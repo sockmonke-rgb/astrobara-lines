@@ -166,6 +166,11 @@ button.undo{border-color:var(--capy);color:#ffd2a8}
 #speedMenu .ap{gap:4px;font-family:var(--f-display);font-size:12px;letter-spacing:.02em;padding:0 10px}
 #speedMenu .ap svg{width:14px;height:14px}
 #speedMenu .ap:not(.on){opacity:.6}
+#speedMenu .sysopt{font-family:var(--f-display);font-size:13.5px;letter-spacing:.04em;padding:0 12px;color:#d9ccff;border-color:rgba(160,130,255,.45)}
+#speedMenu .sysopt .shp{width:14px;height:14px}#speedMenu .sysopt .gi{width:16px;height:16px}
+#speedMenu .sysopt.hot{border-color:var(--alarm);color:#ffc4c4;background:rgba(255,92,92,.16)}
+#speedMenu .sysopt.warn{border-color:#ffc35a;color:#ffe2a8}
+#speedMenu .sysopt.new{border-color:rgba(160,130,255,.85);background:rgba(160,130,255,.12)}
 
 /* Toast */
 #toast{position:absolute;right:calc(14px + var(--sr));top:54px;z-index:25;max-width:min(270px,36%);box-sizing:border-box;
@@ -342,7 +347,7 @@ button.undo{border-color:var(--capy);color:#ffd2a8}
 #tray.fr,#sel.fr{-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 30px),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - 30px),transparent)}
 #tray.fl,#sel.fl{-webkit-mask-image:linear-gradient(90deg,transparent,#000 30px);mask-image:linear-gradient(90deg,transparent,#000 30px)}
 #tray.fl.fr,#sel.fl.fr{-webkit-mask-image:linear-gradient(90deg,transparent,#000 30px,#000 calc(100% - 30px),transparent);mask-image:linear-gradient(90deg,transparent,#000 30px,#000 calc(100% - 30px),transparent)}
-.dots.two{display:grid;grid-template-columns:repeat(6,9px);gap:3px}.dots.two .dot{width:9px;height:9px}.dots.two .dot.free{border-width:2px}
+.dots.two{display:grid;grid-template-columns:repeat(6,9px);gap:3px}.dots.two.wide{grid-template-columns:repeat(8,9px)}.dots.two .dot{width:9px;height:9px}.dots.two .dot.free{border-width:2px}
 .endc .row.go{margin-top:8px;gap:6px}.endc .row.go button{height:38px;padding:0 12px;font-size:13.5px}
 @supports ((-webkit-background-clip:text) or (background-clip:text)){
   .endc .verdict{background-image:linear-gradient(to bottom,var(--vcol) 0%,var(--vcol) 30%,rgba(0,0,0,0) 62%,rgba(0,0,0,0) 100%);
@@ -497,7 +502,7 @@ button.link{height:auto;min-height:0;padding:2px 0;border:none;background:none;c
       <svg class="lines" id="splashLines" aria-hidden="true"></svg>
       <div class="big" aria-hidden="true"><svg viewBox="0 0 64 64"><use href="#capy"/></svg></div>
       <div class="txt">
-        <div class="eyebrow" id="splashEyebrow">Prototype 5.15</div>
+        <div class="eyebrow" id="splashEyebrow">Prototype 5.16</div>
         <h1>Astrobara Lines</h1>
         <p>Capybaras run the Lagrange Alliance’s freight. <b>Drag through places</b> to draw a shipping line. Freight shape = where it’s going. Too much waiting fills a red ring; a full ring ends the run.</p>
         <div class="scen" role="radiogroup" aria-label="Start in">
@@ -575,7 +580,7 @@ const $ = id => document.getElementById(id);
 const app = $('app'), cv = $('cv'), ctx = cv.getContext('2d');
 
 /* ================= Tuning ================= */
-const VERSION = '5.15';
+const VERSION = '5.16';
 const YEAR = 80, QTR = YEAR / 4, HORIZON = 10, Y0 = 2027, STEP = 1 / 30;
 const SOON = 30;   // seconds before a place opens that it, its countdown and the note all appear
 const SPEED = 80;                 // ship speed in map units per second
@@ -604,13 +609,13 @@ function perOf(y) {
 }
 const cal = t => calOf(Math.max(0, t) / YEAR);
 const CENTURY = perOf(2100);
-const eraNow = () => (S.scen === 'rand' ? `${GEN.name} · ${GEN.star.type}` : eraOf(cal(S.t)));
+const eraNow = () => (S.scen === 'rand' ? `${GEN.name} · ${GEN.star.type}` : S.scen === 'sol' && S.open[IDX.RIFT] && GEN ? `${GEN.name} era` : eraOf(cal(S.t)));
 const eraOf = y => (y < 2037 ? 'Earth–Moon era' : y < 2050 ? 'Mars era' : y < 2068 ? 'Belt era' : y < 2100 ? 'Outer planets era' : 'Proxima era');
 
-const LINE_COLORS = ['#f2a65a', '#5ad1e6', '#e86fa8', '#a6d85c', '#a98bf0', '#f2d04c', '#4fd1a5', '#ff7a6b', '#d9b98a', '#5f8dff', '#b8835a', '#d65ce0'];
-const LINE_NAMES = ['Orange', 'Cyan', 'Pink', 'Lime', 'Violet', 'Yellow', 'Mint', 'Coral', 'Sand', 'Blue', 'Brown', 'Magenta'];
-// Three more lines are allowed once the wormhole opens, for the Proxima side.
-const PROX_LINES = 3, maxLines = () => MAX_LINES + (S && S.open[tunnelEnds()[0]] ? PROX_LINES : 0);
+const LINE_COLORS = ['#f2a65a', '#5ad1e6', '#e86fa8', '#a6d85c', '#a98bf0', '#f2d04c', '#4fd1a5', '#ff7a6b', '#d9b98a', '#5f8dff', '#b8835a', '#d65ce0', '#c9ced8', '#a9a83c', '#d8394f'];
+const LINE_NAMES = ['Orange', 'Cyan', 'Pink', 'Lime', 'Violet', 'Yellow', 'Mint', 'Coral', 'Sand', 'Blue', 'Brown', 'Magenta', 'Silver', 'Olive', 'Crimson'];
+// Three more lines are allowed for each wormhole that opens, for the system on its far side.
+const PROX_LINES = 3, maxLines = () => MAX_LINES + (S ? PROX_LINES * tunnels().filter(([a]) => S.open[a]).length : 0);
 
 const SHAPES = {
   earth:    { role: 'Earth',           short: 'Earth',   pay: 4, boom: 'Fusion breakthrough',  blurb: 'Launches hardware, people and supplies, and buys helium-3 from the Moon.' },
@@ -622,7 +627,7 @@ const SHAPES = {
   cross:    { role: 'Deep-space port', short: 'Port',    pay: 8, boom: 'Asteroid rush',         blurb: 'Where ships for Mars and the asteroids gather and refuel.' },
   mars:     { role: 'Mars base',       short: 'Mars',    pay: 7, boom: 'Mars fever',            blurb: 'The first town on another planet. It needs everything and ships out rare metals.' },
   proxb:    { role: 'Proxima b',       short: 'Proxima', pay: 9, boom: 'Proxima fever',         blurb: 'A rocky world around another star.' },
-  worm:     { role: 'Wormhole',        short: 'Wormhole', pay: 0, boom: '', hub: true,          blurb: 'A shortcut to Proxima Centauri. Freight changes lines here.' },
+  worm:     { role: 'Wormhole',        short: 'Wormhole', pay: 0, boom: '', hub: true,          blurb: 'A shortcut to another star system. Freight changes lines here.' },
   world:    { role: 'Colony world',    short: 'Colony',  pay: 9, boom: 'Colony boom',           blurb: 'A rocky world where the colony lives.' },
   alien:    { role: 'Visitor gate',    short: 'Visitors', pay: 12, boom: 'Contact fever',       blurb: 'Something not built by us. It trades.' },
 };
@@ -684,6 +689,9 @@ const PL = [
   ...Array.from({ length: 12 }, (_, k) => ({ id: 'R' + k, name: 'R' + k, x: 3420 + 70 * k, y: 120 + 25 * (k % 4), shape: 'square', sys: 'rnd' })),
   { id: 'RX', name: 'Visitor Gate', x: 3600, y: 420, shape: 'alien', body: 'alien', sys: 'rnd', size: 12, rate: 1.1 },
   { id: 'RW', name: 'Wormhole', x: 3700, y: 440, shape: 'worm', body: 'worm', q: 'up', rate: 0, size: 12.5, sys: 'rnd' },
+  // 5.16: an Earth–Moon run's second wormhole, the Rift, out of the Proxima system to an uncharted one (from 2200).
+  // Its other end is RW. Kept last so saved runs keep their place order.
+  { id: 'RIFT', name: 'Rift', x: 2905, y: 245, shape: 'worm', body: 'worm', q: 'up', rate: 0, size: 12.5, sys: 'far' },
 ];
 const sysOf = i => PL[i].sys || 'sol';
 /* ================= Starting systems =================
@@ -691,7 +699,7 @@ const sysOf = i => PL[i].sys || 'sol';
    (fiction), where the calendar runs four years to a period and places open on their own schedule. */
 const SCEN = {
   sol:  { name: 'Earth–Moon', code: 'SOL', year: 2027, view: 'sol', knots: KNOTS_SOL, tail: 5,
-          start: ['EARTH', 'LEO', 'MOON'], first: ['EARTH', 'LEO'], sensors: ['SEL1', 'SEL5', 'PXF'], years: {}, rate: 1, haz: 1 },
+          start: ['EARTH', 'LEO', 'MOON'], first: ['EARTH', 'LEO'], sensors: ['SEL1', 'SEL5', 'PXF', 'RSF', 'RSU'], years: {}, rate: 1, haz: 1 },
   prox: { name: 'Proxima', code: 'PROX', year: 2100, view: 'far', knots: [[0, 2100], [10, 2140]], tail: 4,
           start: ['PROXB', 'PXL4', 'PROXD'], first: ['PROXB', 'PXL4'], sensors: ['PXF', 'RSF', 'RSU'],
           rate: 1.4, grow: .04, haz: .7,   // fewer places, so each is busier and keeps getting busier; Proxima flares often
@@ -700,14 +708,22 @@ const SCEN = {
 SCEN.rand = { name: 'Uncharted', code: 'RAND', year: 2160, view: 'rnd', knots: [[0, 2160], [10, 2200]], tail: 4,
   start: ['R0', 'R1', 'R2'], first: ['R0', 'R1'], sensors: ['RSF', 'RSU', 'PXF'], years: {}, rate: 1.5, grow: .05, haz: .8, runLabel: 'New random system' };
 const NEVER = 1e12;   // the opening time of a place that isn't part of this run
-const inScen = (k, i) => (k === 'sol' ? sysOf(i) !== 'rnd' : sysOf(i) !== 'sol');
+const inScen = (k, i) => (k === 'sol' ? true : sysOf(i) !== 'sol' && PL[i].id !== 'RIFT');
 // When each run's wormhole opens (periods): past Saturn in 2100, after 13 periods in an uncharted
 // system (to Proxima), after 11 at Proxima (to an uncharted system).
 const EXPAND = { rand: 13, prox: 11 };
+const RIFT_YEAR = 2200;   // an Earth–Moon run's second wormhole, from Proxima to an uncharted system
 const FAR_ORDER = ['PROXB', 'PXL4', 'PROXD', 'FARPORT', 'PXL5', 'ACENA', 'ACENB', 'PROXC', 'BARY', 'CENAB'];
-// Each run's wormhole: [the end in the system you start in, the far end].
-function tunnelEnds() { return S.scen === 'rand' ? [IDX.RW, IDX.WORMF] : S.scen === 'prox' ? [IDX.WORMF, IDX.RW] : [IDX.WORM, IDX.WORMF]; }
-const mouthOther = i => { const [a, b] = tunnelEnds(); return i === a ? b : a; };
+// Each run's wormholes: [the end nearer home, the far end]. An Earth–Moon run has two: Sol to Proxima,
+// and from 2200 the Rift, Proxima to an uncharted system.
+function tunnels() { return S.scen === 'rand' ? [[IDX.RW, IDX.WORMF]] : S.scen === 'prox' ? [[IDX.WORMF, IDX.RW]] : [[IDX.WORM, IDX.WORMF], [IDX.RIFT, IDX.RW]]; }
+const tunnelEnds = () => tunnels()[0];
+const tunnelUp = ([a, b]) => S.open[a] && S.open[b];
+const mouthOther = i => { for (const [a, b] of tunnels()) { if (i === a) return b; if (i === b) return a; } return -1; };
+const farMouth = i => tunnels().some(([, b]) => b === i);
+const homeMouth = i => tunnels().some(([a]) => a === i);
+// The systems you can reach in this run so far, home first.
+function reachSys() { const out = [SCEN[S.scen].view]; for (const t of tunnels()) if (tunnelUp(t)) for (const m of t) if (!out.includes(sysOf(m))) out.push(sysOf(m)); return out; }
 const sysName = v => (v === 'sol' ? 'Sol' : v === 'far' ? 'Proxima' : GEN ? GEN.name : 'Uncharted');
 const sysLabel = v => `⇄ ${sysName(v)}`;
 // Lines stay inside one system; the wormhole joins them.
@@ -783,7 +799,7 @@ SENSORS.push(
 const sensorSys = z => z.sys || 'sol';
 const sensorFrom = k => SCEN[S.scen].years[SENSORS[k].id] ?? SENSORS[k].from;
 // Sensors that belong to this run, and are reachable yet (Proxima's only once the wormhole is open).
-const sensorPlay = k => SCEN[S.scen].sensors.includes(SENSORS[k].id) && (sensorSys(SENSORS[k]) === SCEN[S.scen].view || tunnelOpen());
+const sensorPlay = k => SCEN[S.scen].sensors.includes(SENSORS[k].id) && reachSys().includes(sensorSys(SENSORS[k]));
 const sensorOn = k => S.sensor[k] && S.t >= S.sensorOff[k];
 const warnBonus = (sys = 'sol') => SENSORS.reduce((a, z, k) => a + (sensorOn(k) && sensorSys(z) === sys && z.kind !== 'signal' ? z.bonus : 0), 0);
 const signalBonus = () => SENSORS.reduce((a, z, k) => a + (sensorOn(k) && z.kind === 'signal' ? z.bonus : 0), 0);
@@ -919,7 +935,7 @@ function irlFor(k, shape) {
 function newRun(seed, scen) {
   seed = seed ?? Math.floor(Math.random() * SEED_SPACE);
   scen = SCEN[scen] ? scen : 'sol'; useScen(scen);
-  if (scen === 'rand' || scen === 'prox') generateSystem(seed);
+  generateSystem(seed);   // every run has an uncharted system now: an Earth–Moon run reaches one through the Rift
   const SC = SCEN[scen], h = { rs: seed | 0 }, rnd = rngOf(h);
   const shape = PL.map(p => p.shape || null);
   const roles = shuffle(['diamond', 'star', 'pentagon'], rnd);
@@ -929,6 +945,7 @@ function newRun(seed, scen) {
   const at = irl.map((o, i) => {
     if (!inScen(scen, i)) return NEVER / YEAR;
     const id = PL[i].id;
+    if (scen === 'sol' && (id === 'RIFT' || sysOf(i) === 'rnd')) { const r0 = perOf(RIFT_YEAR); return id === 'RIFT' || id === 'RW' ? r0 : r0 + (GEN.at[id] ?? 0) + (id === 'RX' ? 0 : .4); }
     if (scen === 'rand') return sysOf(i) === 'rnd' ? (id === 'RW' ? EXPAND.rand : GEN.at[id] ?? NEVER / YEAR) : id === 'WORMF' ? EXPAND.rand : EXPAND.rand + .4 + 1.15 * FAR_ORDER.indexOf(id);
     if (scen === 'prox' && (id === 'WORMF' || id === 'RW')) return EXPAND.prox;
     if (scen === 'prox' && sysOf(i) === 'rnd') return EXPAND.prox + (GEN.at[id] ?? 0) + (id === 'RX' ? 0 : .4);
@@ -946,6 +963,11 @@ function newRun(seed, scen) {
   });
   if (scen === 'rand') irl[IDX.RW] = { y: Math.round(calOf(at[IDX.RW])), st: 'fic', note: 'A wormhole to the Proxima Centauri system. Freight dropped at one end comes out the other.' };
   if (scen === 'prox') irl[IDX.WORMF] = { y: Math.round(calOf(at[IDX.WORMF])), st: 'fic', note: `A wormhole to an uncharted system, ${GEN.name}. Freight dropped at one end comes out the other.` };
+  if (scen === 'sol') {
+    PL.forEach((p, i) => { if (sysOf(i) === 'rnd' && p.id !== 'RW') irl[i] = { ...GEN.irl[p.id], y: Math.round(calOf(at[i])) }; });
+    irl[IDX.RIFT] = { y: RIFT_YEAR, st: 'fic', note: `A second wormhole, out of the Proxima system to an uncharted one, ${GEN.name} (a ${GEN.star.type}). Freight dropped at one end comes out the other.` };
+    irl[IDX.RW] = { y: RIFT_YEAR, st: 'fic', note: `The far end of the Rift, in ${GEN.name}. Everything here is made up.` };
+  }
   S = {
     seed, scen, rs: 0, t: 0, speed: 1, paused: true, started: false, over: false, sandbox: false, decadeDone: false, centuryDone: false,
     shape, irl, at: at.map(y => y * YEAR), open: PL.map((p, i) => at[i] === 0), openedAt: Array(NP).fill(0), clock: 0, tut: null,
@@ -1054,7 +1076,7 @@ function reroute() {
     const i = sg.a, j = sg.b;
     if (sg.len < D[i][j]) { D[i][j] = D[j][i] = sg.len; NX[i][j] = j; NX[j][i] = i; }
   }
-  if (tunnelOpen()) { const [a, b] = tunnelEnds(); D[a][b] = D[b][a] = TUNNEL; NX[a][b] = b; NX[b][a] = a; }
+  for (const t of tunnels()) if (tunnelUp(t)) { const [a, b] = t; D[a][b] = D[b][a] = TUNNEL; NX[a][b] = b; NX[b][a] = a; }
   for (let m = 0; m < n; m++) for (let i = 0; i < n; i++) for (let j = 0; j < n; j++)
     if (D[i][m] + D[m][j] < D[i][j]) { D[i][j] = D[i][m] + D[m][j]; NX[i][j] = NX[i][m]; }
   S.NH = []; S.DS = [];
@@ -1073,15 +1095,17 @@ function reroute() {
 // freight boards a ship to GEO as happily as one to Low Orbit.
 const helps = (c, p, q) => S.DS[q][c.want] < S.DS[p][c.want] - 1e-6;
 const TUNNEL = 40;   // how far the wormhole counts as, for routing
-const tunnelOpen = () => { const [a, b] = tunnelEnds(); return S.open[a] && S.open[b]; };
-// Freight dropped at one end of the wormhole that's headed through it comes out the other end.
+const tunnelOpen = () => tunnelUp(tunnelEnds());
+// Freight dropped at one end of a wormhole that's headed through it comes out the other end.
 function tunnel() {
-  if (!tunnelOpen()) return;
-  const [ta, tb] = tunnelEnds();
-  for (const [m, o] of [[ta, tb], [tb, ta]]) {
-    const go = [], stay = []; for (const c of S.Q[m]) (helps(c, m, o) ? go : stay).push(c);
-    if (go.length) { S.Q[m] = stay; S.Q[o].push(...go); S.tunnelT = S.clock; S.tunneled += go.length; }
-  }
+  tunnels().forEach((t, n) => {
+    if (!tunnelUp(t)) return;
+    const [ta, tb] = t;
+    for (const [m, o] of [[ta, tb], [tb, ta]]) {
+      const go = [], stay = []; for (const c of S.Q[m]) (helps(c, m, o) ? go : stay).push(c);
+      if (go.length) { S.Q[m] = stay; S.Q[o].push(...go); S.tunnelT = S.clock; S.tunneled += go.length; if (n > 0) S.rifted = (S.rifted || 0) + go.length; }
+    }
+  });
 }
 function netChanged() { buildTracks(); reroute(); refreshPop(true); trayUI(); placeTut(); }
 
@@ -1209,7 +1233,7 @@ function buySensor(k) {
   S.fund -= z.cost; S.sensor[k] = true; fundFx(-z.cost);
   S.hist.push({ t: S.t, fund: S.fund });
   const sy = sensorSys(z);
-  log(`You bought the ${z.name} for ${fmt(z.cost)}. ${sy === 'far' ? 'Flare' : 'Solar storm'} warnings now come ${warnBonus(sy)}s earlier.`, 'good');
+  log(`You bought the ${z.name} for ${fmt(z.cost)}. ${sy === 'far' ? 'Flare' : sy === 'rnd' ? GEN.star.storm : 'Solar storm'} warnings now come ${warnBonus(sy)}s earlier.`, 'good');
   return null;
 }
 // Scrap for cash: a spare sells for half its base price at today's prices (what you paid doesn't matter).
@@ -1382,8 +1406,8 @@ function openPlace(i) {
   S.open[i] = true; S.openedAt[i] = S.clock; S.flash[i] = 1;
   const fresh = !S.present.has(S.shape[i]);
   S.present = presentShapes(); reroute();
-  const [hm, fm] = tunnelEnds();
-  if (i === fm) return;
+  if (farMouth(i)) return;
+  const tn = tunnels().find(([a]) => a === i), hm = tn ? tn[0] : -1, fm = tn ? tn[1] : -1;
   if (i === IDX.RX) {
     log(`A gate nobody built opened near ${placeName(nearestOpen(i))}. Visitors trade through it: freight to it pays ${fmt(SHAPES.alien.pay)} a load, and it sends out plenty of its own.`, 'warn');
     if (!S.auto) S.hint = { id: 'gate', html: `${shp('alien')} <b>Visitor Gate</b> opened · ${fmt(SHAPES.alien.pay)}/load · it needs a line`, t: S.clock };
@@ -1392,10 +1416,10 @@ function openPlace(i) {
   }
   if (i === hm) {
     S.inv.lines = Math.min(maxLines(), S.inv.lines + 2); S.inv.ships += 2; trayUI();
-    const to = sysOf(fm), where = S.scen === 'sol' ? 'past Saturn' : `near ${placeName(nearestOpen(i))}`;
+    const to = sysOf(fm), rift = i === IDX.RIFT, where = S.scen === 'sol' && !rift ? 'past Saturn' : `near ${placeName(nearestOpen(i))}`;
     const what = to === 'far' ? 'the Proxima Centauri system' : `an uncharted system, ${GEN.name} (a ${GEN.star.type})`;
-    log(`A wormhole opened ${where}, to ${what}. Freight dropped at one end comes out the other. The Alliance sends 2 lines and 2 ships for the far side.${S.scen === 'sol' ? ' (Science fiction from here on.)' : ''}`, 'good');
-    if (!S.auto) { S.hint = { id: 'worm', html: `${shp('worm')} <b>Wormhole</b> to ${sysName(to)} · +2 ${gi('iLine')} +2 ${gi('iShip')} · line to it, then ${sysLabel(to)}`, t: S.clock }; }
+    log(`${rift ? 'A second wormhole, the Rift,' : 'A wormhole'} opened ${where}, to ${what}. Freight dropped at one end comes out the other. The Alliance sends 2 lines and 2 ships for the far side.${S.scen === 'sol' && !rift ? ' (Science fiction from here on.)' : ''}`, 'good');
+    if (!S.auto) { S.hint = { id: 'worm', html: `${shp('worm')} <b>${rift ? 'Rift' : 'Wormhole'}</b> to ${sysName(to)} · +2 ${gi('iLine')} +2 ${gi('iShip')} · line to it, then ${sysLabel(to)}`, t: S.clock }; }
     newPlacePause(i);
     return;
   }
@@ -1469,7 +1493,8 @@ const TOLL = .25, CALM = YEAR;
 function homeFor(i) {
   const h = IDX[SCEN[S.scen].start[0]];
   if (sysOf(i) === sysOf(h)) return h;
-  const [a, b] = tunnelEnds(); return sysOf(a) === sysOf(i) ? a : b;
+  for (const [a, b] of tunnels()) { if (sysOf(b) === sysOf(i)) return b; if (sysOf(a) === sysOf(i)) return a; }
+  return h;
 }
 function servingShip(i) { let best = null; for (const L of S.lines) if (L.stops.includes(i)) for (const sh of L.ships) if (sh.pods < MAX_PODS && (!best || sh.pods < best.pods)) best = sh; return best; }
 const linked = (a, b) => S.lines.some(L => pairs(L).some(([x, y]) => (x === a && y === b) || (x === b && y === a)));
@@ -1811,7 +1836,7 @@ const offersHTML = () => S.meet.pair.map(o => `<button class="offer" data-a="off
 // The shop's capybara quartermaster says one useful thing, or failing that something capybara.
 function qmTip() {
   let w = -1, m = 1e9; for (let i = 0; i < NP; i++) if (S.open[i] && PL[i].rate !== 0) { const r = room(i) - S.Q[i].length; if (r < m) { m = r; w = i; } }
-  const n = nextOpening(), soon = n >= 0 && S.at[n] < NEVER && S.at[n] - S.t < YEAR && n !== tunnelEnds()[1];
+  const n = nextOpening(), soon = n >= 0 && S.at[n] < NEVER && S.at[n] - S.t < YEAR && !farMouth(n);
   if (w >= 0 && m <= 4) return `${placeName(w)} is filling up. A ship or a depot there would help.`;
   if (!S.inv.shields && !S.shield.some(Boolean)) return 'No shields. Storms don’t wait for capybaras.';
   if (soon && S.lines.length >= S.inv.lines) return `${placeName(n)} opens soon and every line is in use.`;
@@ -1944,7 +1969,7 @@ function stats(e) {
 }
 // What opens next on the real-world timeline, for the reviews.
 function upcoming(n) {
-  const out = []; for (let i = 0; i < NP; i++) if (!S.open[i] && S.irl[i] && i !== tunnelEnds()[1] && i !== IDX.RX && S.at[i] < NEVER) out.push(i);
+  const out = []; for (let i = 0; i < NP; i++) if (!S.open[i] && S.irl[i] && !farMouth(i) && i !== IDX.RX && S.at[i] < NEVER) out.push(i);
   out.sort((a, b) => S.at[a] - S.at[b]);
   return out.slice(0, n).map(i => `${esc(placeName(i))} ${S.irl[i].y}`).join(', ');
 }
@@ -2155,6 +2180,7 @@ const ACH = [
   { id: 'prox40', icon: '✨', name: 'Proxima Settled', desc: 'Forty years at Proxima' },
   { id: 'rand40', icon: '🗺️', name: 'Charted', desc: 'Forty years in an uncharted system' },
   { id: 'far', icon: '🌌', name: 'Twenty-Second Century', desc: 'Keep a network running to 2200', test: () => cal(S.t) >= 2200 },
+  { id: 'three', icon: '🌠', name: 'Three Stars', desc: 'Lines running in three star systems at once', test: () => new Set(S.lines.filter(L => L.ships.length).map(L => sysOf(L.stops[0]))).size >= 3 },
 ];
 const ACH_KEY = 'lagrange-ach';
 function readAch() { try { const o = JSON.parse(localStorage.getItem(ACH_KEY) || '{}'); return o && typeof o === 'object' && !Array.isArray(o) ? o : {}; } catch (_) { return {}; } }
@@ -2366,7 +2392,7 @@ function toast(text, ms) { const el = $('toast'); el.innerHTML = text; el.classL
 // A line looped round a tapped button: orange when the tap picks something (a start, a tab, a speed, a shop
 // pick, a term), cyan when it does something. Measured before the handler runs, since handlers often redraw
 // the button, and skipped when the tap was refused or closed what it was on.
-const CHOICE_A = new Set(['scen', 'tab', 'bTab', 'bWho', 'spd', 'autoPause', 'offer', 'bank', 'deal', 'from']);
+const CHOICE_A = new Set(['scen', 'tab', 'bTab', 'bWho', 'spd', 'autoPause', 'offer', 'bank', 'deal', 'from', 'goSys']);
 const loopsEl = document.createElement('div'); loopsEl.id = 'loops'; $('app').appendChild(loopsEl);
 const loopSeen = new WeakMap();
 const loopable = el => !!el && (el.tagName === 'BUTTON' || el.getAttribute('role') === 'button') && !el.disabled
@@ -2469,7 +2495,7 @@ const inView = i => sysOf(i) === S.view;
 const lineView = L => sysOf(L.stops[0]) === S.view;
 function setSys(v) {
   if (!S || S.view === v) return;
-  S.view = v; S.sysSeen = true; jump = null; drag = null; closePop(); snapCam(); lookAt(v); hud();
+  S.view = v; S.sysSeen = true; S.seenV = { ...S.seenV, [v]: true }; jump = null; drag = null; closePop(); snapCam(); lookAt(v); hud();
 }
 // Pinch, drag on empty space or the mouse wheel take the camera over until Fit is tapped.
 let camManual = false;
@@ -2919,7 +2945,9 @@ function needList(sys) {
 // crowding, a vote, damage), violet (a place with no line, a line with no ship, never visited).
 function sysNeeds(other) {
   const n = needList(other)[0];
-  return n ? { lvl: n.lvl === 'ask' ? 'new' : n.lvl, icon: n.icon } : !S.sysSeen ? { lvl: 'new', icon: '' } : { lvl: '', icon: '' };
+  // never visited: a save from before 5.16 only knows whether the first far system was
+  const seen = other === SCEN[S.scen].view || (S.seenV && S.seenV[other]) || (S.sysSeen && other === sysOf(tunnelEnds()[1]));
+  return n ? { lvl: n.lvl === 'ask' ? 'new' : n.lvl, icon: n.icon } : !seen ? { lvl: 'new', icon: '' } : { lvl: '', icon: '' };
 }
 // Arriving in a system: brackets round whatever needs you there, and a note naming the worst of it.
 function lookAt(v) {
@@ -2948,8 +2976,15 @@ function drawLook() {
   }
   ctx.restore();
 }
+// The other system the switch names (and flashes for): the one that needs you most, or else the next
+// along. With two systems a tap goes there; with three (an Earth–Moon run past the Rift) it opens a list.
+function sysNext() {
+  const all = reachSys(), others = all.filter(v => v !== S.view); if (!others.length) return S.view;
+  const rank = { hot: 3, warn: 2, new: 1, '': 0 }, after = v => (all.indexOf(v) - all.indexOf(S.view) + all.length) % all.length;
+  return others.slice().sort((a, b) => rank[sysNeeds(b).lvl] - rank[sysNeeds(a).lvl] || after(a) - after(b))[0];
+}
 function sysBtn() {
-  const [hm, fm] = tunnelEnds(), on = !!S.open[hm], other = S.view === sysOf(hm) ? sysOf(fm) : sysOf(hm);
+  const on = reachSys().length > 1, other = on ? sysNext() : S.view;
   const n = on ? sysNeeds(other) : { lvl: '', icon: '' };
   const sig = [on, other, n.lvl, n.icon].join();
   if (sig === sysSig) return; sysSig = sig;
@@ -2966,7 +3001,7 @@ function trayUI() {
   trayWas = now;
   const used = new Set(S.lines.map(L => L.slot)); let dots = '';
   for (let s = 0; s < S.inv.lines; s++) dots += `<span class="dot ${used.has(s) ? '' : 'free'}" style="${used.has(s) ? 'background:' + LINE_COLORS[s] : 'color:' + LINE_COLORS[s]}"></span>`;
-  $('tLines').innerHTML = dots; $('tLines').classList.toggle('two', S.inv.lines > 6);
+  $('tLines').innerHTML = dots; $('tLines').classList.toggle('two', S.inv.lines > 6); $('tLines').classList.toggle('wide', S.inv.lines > 12);
   requestAnimationFrame(() => edgeFade($('tray')));
   $('cDocks').hidden = !(S.inv.docks > 0); $('tDocks').textContent = S.inv.docks || 0;
   for (const [id, v] of [['tShips', S.inv.ships], ['tPods', S.inv.pods], ['tDepots', S.inv.depots], ['tShields', S.inv.shields]]) { $(id).textContent = v; $(id).parentElement.classList.toggle('zero', !v); }
@@ -3011,10 +3046,10 @@ function coach() {
   if (S.inv.pods && S.lines.length) return { act: true, html: `${gi('iPod')} spare pod · tap a line` };
   if (S.inv.depots) return { act: true, html: `${gi('iDepot')} spare depot · tap a place` };
   const sk = SENSORS.findIndex((z, k) => sensorPlay(k) && !S.sensor[k] && cal(S.t) >= sensorFrom(k) && S.fund >= z.cost + 50);
-  if (sk >= 0 && S.log.some(e => e.kind === 'warn' && /Storm|Flare|Pulse|signal/.test(e.text))) return { act: false, html: `${gi('iSensor')} ${SENSORS[sk].short} for sale · ${fmt(SENSORS[sk].cost)}${via(sensorSys(SENSORS[sk]) === 'far' ? IDX.WORMF : IDX.EARTH)}` };
+  if (sk >= 0 && S.log.some(e => e.kind === 'warn' && /Storm|Flare|Pulse|signal/.test(e.text))) return { act: false, html: `${gi('iSensor')} ${SENSORS[sk].short} for sale · ${fmt(SENSORS[sk].cost)}${via(sensorSys(SENSORS[sk]) === 'far' ? IDX.WORMF : sensorSys(SENSORS[sk]) === 'rnd' ? IDX.RW : IDX.EARTH)}` };
   const n = nextOpening();
   if (n === IDX.RX && S.at[n] - S.t < SOON) return { act: false, html: `${gi('iAlien')} <b>Unknown signal</b> · ${Math.ceil(S.at[n] - S.t)}s` };
-  if (n >= 0 && S.at[n] - S.t < SOON) return { act: false, html: `${shp(S.shape[n])} <b>${esc(placeName(n))}</b> opens · ${Math.ceil(S.at[n] - S.t)}s${n === tunnelEnds()[0] ? '' : via(n)}` };
+  if (n >= 0 && S.at[n] - S.t < SOON) return { act: false, html: `${shp(S.shape[n])} <b>${esc(placeName(n))}</b> opens · ${Math.ceil(S.at[n] - S.t)}s${homeMouth(n) && n !== IDX.RIFT ? '' : via(n)}` };
   return null;
 }
 const TRAY_HELP = {
@@ -3026,10 +3061,11 @@ const TRAY_HELP = {
   shields: () => `${gi('iShield')} ${S.inv.shields} spare · tap a place, Protect`,
 };
 onTap($('bar'), a => {
+  const wasSys = menuKind === 'sys' && !$('speedMenu').hidden;
   if (a !== 'speed') toggleSpeedMenu(false);
   if (a === 'undo') { undo(); return; }
   if (a === 'fit') { camManual = false; jump = null; hud(); return; }
-  if (a === 'sys') { const [hm, fm] = tunnelEnds(); setSys(S.view === sysOf(hm) ? sysOf(fm) : sysOf(hm)); return; }
+  if (a === 'sys') { if (reachSys().length > 2) { if (!wasSys) sysMenu(true); } else setSys(sysNext()); return; }
   if (a === 'play') {
     if (S.over) return; if (!S.started) { toast('Draw a line to start'); return; }
     S.paused = !S.paused; lastPlay = null;
@@ -3052,13 +3088,22 @@ function fiveHTML() {
     <div class="row"><button class="primary" data-a="go5">Play at 5×</button><button data-a="no5">Not now</button><button data-a="dont5" class="${fiveDont ? 'on' : ''}" aria-pressed="${fiveDont}">${fiveDont ? '✓ ' : ''}Don’t ask again</button></div>`;
 }
 function ask5() { pauseFor(); fiveDont = false; openModal(fiveHTML(), 'five'); }
+let menuKind = null;   // what the pop-up above the bar is showing: the speeds, or (with three systems) the systems
 function toggleSpeedMenu(force) {
-  const m = $('speedMenu'), show = force ?? m.hidden;
+  const m = $('speedMenu'), show = force ?? (m.hidden || menuKind !== 'speed'); menuKind = show ? 'speed' : null;
   if (show) m.innerHTML = SPEEDS.map(v => `<button data-a="spd" data-v="${v}" class="${v === S.speed ? 'on' : ''}" role="menuitemradio" aria-checked="${v === S.speed}">${spdText(v)}</button>`).join('')
     + `<button data-a="autoPause" class="ap ${autoPause ? 'on' : ''}" role="menuitemcheckbox" aria-checked="${autoPause}">${pauseIcon}<span>new place · talks</span></button>`;
   m.hidden = !show;
 }
+// With three systems the switch opens a short list of them, each marked with what needs you there.
+function sysMenu(show) {
+  const m = $('speedMenu');
+  if (show) m.innerHTML = reachSys().map(v => { const n = v === S.view ? { lvl: '', icon: '' } : sysNeeds(v);
+    return `<button data-a="goSys" data-v="${v}" class="sysopt ${v === S.view ? 'on' : n.lvl}" role="menuitemradio" aria-checked="${v === S.view}">${n.icon ? n.icon + ' ' : ''}${esc(sysName(v))}</button>`; }).join('');
+  m.hidden = !show; menuKind = show ? 'sys' : null;
+}
 onTap($('speedMenu'), (a, el) => {
+  if (a === 'goSys') { sysMenu(false); setSys(el.dataset.v); return; }
   if (a === 'autoPause') { setAutoPause(!autoPause); toggleSpeedMenu(true); toast(autoPause ? 'Pauses when a new place opens' : 'No pause for new places'); return; }
   if (a !== 'spd') return;
   if (+el.dataset.v === 5 && S.speed !== 5 && !fiveOK()) { toggleSpeedMenu(false); ask5(); return; }
@@ -3159,7 +3204,7 @@ function showLog(back, tab) {
     body = `<p>Everything that happened this run, newest first.</p><ul class="ledger">${items || '<li>Nothing yet.</li>'}</ul>`;
   } else {
     const lines = S.lines.map(L => `<li><span class="t" style="color:${L.color}">${yrText(lineYear(L.stops))}</span><span><b style="color:${L.color}">${L.name}${L.loop ? ' loop' : ''}</b> · ${L.stops.map(i => esc(placeName(i))).join(' → ')}${L.loop ? ' → back' : ''}</span></li>`).join('');
-    const order = PL.map((p, i) => i).filter(i => S.irl[i] && i !== tunnelEnds()[1] && S.at[i] < NEVER && (i !== IDX.RX || S.open[i])).sort((a, b) => S.at[a] - S.at[b] || S.irl[a].y - S.irl[b].y);
+    const order = PL.map((p, i) => i).filter(i => S.irl[i] && !farMouth(i) && S.at[i] < NEVER && (i !== IDX.RX || S.open[i])).sort((a, b) => S.at[a] - S.at[b] || S.irl[a].y - S.irl[b].y);
     const places = order.map(i => {
       const o = S.irl[i], left = S.at[i] - S.t;
       const when = S.open[i] ? 'open' : S.started && !S.tut ? `opens in ${Math.max(1, Math.ceil(left))}s` : 'not yet open';
@@ -3185,7 +3230,7 @@ function helpBody() {
     <li><b>Storm sensors.</b> The two little satellites at the bottom left sit at the Sun–Earth Lagrange points. They carry no freight, so they need no line: tap one and buy it from the budget. Sun–Earth L1 (now) makes solar storm warnings come 15 seconds earlier; Sun–Earth L5 (from 2031) adds 20 more.</li>
     <li><b>Map.</b> Pinch to zoom and drag empty space to move around; Fit puts everything back in view. Arrows at the edge point to places off screen, red when they’re crowded; tap one to glide there. Darker, fogged parts of the map haven’t opened yet. Faint dotted rings are orbits: low Earth orbit and GEO around Earth, and around the Sun further out. Specks around Low Orbit during a debris cascade are debris.</li>
     <li><b>Growth.</b> Each place opens in the year real-world plans and forecasts expect regular freight there, from Earth–Moon space in the 2020s to Mars around 2040 and Titan around 2090. After the first ten years the calendar speeds up. The Timeline tab shows each place’s year, status and a note on the real plan. A line’s year is the latest of its stops.</li>
-    <li><b>Proxima.</b> After 2100 a wormhole opens past Saturn (science fiction from here). Each end is a stop: freight dropped at one end comes out the other. Draw a line to it, then tap ⇄ Proxima to see the other system and build lines there. Lines can’t cross between systems. The button turns red when a place on the other map is crowding.</li>
+    <li><b>Proxima.</b> After 2100 a wormhole opens past Saturn (science fiction from here). Each end is a stop: freight dropped at one end comes out the other. Draw a line to it, then tap ⇄ Proxima to see the other system and build lines there. Lines can’t cross between systems. The button turns red when a place on the other map is crowding. From 2200 a second wormhole, the Rift, opens at Proxima to an uncharted system, with three more lines for it. With three systems, ⇄ goes to whichever needs you most.</li>
     <li><b>Where to start.</b> On the start screen pick Earth–Moon (2027, real-world plans) or Proxima (2100, science fiction: Proxima b and the Alpha Centauri stars, with frequent flares instead of solar storms). Every run has a code, shown in the Timeline: type it on the start screen to play the same map again, or share it.</li>
     <li><b>Uncharted.</b> A random system made up from the run’s code: its star might be a red dwarf, a binary pair or a pulsar, and its places and their names are new each time. It’s harder: busier places and more storms. And you’re not alone there. An “unknown signal” might be a craft that stops any line it drifts over (shields don’t help), a derelict worth salvaging, or visitors who make one place very busy. Somewhere a gate nobody built will open, and whoever runs it trades.</li>
     <li><b>Unrest.</b> Keep a place waiting (its freight above about 60% of its room for a long stretch, or storm damage left unrepaired) and it grows restless: a flag appears and grows. If it fills, the place declares independence for ${REBEL_DUR} seconds: its lines close, it makes and takes no freight, and ships there are held. Once it’s restless enough the workers vote on what they want, usually that your nearest line be extended to them. Serve it to calm it, or tap it and Negotiate: give them what they voted for (they never refuse that, and stay calm for two periods), or offer something else, which they may refuse, and every refusal makes them angrier. Other offers: pay them off, let them keep a 25% toll on deliveries there for two periods, or give them a direct line home (or to the wormhole), a shield for keeps, a depot, a fast dock or a cargo pod. Any deal keeps them calm for a period. Late game only: from 2070 in Earth–Moon runs, six periods into Proxima and uncharted runs.</li>
@@ -3197,7 +3242,7 @@ function helpBody() {
     <li><b>Keyboard.</b> On a computer: Space plays or pauses, 1, 2, 3 and 5 set the speed, Esc closes the bar along the bottom. Scroll to zoom; drag empty space to pan.</li>
     <li><b>Speed.</b> Tap the speed button for 0.1× and 0.5× slow motion or 2×, 3× and 5× (5× asks first). When a new place opens, or a restless place votes on a demand or declares independence, the game pauses so you don’t miss it: white rings spread from any place that isn’t on a line yet, amber rings from a place that wants to talk, the play button pulses, and ▶ carries on. Turn the pause off with the “❚❚ new place · talks” switch in the same menu.</li>
     <li><b>Capybaras.</b> They run the Alliance. The quartermaster at the Alliance Shop has advice, and late in a run a capybara envoy can calm a restless place for free, once a period.</li>
-    <li><b>Awards.</b> 21 to earn, from your first delivery to 2200. New ones show a gold note; reviews and the end of a run list what the run earned; the leaderboard’s 🏅 Awards shows them all.</li>
+    <li><b>Awards.</b> 22 to earn, from your first delivery to lines in three star systems. New ones show a gold note; reviews and the end of a run list what the run earned; the leaderboard’s 🏅 Awards shows them all.</li>
     <li><b>Leaderboard.</b> Every review and every finished run updates your row for that run code. Open it from a review, the end of a run or the start screen; tap a code twice to play it.</li>
     <li><b>Scrap.</b> Short of a repair? Tap Repair anyway and scrap spares for cash: each sells for half its base price (a ship can come off your busiest line). Removing a line also offers to scrap its ships.</li>
   </ul>

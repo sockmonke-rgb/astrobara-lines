@@ -4,7 +4,7 @@
 
 ### [▶ Play Astrobara Lines](https://sockmonke-rgb.github.io/astrobara-lines/)
 
-A capybara-run freight network in the style of Mini Metro. Start in Earth–Moon space in 2027 and build shipping lines outward. Places open in the years real-world plans expect them, out past Saturn, and then through a wormhole to Proxima Centauri.
+A capybara-run freight network in the style of Mini Metro. Start in Earth–Moon space in 2027 and build shipping lines outward. Places open in the years real-world plans expect them, out past Saturn, then through a wormhole to Proxima Centauri, and from 2200 on through a second one to an uncharted star system.
 
 It's one HTML file with no build step and no dependencies. It plays in a phone or desktop browser.
 
@@ -24,7 +24,7 @@ It's one HTML file with no build step and no dependencies. It plays in a phone o
 
 ## Starts
 
-- **Earth–Moon (2027):** each place opens in the year real-world plans expect it. The timeline notes what's real and what's speculative.
+- **Earth–Moon (2027):** each place opens in the year real-world plans expect it. The timeline notes what's real and what's speculative. A wormhole opens past Saturn in 2100 to Proxima Centauri, and in 2200 a second, the Rift, opens from Proxima to a random uncharted system. Each brings three more lines, up to 15.
 - **Proxima (2100):** science fiction.
 - **Uncharted:** a random star system. It's harder, and not everything in it is built by us.
 
@@ -44,7 +44,7 @@ Every run has a code like `SOL-HALO-417`. Type it on the start screen to play th
 
 - **Saving:** runs save in the browser's local storage. Inside the Claude app they also save to the app's cloud storage, and the leaderboard is shared with everyone the game is shared with. The standalone page keeps everything local.
 - **Leaderboard:** one row per run code, ranked by the furthest year reached.
-- **Awards:** 21 to earn, from your first delivery to keeping a network running until 2200.
+- **Awards:** 22 to earn, from your first delivery to running lines in three star systems at once.
 
 ## Screenshots
 

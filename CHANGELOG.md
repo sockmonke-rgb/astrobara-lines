@@ -1,5 +1,12 @@
 # Changelog
 
+## 5.16
+- Earth–Moon runs get a second wormhole: in 2200 the Rift opens at Proxima, out to a random uncharted system with its own star, places and visitors. It brings 2 lines and 2 ships, and room for 3 more lines (up to 15).
+- With three systems, ⇄ opens a short list of them, each marked with what needs you there.
+- A run saved before 5.16 that's already past 2200 gets the Rift 30 seconds after you continue.
+- A new award, Three Stars: lines running in three star systems at once.
+- Run codes still play the same maps.
+
 ## 5.15
 - Each thing in the shop's buy row says how many you already have: spares, free lines, or the level of an upgrade. It counts up when you buy one.
 - The shop's "earned" counts what deliveries paid since the last visit, so repairs and talks in between no longer make it read negative.
