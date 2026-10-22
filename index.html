@@ -262,6 +262,7 @@ button.undo{border-color:var(--capy);color:#ffd2a8}
 .shop .buy span{display:flex;flex-direction:column;color:#ffd8a8}
 .shop .buy b{font:600 12.5px/1.2 var(--f-body);color:var(--ink)}
 .shop .buy[aria-disabled=true]{opacity:.4}
+.shop .buy small{font:500 11px/1.2 var(--f-data);color:var(--dim);margin-top:1px}
 .offer em{font:500 12px/1.2 var(--f-data);font-style:normal;color:#ffd8a8}
 .card.split .mhead{flex:none;display:flex;align-items:flex-end;justify-content:space-between;gap:12px;padding:10px 18px 9px;border-bottom:1px solid var(--rule);background:#0b101b}
 .mfund{position:relative;display:flex;align-items:baseline;gap:8px;margin-top:3px}
@@ -496,7 +497,7 @@ button.link{height:auto;min-height:0;padding:2px 0;border:none;background:none;c
       <svg class="lines" id="splashLines" aria-hidden="true"></svg>
       <div class="big" aria-hidden="true"><svg viewBox="0 0 64 64"><use href="#capy"/></svg></div>
       <div class="txt">
-        <div class="eyebrow" id="splashEyebrow">Prototype 5.14</div>
+        <div class="eyebrow" id="splashEyebrow">Prototype 5.15</div>
         <h1>Astrobara Lines</h1>
         <p>Capybaras run the Lagrange Alliance’s freight. <b>Drag through places</b> to draw a shipping line. Freight shape = where it’s going. Too much waiting fills a red ring; a full ring ends the run.</p>
         <div class="scen" role="radiogroup" aria-label="Start in">
@@ -574,7 +575,7 @@ const $ = id => document.getElementById(id);
 const app = $('app'), cv = $('cv'), ctx = cv.getContext('2d');
 
 /* ================= Tuning ================= */
-const VERSION = '5.14';
+const VERSION = '5.15';
 const YEAR = 80, QTR = YEAR / 4, HORIZON = 10, Y0 = 2027, STEP = 1 / 30;
 const SOON = 30;   // seconds before a place opens that it, its countdown and the note all appear
 const SPEED = 80;                 // ship speed in map units per second
@@ -950,7 +951,7 @@ function newRun(seed, scen) {
     shape, irl, at: at.map(y => y * YEAR), open: PL.map((p, i) => at[i] === 0), openedAt: Array(NP).fill(0), clock: 0, tut: null,
     Q: PL.map(() => []), of: Array(NP).fill(0), depot: Array(NP).fill(false), shield: Array(NP).fill(false), surgeAt: -1, seen: {},
     lines: [], nextId: 1, inv: { ...START_INV },
-    fund: SEED_FUND, delivered: 0, yearDel: 0, yearPay: 0, lastMeet: 0,
+    fund: SEED_FUND, delivered: 0, yearDel: 0, yearPay: 0, lastMeet: 0, earnedMeet: 0,
     haz: null, debris: false, nextHaz: (rnd(), YEAR * .5), script: ['surge', 'storm'], boom: null, nextBoom: YEAR * (2.6 + 0.6 * rnd()),
     log: [], hist: [{ t: 0, fund: SEED_FUND }], hints: {}, hint: null, unreach: 0, unreachT: 0,
     unrest: Array(NP).fill(0), rebel: Array(NP).fill(0), demand: Array(NP).fill(null), fastDock: Array(NP).fill(false), toll: Array(NP).fill(0), calm: Array(NP).fill(0), keepShield: Array(NP).fill(false),
@@ -1757,7 +1758,7 @@ const hazIcon = h => (h.type === 'storm' ? gi('iSun') : h.type === 'debris' ? gi
 // Upgrades come in two kinds: things you place (lines, ships, pods, depots, shields) and
 // network-wide improvements that apply at once and stack a few levels.
 const OFFERS = {
-  line:   { icon: 'iLine',   name: 'New line',      desc: () => 'One more line to draw.', have: () => `you have ${S.inv.lines}` },
+  line:   { icon: 'iLine',   name: 'New line',      desc: () => 'One more line to draw.', have: () => `${Math.max(0, S.inv.lines - S.lines.length)} free of ${S.inv.lines}` },
   ship:   { icon: 'iShip',   name: 'Extra ship',    desc: () => 'A second ship on top of the free one.', have: () => `${S.inv.ships} spare` },
   pod:    { icon: 'iPod',    name: 'Cargo pod',     desc: () => `One ship carries ${POD} more.`, have: () => `${S.inv.pods} spare` },
   depot:  { icon: 'iDepot',  name: 'Depot',         desc: () => `One place holds ${DEPOT_ROOM} more.`, have: () => `${S.inv.depots} spare` },
@@ -1804,7 +1805,8 @@ function buyOffer(k) {
 // Skipping the free upgrade banks the budget: modest interest, always worth less than the upgrade itself.
 const BANK_RATE = .04;
 const bankPay = () => Math.max(5, Math.min(Math.round(S.fund * BANK_RATE), Math.round(.5 * Math.min(...S.meet.pair.map(price)))));
-const shopHTML = () => Object.keys(PRICE).filter(canBuy).map(k => `<button class="buy" data-a="buyUp" data-o="${k}" ${S.fund < price(k) ? 'aria-disabled="true"' : ''} title="${OFFERS[k].name}">${ICON(OFFERS[k].icon)}<span><b>${OFFERS[k].name}</b>${fmt(price(k))}</span></button>`).join('');
+const haveNow = k => (OFFERS[k].up ? `level ${S.up[OFFERS[k].up]} of ${OFFERS[k].max}` : OFFERS[k].have());
+const shopHTML = () => Object.keys(PRICE).filter(canBuy).map(k => `<button class="buy" data-a="buyUp" data-o="${k}" ${S.fund < price(k) ? 'aria-disabled="true"' : ''} title="${OFFERS[k].name}">${ICON(OFFERS[k].icon)}<span><b>${OFFERS[k].name}</b>${fmt(price(k))}<small>${haveNow(k)}</small></span></button>`).join('');
 const offersHTML = () => S.meet.pair.map(o => `<button class="offer" data-a="offer" data-o="${o}">${ICON(OFFERS[o].icon)}<span class="ot"><b>${OFFERS[o].name}</b><span>${OFFERS[o].desc()}</span><em>${offerHave(o)}</em></span></button>`).join('');
 // The shop's capybara quartermaster says one useful thing, or failing that something capybara.
 function qmTip() {
@@ -1822,7 +1824,7 @@ function meetingHTML() {
   const m = S.meet, multi = m.span.includes('–');
   return `<div class="mhead"><div class="col"><div class="eyebrow">Alliance Shop · ${multi ? qLabel(S.t) + ' · ' + eraNow() : 'end of ' + m.span}</div>
       <div class="mfund" id="mFundBox"><span class="lbl">Budget</span><b id="mFund">${fmt(S.fund)}</b></div></div>
-      <span class="credit mnote">earned ${fmt(S.fund - m.last + m.spent)} ${multi ? 'since the last visit' : 'this year'}<br>+1 ${gi('iShip')}${m.freeLine ? ` +1 ${gi('iLine')}` : ''} from the Alliance</span></div>
+      <span class="credit mnote">${m.earned != null ? `earned ${fmt(m.earned)}` : S.fund - m.last + m.spent >= 0 ? `earned ${fmt(S.fund - m.last + m.spent)}` : `budget down ${fmt(m.last - m.spent - S.fund)}`} ${multi ? 'since the last visit' : 'this year'}<br>+1 ${gi('iShip')}${m.freeLine ? ` +1 ${gi('iLine')}` : ''} from the Alliance</span></div>
     <div class="lbody">
       <div class="qm"><svg viewBox="0 0 64 64" aria-hidden="true"><use href="#capy"/></svg><span><b>Quartermaster:</b> ${esc(qmTip())}</span></div>
       <div class="eyebrow">1 · Buy from the budget, if you like</div><div class="shop" id="mShop">${shopHTML()}</div>
@@ -1918,7 +1920,8 @@ function meeting(y) {
   if (S.auto) { const pick = S.auto('meeting', pair); applyOffer(pick); S.meet = null; log(`Alliance Shop: new ship${freeLine ? ', new line' : ''} and ${OFFERS[pick].name.toLowerCase()}.`, ''); return; }
   S.paused = true; closePop();
   const last = S.hist.length > 4 ? S.hist[S.hist.length - 5].fund : SEED_FUND;
-  S.meet = { pair, freeLine, span: periodSpan(y - 1), last, spent: 0, done: false };
+  const earned = S.earnedMeet != null ? S.earned - S.earnedMeet : null; S.earnedMeet = S.earned;
+  S.meet = { pair, freeLine, span: periodSpan(y - 1), last, spent: 0, done: false, earned };
   openModal(meetingHTML(), 'meeting');
 }
 function chart(hist) {

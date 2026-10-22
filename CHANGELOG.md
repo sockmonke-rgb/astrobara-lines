@@ -1,5 +1,9 @@
 # Changelog
 
+## 5.15
+- Each thing in the shop's buy row says how many you already have: spares, free lines, or the level of an upgrade. It counts up when you buy one.
+- The shop's "earned" counts what deliveries paid since the last visit, so repairs and talks in between no longer make it read negative.
+
 ## 5.14
 - The start screen looks the same held upright or on its side. When there's less room it shrinks to fit rather than dropping the helmet and lines.
 - Show (and Repair) on the note at the top glides over to the place and zooms in on it. Fit brings the whole map back.
