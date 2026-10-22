@@ -1,5 +1,8 @@
 # Changelog
 
+## 5.12
+- The start screen wears the icon: a navy glow, stars, and the cyan and orange lines running behind a bigger capybara helmet. The lines draw themselves in when the game opens.
+
 ## 5.11
 - ≡ → Diag tab: copy a diagnostics report (version, device, frame rate, run state, recent log, errors) and, optionally, the save itself, compressed.
 - A clearer glass reflection on the capybara's helmet.

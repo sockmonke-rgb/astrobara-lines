@@ -217,8 +217,18 @@ button.undo{border-color:var(--capy);color:#ffd2a8}
 .card .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:12px}
 .card .row .credit{margin-left:auto}
 .splash{display:flex;gap:18px;align-items:flex-start}
-.splash .big{width:92px;height:92px;flex:none}
+.splash .big{width:100px;height:100px;flex:none;filter:drop-shadow(0 6px 14px rgba(0,0,0,.55))}
+.splash .big svg{display:block;width:100%;height:100%}
 .splash .txt{flex:1;min-width:0}
+/* The start screen wears the icon: a navy glow behind the helmet, a few stars, and two lines (cyan and
+   orange) that come in from the top, pass behind the helmet and run off along the bottom. */
+#splash .card.splash{position:relative;isolation:isolate;border-color:rgba(134,191,226,.24);
+  background:radial-gradient(ellipse 80% 110% at 9% 16%,#1a2a4b 0%,#0d1528 44%,#070a12 100%)}
+#splash .card.splash>*{position:relative;z-index:1}
+#splash .card.splash>.lines{position:absolute;left:0;top:0;z-index:0;pointer-events:none;overflow:hidden}
+.splash .lines path{fill:none;stroke-linecap:round;stroke-linejoin:round}
+.splash .lines .draw{transition:stroke-dashoffset 1.2s cubic-bezier(.3,.7,.2,1)}
+@media (min-height:341px){#splash .card.splash{padding-bottom:36px}}
 .scen{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px}
 .scen button{height:auto;min-height:44px;flex-direction:column;align-items:flex-start;justify-content:center;gap:3px;padding:5px 13px}
 .scen button small{font:500 11px/1.1 var(--f-data);letter-spacing:0;color:var(--dim)}
@@ -414,7 +424,7 @@ button.link{height:auto;min-height:0;padding:2px 0;border:none;background:none;c
 .ledger .when{font:500 11px/1 var(--f-data);color:var(--dim)}
 .legend{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:4px 14px;margin-top:6px;font:400 13px/1.35 var(--f-body);color:#d3d9e5}
 @media (max-height:340px){.splash .big{display:none}.card h1{font-size:27px}.offer{min-height:0}}
-@media (max-height:420px){.splash .big{width:64px;height:64px}.splash .txt ul{gap:1px}.splash .row{margin-top:8px}}
+@media (max-height:420px){.splash .big{width:72px;height:72px}.splash .txt ul{gap:1px}.splash .row{margin-top:8px}}
 @media (prefers-reduced-motion:reduce){#toast{transition:none}}
 </style>
 
@@ -460,9 +470,10 @@ button.link{height:auto;min-height:0;padding:2px 0;border:none;background:none;c
 
   <div id="splash" class="ov">
     <div class="card splash">
-      <svg class="big" viewBox="0 0 64 64" aria-hidden="true"><use href="#capy"/></svg>
+      <svg class="lines" id="splashLines" aria-hidden="true"></svg>
+      <div class="big" aria-hidden="true"><svg viewBox="0 0 64 64"><use href="#capy"/></svg></div>
       <div class="txt">
-        <div class="eyebrow" id="splashEyebrow">Prototype 5.11</div>
+        <div class="eyebrow" id="splashEyebrow">Prototype 5.12</div>
         <h1>Astrobara Lines</h1>
         <p>Capybaras run the Lagrange Alliance’s freight. <b>Drag through places</b> to draw a shipping line. Freight shape = where it’s going. Too much waiting fills a red ring; a full ring ends the run.</p>
         <div class="scen" role="radiogroup" aria-label="Start in">
@@ -540,7 +551,7 @@ const $ = id => document.getElementById(id);
 const app = $('app'), cv = $('cv'), ctx = cv.getContext('2d');
 
 /* ================= Tuning ================= */
-const VERSION = '5.11';
+const VERSION = '5.12';
 const YEAR = 80, QTR = YEAR / 4, HORIZON = 10, Y0 = 2027, STEP = 1 / 30;
 const SOON = 30;   // seconds before a place opens that it, its countdown and the note all appear
 const SPEED = 80;                 // ship speed in map units per second
@@ -3870,7 +3881,57 @@ function splashUI() {
   $('bNow').textContent = sv ? 'New run' : 'Play';
   const far = readFar(pickScen); $('splashFar').textContent = far > SCEN[pickScen].year ? `Furthest: ${far}` : '';
   $('bNow').textContent = sv ? 'New run' : pickScen === 'rand' ? 'New system' : 'Play';
+  splashLines();
 }
+// The start screen's two lines, fitted to the card: in from the top edge, behind the helmet, down the left
+// gutter, a 45° bend, then along the strip under the buttons and off the right edge, the way they run in the
+// icon. They draw themselves in once, after the fonts have settled the layout.
+const SPLASH_STARS = (() => { let a = 7; const rnd = () => ((a = (a * 16807) % 2147483647) / 2147483647);
+  return Array.from({ length: 44 }, () => [rnd(), rnd(), .7 + rnd() * .6, .2 + rnd() * .38]); })();
+let splashFonts = false, splashAnimated = false, splashKey = '';
+function splashLines() {
+  const svg = $('splashLines'); if (!svg || $('splash').hidden) return;
+  const card = svg.parentNode, big = card.querySelector('.big'), txt = card.querySelector('.txt');
+  svg.setAttribute('height', 0);
+  const W = card.clientWidth, H = Math.max(card.clientHeight, card.scrollHeight);
+  if (!W || !H) return;
+  svg.setAttribute('width', W); svg.setAttribute('height', H); svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  // stars keep clear of the words, the buttons, the helmet and the lines, so none reads as a stray dot
+  const box = (el, m) => { let x = 0, y = 0; for (let e = el; e && e !== card; e = e.offsetParent) { x += e.offsetLeft; y += e.offsetTop; } return [x - m, y - m, x + el.offsetWidth + m, y + el.offsetHeight + m]; };
+  const clear = [...txt.querySelectorAll('.eyebrow, h1, p, button:not([hidden]), input, .credit')].filter(e => e.offsetWidth).map(e => box(e, 10));
+  if (big.offsetWidth) clear.push(box(big, 4));
+  const room = H - (txt.offsetTop + txt.offsetHeight);
+  let out = '';
+  if (big.offsetWidth && splashFonts && room >= 24) {
+    const r = big.offsetWidth / 2, hx = big.offsetLeft + r;
+    const lw = Math.max(5, Math.round(r * .14)), s = Math.round(lw * 1.6);
+    const mid = H - room / 2, yo = mid - s / 2, yc = mid + s / 2, xo = hx + s / 2, xc = hx - s / 2;
+    clear.push([xc - lw * 2, -1, xo + lw * 2, H + 1], [-1, yo - lw * 2, W + 1, H + 1]);
+    const ci = Math.round(r * .5), co = ci + (2 - Math.SQRT2) * s;   // keeps the two diagonals parallel, s apart
+    const f = v => v.toFixed(1);
+    out += `<path class="ln" d="M${f(xc)} ${-lw}V${f(yc - co)}L${f(xc + co)} ${f(yc)}H${W + lw}" stroke="#5ad1e6" stroke-width="${lw}"/>`
+         + `<path class="ln" d="M${f(xo)} ${-lw}V${f(yo - ci)}L${f(xo + ci)} ${f(yo)}H${W + lw}" stroke="#f2a65a" stroke-width="${lw}"/>`;
+  }
+  const key = `${W}x${H}:${out}:${clear.map(c => c.map(Math.round).join(',')).join(';')}`;
+  if (key === splashKey) return;   // nothing moved, so leave the drawing (and any draw-in under way) alone
+  splashKey = key;
+  const stars = SPLASH_STARS.map(([x, y, r, o]) => [x * W, y * H, r, o]).filter(([x, y]) => !clear.some(([a, b, c, d]) => x > a && x < c && y > b && y < d)).slice(0, 16);
+  svg.innerHTML = stars.map(([x, y, r, o]) => `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${r.toFixed(2)}" fill="#e9edf4" fill-opacity="${o.toFixed(2)}"/>`).join('') + out;
+  const lns = svg.querySelectorAll('.ln');
+  if (lns.length && !splashAnimated) {
+    splashAnimated = true;
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    lns.forEach(p => { const L = p.getTotalLength(); p.style.strokeDasharray = L; p.style.strokeDashoffset = L; });
+    svg.getBoundingClientRect();
+    requestAnimationFrame(() => lns.forEach((p, k) => { p.style.transitionDelay = `${k * 140}ms`; p.classList.add('draw'); p.style.strokeDashoffset = 0; }));
+  }
+}
+(() => {
+  const go = () => { if (splashFonts) return; splashFonts = true; splashLines(); };
+  try { document.fonts.ready.then(go); } catch (_) { go(); }
+  setTimeout(go, 1500);
+  if (window.ResizeObserver) { const ro = new ResizeObserver(() => splashLines()); const c = document.querySelector('#splash .card.splash'); ro.observe(c); ro.observe(c.querySelector('.txt')); }
+})();
 const runToast = () => (S.scen === 'rand' ? `${GEN.name} · ${GEN.star.type} · ${runCode()}` : `New ${SCEN[S.scen].name} run · ${runCode()}`);
 function begin(seed, scen, tut, relaxed) {
   $('splash').hidden = true; startRun(seed, tut, scen); rememberScen(S.scen);
