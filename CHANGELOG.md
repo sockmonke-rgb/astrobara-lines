@@ -1,5 +1,10 @@
 # Changelog
 
+## 5.13
+- Ships run along the start screen's lines.
+- Tapping a button sends a line round it: orange when you pick something (a start, a tab, a speed, a shop pick, a term in talks), cyan when you do something (Play, Go, the bottom bar). Buttons that leave the start screen wait a beat for theirs.
+- Every card has the navy glow and runs on a cyan-and-orange line pair along its bottom edge, drawn in as it opens. A lost network's lines are dimmed.
+
 ## 5.12
 - The start screen wears the icon: a navy glow, stars, and the cyan and orange lines running behind a bigger capybara helmet. The lines draw themselves in when the game opens.
 
