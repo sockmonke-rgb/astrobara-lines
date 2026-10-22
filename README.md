@@ -1,10 +1,16 @@
 # Astrobara Lines
 
+[![Astrobara Lines: a capybara in a space helmet beside a freight network map of Earth–Moon space](screenshots/social.png)](https://sockmonke-rgb.github.io/astrobara-lines/)
+
+### [▶ Play Astrobara Lines](https://sockmonke-rgb.github.io/astrobara-lines/)
+
 A capybara-run freight network in the style of Mini Metro. Start in Earth–Moon space in 2027 and build shipping lines outward. Places open in the years real-world plans expect them, out past Saturn, and then through a wormhole to Proxima Centauri.
 
 It's one HTML file with no build step and no dependencies. It plays in a phone or desktop browser.
 
-**Play:** open `index.html`, or turn on GitHub Pages for this repo (Settings → Pages → Deploy from branch → `main`, `/ (root)`) and play at `https://sockmonke-rgb.github.io/astrobara-lines/`.
+**On your home screen:** on iPhone or iPad, open the game in Safari, tap Share, then **Add to Home Screen**. In Chrome on Android, use the ⋮ menu and **Add to Home screen**. The game gets its own capybara icon and opens full screen. iOS keeps a home-screen app's saves separate from Safari's, so a run started in one won't show up in the other.
+
+![A freight network around Earth and the Moon in 2043, with ships out on the lines](screenshots/network.jpg)
 
 ## How to play
 
@@ -39,6 +45,23 @@ Every run has a code like `SOL-HALO-417`. Type it on the start screen to play th
 - **Saving:** runs save in the browser's local storage. Inside the Claude app they also save to the app's cloud storage, and the leaderboard is shared with everyone the game is shared with. The standalone page keeps everything local.
 - **Leaderboard:** one row per run code, ranked by the furthest year reached.
 - **Awards:** 21 to earn, from your first delivery to keeping a network running until 2200.
+
+## Screenshots
+
+<table>
+  <tr>
+    <td width="50%"><img src="screenshots/outer.jpg" alt="The network stretched from Earth to Callisto in 2079"><br><sub>Out to Jupiter, 2079</sub></td>
+    <td width="50%"><img src="screenshots/proxima.jpg" alt="Lines around Proxima b and Alpha Centauri A and B in 2131"><br><sub>The Proxima start, 2131</sub></td>
+  </tr>
+  <tr>
+    <td><img src="screenshots/review.jpg" alt="The ten-year review card: Ten Years Strong, with the run's stats and budget chart"><br><sub>The ten-year review</sub></td>
+    <td><img src="screenshots/lost.jpg" alt="The Network Lost card, with a sad capybara, the run's stats and four awards"><br><sub>When a run ends</sub></td>
+  </tr>
+  <tr>
+    <td><img src="screenshots/start.jpg" alt="The start screen, with Earth–Moon, Proxima and Uncharted starts"><br><sub>The start screen</sub></td>
+    <td><img src="screenshots/awards.jpg" alt="The awards gallery, 7 of 21 earned"><br><sub>Awards</sub></td>
+  </tr>
+</table>
 
 ## Reporting a problem
 

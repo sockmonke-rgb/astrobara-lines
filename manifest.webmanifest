@@ -1,0 +1,30 @@
+{
+  "name": "Astrobara Lines",
+  "short_name": "Astro Lines",
+  "description": "Draw shipping lines for a capybara-run freight network, from Earth–Moon space in 2027 out past Saturn and through a wormhole to Proxima Centauri.",
+  "lang": "en",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#04060b",
+  "theme_color": "#04060b",
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

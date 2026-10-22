@@ -3,6 +3,7 @@
 ## 5.11
 - ≡ → Diag tab: copy a diagnostics report (version, device, frame rate, run state, recent log, errors) and, optionally, the save itself, compressed.
 - A clearer glass reflection on the capybara's helmet.
+- Add to Home Screen gives the game its own capybara icon and opens it full screen. Links to the game show a preview card.
 
 ## 5.10
 - Line ends are round pull knobs, set clear of the place they hang off. Grabbing the knob always extends that line; dragging from a place always starts a new one. The tag by your finger says which.
