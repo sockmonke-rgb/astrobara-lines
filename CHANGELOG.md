@@ -1,5 +1,10 @@
 # Changelog
 
+## 5.14
+- The start screen looks the same held upright or on its side. When there's less room it shrinks to fit rather than dropping the helmet and lines.
+- Show (and Repair) on the note at the top glides over to the place and zooms in on it. Fit brings the whole map back.
+- Buying in the shop loops the line round the thing you bought, not the first item in the row.
+
 ## 5.13
 - Ships run along the start screen's lines.
 - Tapping a button sends a line round it: orange when you pick something (a start, a tab, a speed, a shop pick, a term in talks), cyan when you do something (Play, Go, the bottom bar). Buttons that leave the start screen wait a beat for theirs.

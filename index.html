@@ -229,7 +229,7 @@ button.undo{border-color:var(--capy);color:#ffd2a8}
 .splash .lines path{fill:none;stroke-linecap:round;stroke-linejoin:round}
 .splash .lines .draw{transition:stroke-dashoffset 1.2s cubic-bezier(.3,.7,.2,1)}
 .splash .lines .ships{opacity:0;transition:opacity .6s ease 1.1s}.splash .lines .ships.on{opacity:1}
-@media (min-height:341px){#splash .card.splash{padding-bottom:36px}}
+#splash .card.splash{padding-bottom:36px;max-height:none;overflow:hidden;transform-origin:50% 50%;flex:none}
 .scen{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px}
 .scen button{height:auto;min-height:44px;flex-direction:column;align-items:flex-start;justify-content:center;gap:3px;padding:5px 13px}
 .scen button small{font:500 11px/1.1 var(--f-data);letter-spacing:0;color:var(--dim)}
@@ -424,8 +424,10 @@ button.link{height:auto;min-height:0;padding:2px 0;border:none;background:none;c
 .ledger .st-fic{color:#ffb3e6;border-color:rgba(240,140,210,.45)}
 .ledger .when{font:500 11px/1 var(--f-data);color:var(--dim)}
 .legend{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:4px 14px;margin-top:6px;font:400 13px/1.35 var(--f-body);color:#d3d9e5}
-@media (max-height:340px){.splash .big{display:none}.card h1{font-size:27px}.offer{min-height:0}}
-@media (max-height:420px){.splash .big{width:72px;height:72px}.splash .txt ul{gap:1px}.splash .row{margin-top:8px}}
+/* sized by the app's own box (#app.short / .low, set in layout()), so a phone held upright and one on its
+   side with the same room get the same layout */
+#app.short .card:not(.splash) h1{font-size:27px}#app.short .offer{min-height:0}
+#app.low .card:not(.splash) ul{gap:1px}
 /* 5.13: the icon's look carries through the rest of the UI. Every card gets the navy glow and runs on a
    cyan-and-orange line pair along its bottom edge, drawn in when the card opens (dimmed on a lost network).
    Tapped buttons get a line looped round them: orange for a choice, cyan for an action (see loopFx). */
@@ -494,7 +496,7 @@ button.link{height:auto;min-height:0;padding:2px 0;border:none;background:none;c
       <svg class="lines" id="splashLines" aria-hidden="true"></svg>
       <div class="big" aria-hidden="true"><svg viewBox="0 0 64 64"><use href="#capy"/></svg></div>
       <div class="txt">
-        <div class="eyebrow" id="splashEyebrow">Prototype 5.13</div>
+        <div class="eyebrow" id="splashEyebrow">Prototype 5.14</div>
         <h1>Astrobara Lines</h1>
         <p>Capybaras run the Lagrange Alliance’s freight. <b>Drag through places</b> to draw a shipping line. Freight shape = where it’s going. Too much waiting fills a red ring; a full ring ends the run.</p>
         <div class="scen" role="radiogroup" aria-label="Start in">
@@ -572,7 +574,7 @@ const $ = id => document.getElementById(id);
 const app = $('app'), cv = $('cv'), ctx = cv.getContext('2d');
 
 /* ================= Tuning ================= */
-const VERSION = '5.13';
+const VERSION = '5.14';
 const YEAR = 80, QTR = YEAR / 4, HORIZON = 10, Y0 = 2027, STEP = 1 / 30;
 const SOON = 30;   // seconds before a place opens that it, its countdown and the note all appear
 const SPEED = 80;                 // ship speed in map units per second
@@ -2370,9 +2372,10 @@ const isChoice = el => CHOICE_A.has(el.dataset.a) || /^(radio|tab|menuitemradio|
 // where a button sits in app coordinates; its layout size, so a pop animation under way doesn't shrink the loop
 function loopRect(el, choice) {
   if (!el || !el.isConnected || !el.offsetWidth) return null;
-  const r = el.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2, w = el.offsetWidth, h = el.offsetHeight;
-  const ax = rot ? cy : cx, ay = rot ? window.innerWidth - cx : cy;
-  return { x: ax - w / 2, y: ay - h / 2, w, h, br: parseFloat(getComputedStyle(el).borderTopLeftRadius) || 8, choice, cx, cy };
+  const r = el.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+  const pa = el.parentElement, pr = pa && pa.getBoundingClientRect(), k = pa && pa.offsetWidth ? (rot ? pr.height : pr.width) / pa.offsetWidth : 1;   // a scaled card
+  const w = el.offsetWidth * k, h = el.offsetHeight * k, ax = rot ? cy : cx, ay = rot ? window.innerWidth - cx : cy;
+  return { x: ax - w / 2, y: ay - h / 2, w, h, br: (parseFloat(getComputedStyle(el).borderTopLeftRadius) || 8) * k, choice, cx, cy };
 }
 function loopFx(q) {
   if (!q) return;
@@ -2399,10 +2402,16 @@ function onTap(root, fn) {
     const t = loopSeen.get(el), ok = (!t || lastFire - t > 350) && loopable(el); loopSeen.set(el, lastFire);
     const choice = ok && isChoice(el);
     // handlers often redraw what they're on, so find the button again afterwards by what it is
-    const key = ok ? `[data-a="${el.dataset.a}"]` + ['t', 'k', 'v', 'i', 'j'].map(k => el.dataset[k] != null ? `[data-${k}="${CSS.escape(el.dataset[k])}"]` : '').join('') : '';
+    const key = ok ? [...el.attributes].filter(at => at.name.startsWith('data-')).map(at => `[${at.name}="${CSS.escape(at.value)}"]`).join('') : '';
+    const r0 = ok && el.getBoundingClientRect();
     fn(el.dataset.a, el);
     if (!ok || el.classList.contains('no')) return;
-    const tgt = el.isConnected ? el : root.querySelector(key), q = loopRect(tgt, choice);
+    let tgt = el;
+    if (!el.isConnected) {
+      const near = b => { const r = b.getBoundingClientRect(); return Math.hypot(r.left + r.width / 2 - r0.left - r0.width / 2, r.top + r.height / 2 - r0.top - r0.height / 2); };
+      tgt = [...root.querySelectorAll(key)].sort((a, b) => near(a) - near(b))[0];
+    }
+    const q = loopRect(tgt, choice);
     // only if the tap took and the button is still what's showing there
     const top = q && document.elementFromPoint(q.cx, q.cy);
     if (top && (top === tgt || tgt.contains(top))) loopFx(q);
@@ -2447,6 +2456,11 @@ function camTarget() {
   return t;
 }
 function snapCam() { camManual = false; cam = camTarget(); fitCam(); }
+// Glide in on a place and zoom to it (the banner's Show); Fit brings the whole map back.
+function zoomTo(i) {
+  const { side, top, rw, rh } = mapBox();
+  jump = { a: worldAt({ x: side + rw / 2, y: top + rh / 2 }), b: { x: PL[i].x, y: PL[i].y }, t: 0, s0: sc, s1: Math.max(sc, sc0 * 1.9) };
+}
 // Is place i on the map you're looking at?
 const inView = i => sysOf(i) === S.view;
 const lineView = L => sysOf(L.stops[0]) === S.view;
@@ -2494,10 +2508,11 @@ function layout() {
   rot = ih > iw; W = rot ? ih : iw; H = rot ? iw : ih;
   app.style.width = W + 'px'; app.style.height = H + 'px';
   app.style.transform = rot ? 'rotate(90deg) translateY(-100%)' : 'none';
-  app.classList.toggle('rot', rot); app.classList.toggle('narrow', W < 700);
+  app.classList.toggle('rot', rot); app.classList.toggle('narrow', W < 700); app.classList.toggle('short', H <= 340); app.classList.toggle('low', H <= 420);
   dpr = Math.min(2.5, window.devicePixelRatio || 1);
   cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); cv.style.width = W + 'px'; cv.style.height = H + 'px';
   trackSc = 0; fitCam(); barTop = $('bar').offsetTop || H - 56; plxPrev = null;
+  if (typeof splashFit === 'function') splashFit();
 }
 const X = v => ox + v * sc, Y = v => oy + v * sc;
 const lp = e => (rot ? { x: e.clientY, y: window.innerWidth - e.clientX } : { x: e.clientX, y: e.clientY });
@@ -3051,7 +3066,7 @@ onTap($('banner'), a => {
   if (a === 'bGo' && bannerGo) {
     const g = bannerGo;
     if (g.talk != null) openTalks(g.talk);
-    else if (g.place != null) { if (!inView(g.place)) setSys(sysOf(g.place)); select('place', g.place); }
+    else if (g.place != null) { if (!inView(g.place)) setSys(sysOf(g.place)); select('place', g.place); zoomTo(g.place); }
   }
 });
 
@@ -3905,7 +3920,7 @@ function frame(ts) {
   // tapping an edge arrow glides the view over to that place
   if (jump && S) {
     jump.t = Math.min(1, jump.t + rdt / 0.4); const e = 1 - Math.pow(1 - jump.t, 3), { side, top, rw, rh } = mapBox();
-    setView(sc, { x: side + rw / 2, y: top + rh / 2 }, { x: jump.a.x + (jump.b.x - jump.a.x) * e, y: jump.a.y + (jump.b.y - jump.a.y) * e });
+    setView(jump.s1 ? jump.s0 + (jump.s1 - jump.s0) * e : sc, { x: side + rw / 2, y: top + rh / 2 }, { x: jump.a.x + (jump.b.x - jump.a.x) * e, y: jump.a.y + (jump.b.y - jump.a.y) * e });
     if (jump.t >= 1) jump = null;
   }
   // ease the camera toward its target, but never while a finger is drawing or after you zoomed by hand
@@ -3956,8 +3971,17 @@ function splashUI() {
 const SPLASH_STARS = (() => { let a = 7; const rnd = () => ((a = (a * 16807) % 2147483647) / 2147483647);
   return Array.from({ length: 44 }, () => [rnd(), rnd(), .7 + rnd() * .6, .2 + rnd() * .38]); })();
 let splashFonts = false, splashAnimated = false, splashKey = '';
+// The start card keeps its full design and shrinks to fit when the app is short (a phone on its side, with
+// the host's bar across the top), rather than switching to a cut-down layout.
+function splashFit() {
+  const ov = $('splash'), card = ov && ov.querySelector('.card.splash'); if (!card || ov.hidden) return;
+  const cs = getComputedStyle(ov), aw = ov.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight), ah = ov.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+  const k = Math.min(1, aw / card.offsetWidth, ah / card.offsetHeight);
+  card.style.transform = k < .999 ? `scale(${k.toFixed(4)})` : '';
+}
 function splashLines() {
   const svg = $('splashLines'); if (!svg || $('splash').hidden) return;
+  splashFit();
   const card = svg.parentNode, big = card.querySelector('.big'), txt = card.querySelector('.txt');
   svg.setAttribute('height', 0);
   const W = card.clientWidth, H = Math.max(card.clientHeight, card.scrollHeight);
