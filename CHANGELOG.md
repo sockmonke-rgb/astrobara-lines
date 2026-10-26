@@ -1,5 +1,9 @@
 # Changelog
 
+## 5.19
+- A place overflowing is now the top note, ahead of storms and hints. It's red, counts down the seconds before the run ends, and has Show to take you there.
+- When an overflow starts somewhere you could miss it (in another system, or anywhere at 3× and up), the game pauses, as it does for new places. Turn it off in the speed menu.
+
 ## 5.18
 - Talks show your budget in large figures at the top, next to the countdown, so you can see it before you pay.
 

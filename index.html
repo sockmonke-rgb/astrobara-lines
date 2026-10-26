@@ -511,7 +511,7 @@ button.link{height:auto;min-height:0;padding:2px 0;border:none;background:none;c
       <svg class="lines" id="splashLines" aria-hidden="true"></svg>
       <div class="big" aria-hidden="true"><svg viewBox="0 0 64 64"><use href="#capy"/></svg></div>
       <div class="txt">
-        <div class="eyebrow" id="splashEyebrow">Prototype 5.18</div>
+        <div class="eyebrow" id="splashEyebrow">Prototype 5.19</div>
         <h1>Astrobara Lines</h1>
         <p>Capybaras run the Lagrange Alliance’s freight. <b>Drag through places</b> to draw a shipping line. Freight shape = where it’s going. Too much waiting fills a red ring; a full ring ends the run.</p>
         <div class="scen" role="radiogroup" aria-label="Start in">
@@ -589,7 +589,7 @@ const $ = id => document.getElementById(id);
 const app = $('app'), cv = $('cv'), ctx = cv.getContext('2d');
 
 /* ================= Tuning ================= */
-const VERSION = '5.18';
+const VERSION = '5.19';
 const YEAR = 80, QTR = YEAR / 4, HORIZON = 10, Y0 = 2027, STEP = 1 / 30;
 const SOON = 30;   // seconds before a place opens that it, its countdown and the note all appear
 const SPEED = 80;                 // ship speed in map units per second
@@ -1325,6 +1325,9 @@ function step(dt) {
       if (S.stat && !S.stat.first && !S.of[i]) S.stat.first = { id: PL[i].id, t: S.t };
       const was = S.of[i];
       S.of[i] += dt / OVERFLOW;
+      // 5.19: an overflow you could miss (in another system, or at 3× and up) pauses the game, once each time it starts
+      if (!was && !S.paused && willPause() && (!inView(i) || S.speed >= 3)) { S.paused = true; S.autoPaused = i; lastPlay = null; }
+      if (!was && !S.auto) log(`${placeName(i)} is overflowing: ${S.Q[i].length} loads waiting with room for ${room(i)}. Clear it within ${OVERFLOW}s or the run ends.`, 'bad');
       if (S.stat && was < .6 && S.of[i] >= .6) S.stat.close++;
       if (S.stat && S.of[i] >= .9) (S.stat.hi || (S.stat.hi = {}))[i] = 1;
       if (S.of[i] >= 1) { if (S.sandbox) S.of[i] = 1; else { fail(i); return; } }
@@ -3022,8 +3025,14 @@ function banner() {
   let cls = '', html = '', cd = '', x = false, go = null;
   // while the game is paused for something (a new place, a vote), its note shows even over a storm warning
   const held = S.paused && S.autoPaused != null && S.hint && ['new', 'gate', 'worm', 'same', 'talks'].includes(S.hint.id);
+  // 5.19: a place overflowing is how a run ends, so it outranks every other note: red, with the time left and Show
+  const ov = S.started && !S.tut && !S.over ? overflowing() : -1;
+  if (ov >= 0) {
+    cls = 'live'; html = `${shp(S.shape[ov])} <b>${esc(placeName(ov))}</b> overflowing ${S.Q[ov].length}/${room(ov)} · add ships, pods or a depot${S.paused && S.autoPaused === ov ? ' · paused' : ''}${via(ov)}`;
+    cd = Math.max(0, Math.ceil((1 - S.of[ov]) * OVERFLOW)) + 's'; go = { label: 'Show', place: ov };
+  }
   // a storm or debris you're already protected from needs no banner
-  if (h && !held && !quietHaz(h)) {
+  else if (h && !held && !quietHaz(h)) {
     cls = h.phase; html = `<b>${hazIcon(h)} ${esc(h.title)}</b>${h.early ? ' ' + gi('iSensor') : ''} ${h.phase === 'warn' || h.type === 'drifter' ? hazWhat(h) : h.type === 'surge' ? '' : hazAction(h)}`;
     cd = (h.phase === 'warn' ? '' : 'now ') + Math.max(0, Math.ceil((h.phase === 'warn' ? h.at : h.until) - S.t)) + 's';
   } else if (S.hint) { cls = 'hint'; html = S.hint.html; x = S.hint.id !== 'start'; go = S.hint.go || null; }
@@ -3037,6 +3046,8 @@ function banner() {
   if ($('bCd').textContent !== cd) $('bCd').textContent = cd;
   if (S.hint && S.hint.id !== 'start' && S.clock - S.hint.t > 30) S.hint = null;
 }
+// The place closest to ending the run: overflowing now, its red ring filling.
+function overflowing() { let w = -1; for (let i = 0; i < NP; i++) if (S.open[i] && S.of[i] > 0 && S.Q[i].length > room(i) && !rebelNow(i) && (w < 0 || S.of[i] > S.of[w])) w = i; return w; }
 // What to do right now, in order of urgency; otherwise what's coming and when.
 function nextOpening() { let best = -1; for (let i = 0; i < NP; i++) if (!S.open[i] && (best < 0 || S.at[i] < S.at[best])) best = i; return best; }
 const via = i => (sysOf(i) !== S.view ? ` · ${sysLabel(sysOf(i))}` : '');
