@@ -272,6 +272,7 @@ button.undo{border-color:var(--capy);color:#ffd2a8}
 .card.split .mhead{flex:none;display:flex;align-items:flex-end;justify-content:space-between;gap:12px;padding:10px 18px 9px;border-bottom:1px solid var(--rule);background:#0b101b}
 .mfund{position:relative;display:flex;align-items:baseline;gap:8px;margin-top:3px}
 .mfund b{font:700 24px/1.05 var(--f-data);color:var(--capy);font-variant-numeric:tabular-nums}
+.mfunds{display:flex;gap:24px;flex-wrap:wrap;align-items:baseline}
 .mnote{text-align:right;line-height:1.45}.mnote .gi{width:13px;height:13px;vertical-align:-2px}
 .card.split .foot .credit{flex:1;min-width:0;line-height:1.35}
 .down{animation:fundDown .7s}.up{animation:fundUp .7s}
@@ -510,7 +511,7 @@ button.link{height:auto;min-height:0;padding:2px 0;border:none;background:none;c
       <svg class="lines" id="splashLines" aria-hidden="true"></svg>
       <div class="big" aria-hidden="true"><svg viewBox="0 0 64 64"><use href="#capy"/></svg></div>
       <div class="txt">
-        <div class="eyebrow" id="splashEyebrow">Prototype 5.17</div>
+        <div class="eyebrow" id="splashEyebrow">Prototype 5.18</div>
         <h1>Astrobara Lines</h1>
         <p>Capybaras run the Lagrange Alliance’s freight. <b>Drag through places</b> to draw a shipping line. Freight shape = where it’s going. Too much waiting fills a red ring; a full ring ends the run.</p>
         <div class="scen" role="radiogroup" aria-label="Start in">
@@ -588,7 +589,7 @@ const $ = id => document.getElementById(id);
 const app = $('app'), cv = $('cv'), ctx = cv.getContext('2d');
 
 /* ================= Tuning ================= */
-const VERSION = '5.17';
+const VERSION = '5.18';
 const YEAR = 80, QTR = YEAR / 4, HORIZON = 10, Y0 = 2027, STEP = 1 / 30;
 const SOON = 30;   // seconds before a place opens that it, its countdown and the note all appear
 const SPEED = 80;                 // ship speed in map units per second
@@ -1616,8 +1617,9 @@ function talksHTML(i) {
   const d = S.demand[i], dNo = d.type === 'line' && S.lines.length >= S.inv.lines ? 'No free line' : d.type === 'pay' && S.fund < Math.round(negotiateCost() * 1.5) ? `Need ${fmt(Math.round(negotiateCost() * 1.5))}` : '';
   const dIcon = d.type === 'pay' ? 'iFlag' : 'iLine', dSw = d.type === 'extend' ? `<span class="sw" style="background:${S.lines.find(x => x.id === d.L).color}"></span>` : '';
   return `<div class="mhead"><div class="col"><div class="eyebrow">Talks · ${esc(placeName(i))}</div>
-      <div class="mfund"><span class="lbl">${reb ? 'Independent' : 'Unrest'}</span><b style="color:#ffb27a">${reb ? Math.ceil(S.rebel[i] - S.t) + 's' : Math.round(S.unrest[i] * 100) + '%'}</b></div></div>
-      <span class="credit mnote">Budget ${fmt(S.fund)}<br>Every refusal makes them angrier</span></div>
+      <div class="mfunds"><div class="mfund"><span class="lbl">${reb ? 'Independent' : 'Unrest'}</span><b style="color:#ffb27a">${reb ? Math.ceil(S.rebel[i] - S.t) + 's' : Math.round(S.unrest[i] * 100) + '%'}</b></div>
+        <div class="mfund"><span class="lbl">Budget</span><b>${fmt(S.fund)}</b></div></div></div>
+      <span class="credit mnote">Every refusal<br>makes them angrier</span></div>
     <div class="lbody"><div class="eyebrow">They voted for</div>
       <button class="term demand" data-a="deal" data-k="vote" data-i="${i}" ${dNo ? 'aria-disabled="true"' : ''}>${ICON(dIcon)}<span class="ot"><b>${dSw}${esc(demandText(d))}</b><span>Give them this and they’ll stay calm for two periods. They won’t refuse their own demand.</span>${dNo ? `<em>${dNo}</em>` : ''}</span></button>
       <div class="eyebrow" style="margin-top:12px">Or offer something else · they may refuse</div>

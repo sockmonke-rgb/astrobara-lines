@@ -1,5 +1,8 @@
 # Changelog
 
+## 5.18
+- Talks show your budget in large figures at the top, next to the countdown, so you can see it before you pay.
+
 ## 5.17
 - With a mouse, resting on a button, the top strip, a place, a line, a line's end or a sensor shows a note saying what it is and what a tap does. The cursor changes over things you can tap or drag. Phones and tablets are unchanged.
 
