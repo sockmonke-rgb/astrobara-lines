@@ -34,7 +34,7 @@ Every run has a code like `SOL-HALO-417`. Type it on the start screen to play th
 
 - **Touch:** drag to draw, drag empty space to pan, pinch to zoom. The game also plays with the phone held upright, turned on its side.
 - **Desktop:**
-  - Mouse: the same as touch, with the scroll wheel to zoom.
+  - Mouse: the same as touch, with the scroll wheel to zoom. Rest the mouse on a button, a place, a line or a sensor to see what it is.
   - <kbd>Space</kbd> plays or pauses.
   - <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> <kbd>5</kbd> set the speed (5× asks first).
   - <kbd>Esc</kbd> closes the bar along the bottom.

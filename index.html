@@ -453,6 +453,14 @@ button.link{height:auto;min-height:0;padding:2px 0;border:none;background:none;c
 #loops{position:absolute;inset:0;z-index:80;pointer-events:none;overflow:visible}
 #loops svg{position:absolute;overflow:visible}
 #loops path{fill:none;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
+/* 5.17: with a mouse, resting on a button, a place, a line or a sensor says what it is */
+#tip{position:absolute;z-index:85;max-width:300px;box-sizing:border-box;padding:6px 10px;border-radius:9px;pointer-events:none;
+  background:rgba(8,12,21,.97);border:1px solid rgba(134,191,226,.32);box-shadow:0 6px 18px rgba(0,0,0,.5);font:500 12px/1.4 var(--f-body);color:#d3d9e5}
+#tip b{color:var(--ink);font-weight:600}
+#tip .shp{width:12px;height:12px;vertical-align:-1px}#tip .gi{width:14px;height:14px;vertical-align:-3px}
+#tip .sw{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px;vertical-align:-1px}
+#tip .k{display:inline-block;margin-left:4px;padding:0 4px;border:1px solid var(--rule);border-radius:4px;font:500 10.5px/1.45 var(--f-data);color:var(--dim)}
+@media (hover:hover) and (pointer:fine){#hud [data-tip]{pointer-events:auto;cursor:default}}
 @media (prefers-reduced-motion:reduce){.card{animation:none}}
 @media (prefers-reduced-motion:reduce){#toast{transition:none}}
 </style>
@@ -463,12 +471,12 @@ button.link{height:auto;min-height:0;padding:2px 0;border:none;background:none;c
   <canvas id="cv"></canvas>
 
   <div id="hud">
-    <div class="blk fund">
+    <div class="blk fund" data-tip="<b>Budget</b> · deliveries earn it; the Alliance Shop, repairs and talks spend it">
       <div class="av" aria-hidden="true"><svg viewBox="0 0 64 64"><use href="#capy"/></svg></div>
       <div class="col" id="hFundBox"><span class="lbl">Budget</span><span class="num" id="hFund">$100M</span></div>
     </div>
-    <div class="col"><span class="num" id="hDate">Q1 2027</span><span class="sub" id="hYear">Year 1 of 10</span></div>
-    <div class="col right"><span class="sub" id="hMeet"></span><span class="sub" id="hBoom"></span></div>
+    <div class="col" data-tip="<b>The date</b> · a year per period at first; after the ten-year review the calendar speeds up"><span class="num" id="hDate">Q1 2027</span><span class="sub" id="hYear">Year 1 of 10</span></div>
+    <div class="col right" data-tip="<b>Alliance Shop</b> · the next visit brings a free ship and a pick · ★ a boom: deliveries of that kind pay double"><span class="sub" id="hMeet"></span><span class="sub" id="hBoom"></span></div>
     <div id="prog"></div>
   </div>
 
@@ -502,7 +510,7 @@ button.link{height:auto;min-height:0;padding:2px 0;border:none;background:none;c
       <svg class="lines" id="splashLines" aria-hidden="true"></svg>
       <div class="big" aria-hidden="true"><svg viewBox="0 0 64 64"><use href="#capy"/></svg></div>
       <div class="txt">
-        <div class="eyebrow" id="splashEyebrow">Prototype 5.16</div>
+        <div class="eyebrow" id="splashEyebrow">Prototype 5.17</div>
         <h1>Astrobara Lines</h1>
         <p>Capybaras run the Lagrange Alliance’s freight. <b>Drag through places</b> to draw a shipping line. Freight shape = where it’s going. Too much waiting fills a red ring; a full ring ends the run.</p>
         <div class="scen" role="radiogroup" aria-label="Start in">
@@ -580,7 +588,7 @@ const $ = id => document.getElementById(id);
 const app = $('app'), cv = $('cv'), ctx = cv.getContext('2d');
 
 /* ================= Tuning ================= */
-const VERSION = '5.16';
+const VERSION = '5.17';
 const YEAR = 80, QTR = YEAR / 4, HORIZON = 10, Y0 = 2027, STEP = 1 / 30;
 const SOON = 30;   // seconds before a place opens that it, its countdown and the note all appear
 const SPEED = 80;                 // ship speed in map units per second
@@ -3060,6 +3068,92 @@ const TRAY_HELP = {
   docks: () => `${gi('iDock')} ${S.inv.docks || 0} spare · tap a place, Dock`,
   shields: () => `${gi('iShield')} ${S.inv.shields} spare · tap a place, Protect`,
 };
+/* ================= Hover tips =================
+   Only with a mouse (and not when the app is turned for a phone held upright): rest on a button, a place,
+   a line, a line's end or a sensor, and a note says what it is and what a tap does. */
+const tipEl = document.createElement('div'); tipEl.id = 'tip'; tipEl.hidden = true; app.appendChild(tipEl);
+const canHover = () => !rot && matchMedia('(hover: hover) and (pointer: fine)').matches;
+let tipFor = null, tipTimer = 0, tipAt = null;
+function hideTip() { tipFor = null; clearTimeout(tipTimer); tipEl.hidden = true; }
+// put the note by a point (the mouse), or above or below a box (a button), kept inside the app
+function placeTip(html, at) {
+  tipEl.innerHTML = html; tipEl.hidden = false;
+  const w = tipEl.offsetWidth, h = tipEl.offsetHeight;
+  let x, y;
+  if (at.box) { const b = at.box; x = b.x + b.w / 2 - w / 2; y = b.y > H / 2 ? b.y - h - 8 : b.y + b.h + 8; }
+  else { x = at.x + 14; y = at.y + 18; if (x + w > W - 8) x = at.x - w - 12; if (y + h > H - 62) y = at.y - h - 12; }
+  tipEl.style.left = Math.max(8, Math.min(W - w - 8, x)) + 'px'; tipEl.style.top = Math.max(8, Math.min(H - h - 8, y)) + 'px';
+}
+const CTRL_TIP = {
+  undo: () => 'Undo your last change to a line',
+  sys: () => reachSys().length > 2 ? 'Switch star system: pick from the list' : `Switch to ${esc(sysName(sysNext()))}`,
+  fit: () => 'Fit the whole map in view',
+  play: () => `${S && S.paused ? 'Play' : 'Pause'} <span class="k">Space</span>`,
+  speed: () => 'Game speed, and pausing for new places and talks <span class="k">1</span><span class="k">2</span><span class="k">3</span><span class="k">5</span>',
+  log: () => 'Timeline, log, how it works and diagnostics',
+};
+function tipText(el) {
+  if (el.dataset.tip) return el.dataset.tip;
+  const a = el.dataset.a;
+  if (el.closest('#tray') && TRAY_HELP[a] && S) return `<b>${esc(el.getAttribute('aria-label') || '')}</b> · ${TRAY_HELP[a]()}${a === 'lines' ? ' · drag through places to draw one' : ''}`;
+  if (el.closest('#ctrls') && CTRL_TIP[a]) return CTRL_TIP[a]();
+  const al = el.getAttribute('aria-label');
+  return al && al.trim() !== el.textContent.trim() ? esc(al) : null;
+}
+app.addEventListener('pointerover', e => {
+  if (e.pointerType !== 'mouse' || !canHover()) return;
+  const el = e.target.closest('[data-tip], button, [role=button]');
+  if (!el || el === cv || el === tipFor) return;
+  const html = tipText(el); if (!html) { hideTip(); return; }
+  hideTip(); tipFor = el;
+  tipTimer = setTimeout(() => {
+    if (tipFor !== el || !el.isConnected || !el.offsetWidth) return;
+    const r = el.getBoundingClientRect(); placeTip(tipText(el) || html, { box: { x: r.left, y: r.top, w: r.width, h: r.height } });
+  }, 380);
+});
+app.addEventListener('pointerout', e => { if (tipFor && tipFor.nodeType && !(e.relatedTarget && tipFor.contains(e.relatedTarget))) hideTip(); });
+app.addEventListener('pointerdown', hideTip, true);
+// what's under the mouse on the map
+function tipPlace(i) {
+  const s = S.shape[i], sh = SHAPES[s];
+  if (PL[i].rate === 0) return `${shp('worm')} <b>${esc(placeName(i))}</b> · freight dropped here comes out at ${esc(sysName(sysOf(mouthOther(i))))}${onLines(i) ? '' : '<br>not on a line yet · drag from it to start one'}`;
+  const bits = [`${S.Q[i].length}/${room(i)} waiting`, `${fmt(sh.pay)}/load`];
+  if (S.unrest && rebelNow(i)) bits.push('independent · tap to negotiate');
+  else if (S.unrest && S.unrest[i] >= .3) bits.push('restless');
+  if (S.dmg[i]) bits.push('damaged · tap to repair');
+  if (S.shield[i]) bits.push('protected');
+  if (S.depot[i]) bits.push('depot');
+  if (S.fastDock && S.fastDock[i]) bits.push('fast dock');
+  return `${shp(s)} <b>${esc(placeName(i))}</b> · ${sh.role}<br>${bits.join(' · ')}<br>${onLines(i) ? 'tap for a depot, shield or repair · drag to draw a line' : 'not on a line yet · drag from it to start one'}`;
+}
+function mapTip(p) {
+  const pin = camManual ? pins.find(q => Math.hypot(q.x - p.x, q.y - p.y) < 22) : null;
+  if (pin) return { key: 'pin' + pin.i, cur: 'pointer', html: `${shp(S.shape[pin.i])} <b>${esc(placeName(pin.i))}</b> is off screen · tap to glide there` };
+  let hb = null, hd = 24; for (const h of handles()) { const d = Math.hypot(h.x - p.x, h.y - p.y); if (d < hd) { hd = d; hb = h; } }
+  const pi = placeAt(p, 26), pd = pi >= 0 ? Math.hypot(X(PL[pi].x) - p.x, Y(PL[pi].y) - p.y) : Infinity;
+  if (hb && hd < pd && !(pi >= 0 && pd <= R(pi) + 4)) return { key: 'k' + hb.L.id + hb.end, cur: 'grab', html: `<span class="sw" style="background:${hb.L.color}"></span><b>${hb.L.name} line</b>, its end · drag to add stops, or back along the line to cut them` };
+  if (pi >= 0) return { key: 'p' + pi, cur: 'pointer', html: tipPlace(pi) };
+  const k = sensorAt(p);
+  if (k >= 0) {
+    const z = SENSORS[k], owned = S.sensor[k], down = owned && !sensorOn(k), soon = cal(S.t) < sensorFrom(k);
+    return { key: 's' + k, cur: 'pointer', html: `${gi('iSensor')} <b>${esc(z.name)}</b> · ${down ? 'knocked out by a storm · tap to repair' : owned ? 'on' : soon ? `for sale from ${sensorFrom(k)}` : `${fmt(z.cost)} · tap to buy`}<br>${z.kind === 'signal' ? 'hears unknown signals' : 'storm warnings'} ${z.bonus}s sooner · it carries no freight` };
+  }
+  const L = lineAt(p);
+  if (L) return { key: 'L' + L.id, cur: 'pointer', html: `<span class="sw" style="background:${L.color}"></span><b>${L.name} line</b> · ${L.stops.map(i => esc(placeName(i))).join(' → ')}${L.loop ? ' → back' : ''}<br>${L.ships.length} ship${L.ships.length === 1 ? '' : 's'} · tap to add ships or pods, or to remove it` };
+  return null;
+}
+function hoverMap(e) {
+  if (e.pointerType !== 'mouse' || e.buttons || !canHover() || !S || drag || pinch || !$('modal').hidden || !$('splash').hidden || !$('board').hidden) { if (tipFor && !tipFor.nodeType) hideTip(); cv.style.cursor = ''; return; }
+  const p = lp(e), t = mapTip(p); tipAt = p;
+  cv.style.cursor = t ? t.cur : '';
+  if (!t) { if (tipFor && !tipFor.nodeType) hideTip(); return; }
+  if (tipFor === t.key) { if (!tipEl.hidden) placeTip(t.html, p); return; }
+  hideTip(); tipFor = t.key;
+  tipTimer = setTimeout(() => { if (tipFor !== t.key) return; const u = mapTip(tipAt); if (u && u.key === t.key) placeTip(u.html, tipAt); }, 260);
+}
+cv.addEventListener('pointermove', hoverMap);
+cv.addEventListener('pointerleave', () => { if (tipFor && !tipFor.nodeType) hideTip(); cv.style.cursor = ''; });
+cv.addEventListener('wheel', hideTip, { passive: true });
 onTap($('bar'), a => {
   const wasSys = menuKind === 'sys' && !$('speedMenu').hidden;
   if (a !== 'speed') toggleSpeedMenu(false);

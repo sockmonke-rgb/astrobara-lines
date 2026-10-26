@@ -1,5 +1,8 @@
 # Changelog
 
+## 5.17
+- With a mouse, resting on a button, the top strip, a place, a line, a line's end or a sensor shows a note saying what it is and what a tap does. The cursor changes over things you can tap or drag. Phones and tablets are unchanged.
+
 ## 5.16
 - Earth–Moon runs get a second wormhole: in 2200 the Rift opens at Proxima, out to a random uncharted system with its own star, places and visitors. It brings 2 lines and 2 ships, and room for 3 more lines (up to 15).
 - With three systems, ⇄ opens a short list of them, each marked with what needs you there.
