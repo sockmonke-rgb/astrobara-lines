@@ -201,6 +201,7 @@ button.undo{border-color:var(--capy);color:#ffd2a8}
 #sel .ic .gi{margin:0}
 #sel button.on{border-color:rgba(127,211,255,.75);background:rgba(127,211,255,.14);color:#cdeeff}
 #sel button small{font:600 11px/1 var(--f-data);color:var(--dim);margin-left:2px}
+#sel button.primary small{color:#5b3510}
 #sel .x{min-width:40px;padding:0;font-size:22px;background:transparent;border-color:transparent;color:var(--dim)}
 #sel .ask{font:500 12.5px/1.25 var(--f-body);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:1}
 #app.narrow #sel button{padding:0 6px;font-size:13px}
@@ -511,7 +512,7 @@ button.link{height:auto;min-height:0;padding:2px 0;border:none;background:none;c
       <svg class="lines" id="splashLines" aria-hidden="true"></svg>
       <div class="big" aria-hidden="true"><svg viewBox="0 0 64 64"><use href="#capy"/></svg></div>
       <div class="txt">
-        <div class="eyebrow" id="splashEyebrow">Prototype 5.21</div>
+        <div class="eyebrow" id="splashEyebrow">Prototype 5.22</div>
         <h1>Astrobara Lines</h1>
         <p>Capybaras run the Lagrange Alliance’s freight. <b>Drag through places</b> to draw a shipping line. Freight shape = where it’s going. Too much waiting fills a red ring; a full ring ends the run.</p>
         <div class="scen" role="radiogroup" aria-label="Start in">
@@ -589,7 +590,7 @@ const $ = id => document.getElementById(id);
 const app = $('app'), cv = $('cv'), ctx = cv.getContext('2d');
 
 /* ================= Tuning ================= */
-const VERSION = '5.21';
+const VERSION = '5.22';
 const YEAR = 80, QTR = YEAR / 4, HORIZON = 10, Y0 = 2027, STEP = 1 / 30;
 const SOON = 30;   // seconds before a place opens that it, its countdown and the note all appear
 const SPEED = 80;                 // ship speed in map units per second
@@ -1769,7 +1770,23 @@ function breakdowns() {
   let r = S.rnd() * tot, pick = pool[0]; for (const e of pool) { r -= e[3]; if (r <= 0) { pick = e; break; } }
   const [L, sh, k] = pick; sh.brk = S.t + BRK_WARN;
   log(`${L.name} ship ${k + 1} is due a breakdown: in ${BRK_WARN}s it stops for ${BRK_DUR}s.`, 'warn');
-  if (!S.auto) toast(`🔧 <b>${L.name} ship ${k + 1}</b> breaks down in ${BRK_WARN}s · stops ${BRK_DUR}s${sysOf(L.stops[0]) !== S.view ? ' · ' + esc(sysLabel(sysOf(L.stops[0]))) : ''}`, 4500);
+  if (!S.auto) toast(`🔧 <b>${L.name} ship ${k + 1}</b> breaks down in ${BRK_WARN}s · tap its line, Repair${sysOf(L.stops[0]) !== S.view ? ' · ' + esc(sysLabel(sysOf(L.stops[0]))) : ''}`, 4500);
+}
+// 5.22: a ship that's due a breakdown, or broken down, can be repaired from its line's bar (or the note's Repair)
+// at the same price as a storm-damaged place. Repairing during the warning heads it off. Or just wait it out.
+function shipTrouble(L) { return L.ships.filter(x => x.brk || x.fix); }
+function fixShips(L) {
+  const bad = shipTrouble(L); if (!bad.length) return 'Running fine';
+  const c = repairCost(); if (S.fund < c) return `Need ${fmt(c)}`;
+  S.fund -= c; S.hist.push({ t: S.t, fund: S.fund }); fundFx(-c);
+  for (const x of bad) { x.brk = 0; x.fix = 0; }
+  log(`You repaired the ${L.name.toLowerCase()} line’s ship for ${fmt(c)}.`, ''); return null;
+}
+// the line whose ship trouble is most pressing: a breakdown under way first, then the soonest due
+function worstTrouble() {
+  let best = null;
+  for (const L of S.lines) for (const x of shipTrouble(L)) { const t = x.fix ? x.fix - S.t - 1e3 : x.brk - S.t; if (!best || t < best.t) best = { L, k: L.ships.indexOf(x), x, t }; }
+  return best;
 }
 // In an uncharted system some warnings are just "a signal": it turns out to be a craft that stops
 // whatever lines it drifts over, a derelict worth salvaging, or visitors who come to look.
@@ -2742,6 +2759,9 @@ function lineAt(p) {
   return best;
 }
 let drag = null, pinch = null, pins = [], jump = null;
+// 5.22: how near a selected line's knob a finger can land and still grab it (a usual knob: 24)
+const GRAB = 46;
+const selLine = () => (sel && sel.type === 'line' && S ? S.lines.find(L => L.id === sel.id && !L.loop && lineView(L)) || null : null);
 const touches = new Map();
 cv.addEventListener('pointerdown', e => {
   if (!S || (S.over && !S.sandbox) || !$('modal').hidden || !$('splash').hidden) return;
@@ -2765,6 +2785,19 @@ cv.addEventListener('pointerdown', e => {
   // a knob is grabbed when the finger is nearer it than the place it hangs off (and not on the place itself)
   let hb = null, hd = 24; for (const h of handles()) { const d = Math.hypot(h.x - p.x, h.y - p.y); if (d < hd) { hd = d; hb = h; } }
   const pi = placeAt(p, 26), pd = pi >= 0 ? Math.hypot(X(PL[pi].x) - p.x, Y(PL[pi].y) - p.y) : Infinity;
+  // 5.22: with a line selected, its ends are easy to grab: anywhere near either knob, or the place it ends at.
+  // (A tap on that place still opens the place.)
+  const SL = selLine();
+  if (SL) {
+    const ends = { head: SL.stops[0], tail: SL.stops[SL.stops.length - 1] }, onOther = pi >= 0 && pd <= R(pi) + 4 && pi !== ends.head && pi !== ends.tail;
+    // right on the end place: a drag extends, a tap opens the place. Otherwise near a knob: grab it.
+    const onEnd = pi >= 0 && pd <= R(pi) + 4 && (pi === ends.head || pi === ends.tail);
+    let g = null, gd = GRAB, viaPlace = false;
+    if (onEnd) { g = handles().find(h => h.L === SL && h.end === (pi === ends.tail ? 'tail' : 'head')) || null; viaPlace = !!g; }
+    else if (!onOther) for (const h of handles()) if (h.L === SL) { const d = Math.hypot(h.x - p.x, h.y - p.y); if (d < gd) { gd = d; g = h; } }
+    if (!g && pi >= 0 && (pi === ends.head || pi === ends.tail)) { g = handles().find(h => h.L === SL && h.end === (pi === ends.tail ? 'tail' : 'head')) || null; viaPlace = !!g; }
+    if (g) { drag = { mode: 'extend', L: SL, end: g.end, stops: g.end === 'tail' ? SL.stops.slice() : SL.stops.slice().reverse(), id: e.pointerId, p, x0: p.x, y0: p.y, moved: false, startPlace: pi, handle: g, viaPlace }; return; }
+  }
   if (hb && hd < pd && !(pi >= 0 && pd <= R(pi) + 4)) drag = { mode: 'extend', L: hb.L, end: hb.end, stops: hb.end === 'tail' ? hb.L.stops.slice() : hb.L.stops.slice().reverse() };
   else if (pi >= 0 && S.lines.length >= S.inv.lines && endAt(pi, p)) { const h = endAt(pi, p); drag = { mode: 'extend', L: h.L, end: h.end, stops: h.end === 'tail' ? h.L.stops.slice() : h.L.stops.slice().reverse() }; hb = null; }
   else if (pi >= 0) drag = { mode: 'new', stops: [pi] };
@@ -2831,7 +2864,7 @@ cv.addEventListener('pointerup', e => {
     }
     const sk = sensorAt(d.p);
     if (sk >= 0 && d.startPlace < 0 && !(d.handle && d.mode === 'extend')) { select('sensor', sk); return; }
-    if (d.handle && d.mode === 'extend') select('line', d.handle.L.id);
+    if (d.handle && d.mode === 'extend' && !d.viaPlace) select('line', d.handle.L.id);
     else if (d.startPlace >= 0) select('place', d.startPlace);
     else { const L = lineAt(d.p); if (L) select('line', L.id); else closePop(); }
   }
@@ -2878,13 +2911,13 @@ function refreshPop(force) {
   if (sel.scrap) return scrapBar(force);
   if (sel.type === 'line') {
     const L = S.lines.find(x => x.id === sel.id); if (!L) return closePop();
-    const sig = 'L' + L.id + confirmRm + L.loop;
+    const sig = 'L' + L.id + confirmRm + L.loop + (shipTrouble(L).length > 0);
     if (force || sig !== popSig) {
       popSig = sig;
       P.innerHTML = confirmRm
         ? `<span class="ask">Remove the ${L.name.toLowerCase()} line? Its ships become spare.</span><button class="danger" data-a="rmYes">Remove</button>${L.ships.length ? `<button data-a="rmScrap" aria-label="Remove and scrap its ships">Scrap ${L.ships.length}${gi('iShip')} +${fmt(lineScrap(L))}</button>` : ''}<button data-a="rmNo">Keep</button>`
         : `<div class="si" data-a="info"><span class="nm"><span class="sw" style="background:${L.color}"></span>${L.name}<span class="yr" data-f="lyr"></span></span><span class="st" data-f="lst"></span></div>
-          <button class="ic" data-a="addShip" aria-label="Add a ship">+${gi('iShip')}<small data-f="nShips"></small></button><button class="ic" data-a="rmShip" aria-label="Take a ship off">−${gi('iShip')}</button><button class="ic" data-a="addPod" aria-label="Add a cargo pod">+${gi('iPod')}<small data-f="nPods"></small></button>${L.loop ? `<button class="ic" data-a="unloop" aria-label="Open the loop">${gi('iLoop')}✕</button>` : ''}<button class="ic ghost" data-a="rmLine" aria-label="Remove line">${gi('iTrash')}</button><button class="x" data-a="close" aria-label="Close">×</button>`;
+          ${shipTrouble(L).length ? `<button class="primary nudge" data-a="fixShip" aria-label="Repair the ship">🔧 Repair <small data-f="rCost"></small></button>` : ''}<button class="ic" data-a="addShip" aria-label="Add a ship">+${gi('iShip')}<small data-f="nShips"></small></button><button class="ic" data-a="rmShip" aria-label="Take a ship off">−${gi('iShip')}</button><button class="ic" data-a="addPod" aria-label="Add a cargo pod">+${gi('iPod')}<small data-f="nPods"></small></button>${L.loop ? `<button class="ic" data-a="unloop" aria-label="Open the loop">${gi('iLoop')}✕</button>` : ''}<button class="ic ghost" data-a="rmLine" aria-label="Remove line">${gi('iTrash')}</button><button class="x" data-a="close" aria-label="Close">×</button>`;
     }
     if (!confirmRm) {
       const pods = L.ships.reduce((a, s) => a + s.pods, 0), cap = L.ships.reduce((a, s) => a + shipCap(s), 0);
@@ -2896,6 +2929,7 @@ function refreshPop(force) {
       setF('nShips', String(S.inv.ships), true); setF('nPods', String(S.inv.pods), true); setF('lyr', yrTag(L.stops));
       const nudge = P.querySelector('[data-a="addShip"]'); if (nudge) nudge.classList.toggle('nudge', !!(S.tut && S.tut.step === 5 && S.inv.ships > 0));
       offBtn('addShip', S.inv.ships < 1); offBtn('rmShip', !L.ships.length); offBtn('addPod', S.inv.pods < 1 || !L.ships.length);
+      setF('rCost', fmt(repairCost())); offBtn('fixShip', S.fund < repairCost());
     }
   } else if (sel.type === 'sensor') {
     const k = sel.id, z = SENSORS[k], owned = S.sensor[k], soon = cal(S.t) < sensorFrom(k), down = owned && !sensorOn(k), sig = 'S' + k + owned + soon + down;
@@ -2996,6 +3030,7 @@ onTap(P, (a, el) => {
       else { const sh = L.ships[L.ships.length - 1], p = shipAt(L, sh); bornAt.set(sh, performance.now()); burst(p.x, p.y, sysOf(L.stops[0]), `+ship ${L.ships.length}`, L.color);
         deployFx(el, `+1 ${gi('iShip')} ${esc(L.name)} · ${L.ships.length} ship${L.ships.length > 1 ? 's' : ''}`); }
     }
+    else if (a === 'fixShip') { const r = fixShips(L); if (r) { why(r); noFx(el); } else { const sh = L.ships[0], p = sh ? shipAt(L, sh) : PL[L.stops[0]]; burst(p.x, p.y, sysOf(L.stops[0]), 'repaired', L.color); deployFx(el, `🔧 ${esc(L.name)} running`); refreshPop(true); return; } }
     else if (a === 'rmShip') { const r = removeShip(L); if (r) { why(r); noFx(el); } else deployFx(el, `${gi('iShip')} back to spare · ${S.inv.ships}`, true); }
     else if (a === 'addPod') {
       const tgt = L.ships.length ? L.ships.reduce((x, y) => (y.pods < x.pods ? y : x)) : null, r = addPod(L);
@@ -3184,6 +3219,10 @@ function banner() {
   } else if (stuckWorst() >= 0 && !S.tut) {
     const i = stuckWorst(), st = stuckNote(i), w = Object.keys(st.by).sort((a, b) => st.by[b] - st.by[a])[0];
     cls = 'coach act'; html = `${shp(w)} <b>${st.n} stuck at ${esc(placeName(i))}</b> · ${st.noRoute >= st.n / 2 ? `no line reaches ${shp(w)}` : `no ship goes their way`}${via(i)}`; go = { label: 'Show', place: i };
+  } else if (worstTrouble() && !S.tut) {
+    const w = worstTrouble(), secs = Math.max(0, Math.ceil((w.x.fix || w.x.brk) - S.t));
+    cls = 'coach act'; html = `🔧 <b>${esc(w.L.name)} ship ${w.k + 1}</b> ${w.x.fix ? `stopped · ${secs}s` : `breaks down in ${secs}s`}${sysOf(w.L.stops[0]) !== S.view ? ' · ' + esc(sysLabel(sysOf(w.L.stops[0]))) : ''}`;
+    go = { label: `Repair ${fmt(repairCost())}`, line: w.L.id, icon: '' };
   } else if (S.hint) { cls = 'hint'; html = S.hint.html; x = S.hint.id !== 'start'; go = S.hint.go || null; }
   else { const c = coach(); if (c) { cls = 'coach' + (c.act ? ' act' : ''); html = c.html; go = c.go || null; } }
   bannerGo = go;
@@ -3311,9 +3350,9 @@ function tipPlace(i) {
 function mapTip(p) {
   const pin = camManual ? pins.find(q => Math.hypot(q.x - p.x, q.y - p.y) < 22) : null;
   if (pin) return { key: 'pin' + pin.i, cur: 'pointer', html: `${shp(S.shape[pin.i])} <b>${esc(placeName(pin.i))}</b> is off screen · tap to glide there` };
-  let hb = null, hd = 24; for (const h of handles()) { const d = Math.hypot(h.x - p.x, h.y - p.y); if (d < hd) { hd = d; hb = h; } }
+  let hb = null, hd = 24; for (const h of handles()) { const d = Math.hypot(h.x - p.x, h.y - p.y); if (d < hd || (h.L === selLine() && d < GRAB && (!hb || hb.L !== h.L))) { hd = d; hb = h; } }
   const pi = placeAt(p, 26), pd = pi >= 0 ? Math.hypot(X(PL[pi].x) - p.x, Y(PL[pi].y) - p.y) : Infinity;
-  if (hb && hd < pd && !(pi >= 0 && pd <= R(pi) + 4)) return { key: 'k' + hb.L.id + hb.end, cur: 'grab', html: `<span class="sw" style="background:${hb.L.color}"></span><b>${hb.L.name} line</b>, its end · drag to add stops, or back along the line to cut them` };
+  if (hb && (hd < pd || hb.L === selLine()) && !(pi >= 0 && pd <= R(pi) + 4)) return { key: 'k' + hb.L.id + hb.end, cur: 'grab', html: `<span class="sw" style="background:${hb.L.color}"></span><b>${hb.L.name} line</b>, its end · drag to add stops, or back along the line to cut them` };
   if (pi >= 0) return { key: 'p' + pi, cur: 'pointer', html: tipPlace(pi) };
   const k = sensorAt(p);
   if (k >= 0) {
@@ -3391,6 +3430,12 @@ onTap($('banner'), a => {
     const g = bannerGo;
     if (g.talk != null) openTalks(g.talk);
     else if (g.place != null) { if (!inView(g.place)) setSys(sysOf(g.place)); select('place', g.place); zoomTo(g.place); }
+    else if (g.line != null) {
+      const L = S.lines.find(x => x.id === g.line); if (!L) return;
+      if (!lineView(L)) setSys(sysOf(L.stops[0]));
+      const r = fixShips(L); if (r) toast(r); else { const sh = L.ships[0], p = sh ? shipAt(L, sh) : PL[L.stops[0]]; burst(p.x, p.y, sysOf(L.stops[0]), 'repaired', L.color); toast(`🔧 ${esc(L.name)} line running`); }
+      bannerSig = ''; hud();
+    }
   }
 });
 
@@ -3496,7 +3541,7 @@ function showLog(back, tab) {
 }
 function helpBody() {
   return `<ul>
-    <li><b>Lines.</b> Drag from a place through others to draw a line. Drag the round knob at either end to extend it (dragging from a place always starts a new line), or drag the knob back along the line to cut stops off (as many as you like, down to two), or drop it on the line’s first stop to make a loop. While drawing, go back to where you started to cancel, and Undo appears for a few seconds after every change. Changing a line you already have costs a little (never more than you have, and Undo gives it back); drawing a new one is free. Tap a line to add ships or pods, or to remove it.</li>
+    <li><b>Lines.</b> Drag from a place through others to draw a line. Drag the round knob at either end to extend it (dragging from a place starts a new line, unless a line is selected and ends there: then it extends that line; a selected line’s knobs can be grabbed from a little further away too), or drag the knob back along the line to cut stops off (as many as you like, down to two), or drop it on the line’s first stop to make a loop. While drawing, go back to where you started to cancel, and Undo appears for a few seconds after every change. Changing a line you already have costs a little (never more than you have, and Undo gives it back); drawing a new one is free. Tap a line to add ships or pods, or to remove it.</li>
     <li><b>Ships.</b> On a line, ships shuttle back and forth between the ends. On a loop they go round, split between the two ways: if they bunch up going one way, one turns round at its next stop. On a loop with one ship, freight rides the long way round. The pointed end shows which way a ship is heading.</li>
     <li><b>Berths and fuel.</b> A place loads ${BERTHS} ships at once (a wormhole ${BERTHS + 2}); the rest queue just outside. A fast dock adds 2 berths. A long line (more than about Earth to the Moon and on to L2) with no ${shp('diamond')} fuel depot among its stops runs ${Math.round((1 - FUEL_SLOW) * 100)}% slower: the line’s bar says so.</li>
     <li><b>Freight.</b> Each load shows the kind of place it wants, not one particular place: ■ freight is happy at any station, Low Orbit or GEO. It boards any ship whose next stop brings it closer to one, changing lines where they meet.</li>
@@ -3512,7 +3557,7 @@ function helpBody() {
     <li><b>Proxima.</b> After 2100 a wormhole opens past Saturn (science fiction from here). Each end is a stop: freight dropped at one end comes out the other. Draw a line to it, then tap ⇄ Proxima to see the other system and build lines there. Lines can’t cross between systems. The button turns red when a place on the other map is crowding. From 2200 a second wormhole, the Rift, opens at Proxima to an uncharted system, with three more lines for it. With three systems, ⇄ goes to whichever needs you most.</li>
     <li><b>Where to start.</b> On the start screen pick Earth–Moon (2027, real-world plans) or Proxima (2100, science fiction: Proxima b and the Alpha Centauri stars, with frequent flares instead of solar storms). Every run has a code, shown in the Timeline: type it on the start screen to play the same map again, or share it.</li>
     <li><b>Uncharted.</b> A random system made up from the run’s code: its star might be a red dwarf, a binary pair or a pulsar, and its places and their names are new each time. It’s harder: busier places and more storms. And you’re not alone there. An “unknown signal” might be a craft that stops any line it drifts over (shields don’t help), a derelict worth salvaging, or visitors who make one place very busy. Somewhere a gate nobody built will open, and whoever runs it trades.</li>
-    <li><b>Late in a run.</b> Ships now and then break down: a warning, then the ship stops where it is for ${BRK_DUR} seconds (a wrench marks it). And some events are swings in demand: a rush, when one place’s freight nearly all heads for the kind of place farthest from it on your lines, or a strike, when a place takes no deliveries for a while and freight for it goes to another of its kind your lines already reach.</li>
+    <li><b>Late in a run.</b> Ships now and then break down: a warning, then the ship stops where it is for ${BRK_DUR} seconds (a wrench marks it). Tap its line and Repair (or Repair on the note) to fix it at once, even during the warning, or wait it out. And some events are swings in demand: a rush, when one place’s freight nearly all heads for the kind of place farthest from it on your lines, or a strike, when a place takes no deliveries for a while and freight for it goes to another of its kind your lines already reach.</li>
     <li><b>Unrest.</b> Keep a place waiting (its freight above about 60% of its room for a long stretch, or storm damage left unrepaired) and it grows restless: a flag appears and grows. If it fills, the place declares independence for ${REBEL_DUR} seconds: its lines close, it makes and takes no freight, and ships there are held. Once it’s restless enough the workers vote on what they want, usually that your nearest line be extended to them. Serve it to calm it, or tap it and Negotiate: give them what they voted for (they never refuse that, and stay calm for two periods), or offer something else, which they may refuse, and every refusal makes them angrier. Other offers: pay them off, let them keep a 25% toll on deliveries there for two periods, or give them a direct line home (or to the wormhole), a shield for keeps, a depot, a fast dock or a cargo pod. Any deal keeps them calm for a period. Late game only: from 2070 in Earth–Moon runs, six periods into Proxima and uncharted runs.</li>
     <li><b>Sensors elsewhere.</b> Uncharted systems have two to buy: a star watch (earlier storm warnings) and a signal array, which hears unknown signals sooner and tells you what they are. Proxima has a flare watch.</li>
     <li><b>Saving.</b> Your run saves itself as you play, and when you close the page. Continue on the start screen picks it up where you left off. A run that ends is not kept.</li>
@@ -3810,6 +3855,7 @@ function draw(rdt) {
   for (const t of handles()) {
     if (drag && drag.mode === 'extend' && drag.moved && drag.L === t.L && drag.end === t.end) continue;   // it's under the finger
     ctx.globalAlpha = selId != null && t.L.id !== selId ? .3 : 1;
+    if (t.L.id === selId && !S.tut) { ctx.save(); ctx.beginPath(); ctx.arc(t.x, t.y, 20 * uk + 2 * Math.sin(clock * 4), 0, Math.PI * 2); ctx.fillStyle = t.L.color; ctx.globalAlpha = .16; ctx.fill(); ctx.globalAlpha = .55; ctx.lineWidth = 1.5; ctx.strokeStyle = t.L.color; ctx.setLineDash([3, 4]); ctx.stroke(); ctx.restore(); }
     drawKnob(t.x, t.y, t.ux, t.uy, t.L.color, t.bx + t.ux * 8, t.by + t.uy * 8);
     // a ring around the end, the thing to grab to extend the line
     if (S.tut) { const a0 = ctx.globalAlpha; ctx.beginPath(); ctx.arc(t.x, t.y, 13 * uk, 0, Math.PI * 2);
@@ -4506,7 +4552,7 @@ requestAnimationFrame(frame);
 window.LC = {
   get S() { return S; }, get GEN() { return GEN; }, plx: () => PLX.map(L => ({ ux: L.ux, uy: L.uy, k: L.k, ls: Math.pow(sc / sc0, L.d) })), IDX, PL, YEAR, startRun, step, tutGo, tutEnd, createLine, setStops, removeLine, addShip, removeShip, addPod, shieldPlace, buildDepot, select, room, setLine, openLoop, undo,
   snapCam, cal, calOf, perOf, lineYear, showLog, buySensor, SENSORS, setSys, setAutoPause, inScen, trayUI, recordRun, readBoard, openBoard, showLost, endLost, showWin, award, readAch, needList, lookAt, ACH, ask5, qmTip, diagText, saveText, loadSaveText, perf, get capyImg() { return capyImg; }, get won() { return won; }, get lost() { return lost; }, get boardAll() { return boardAll; }, scrap, scrapVal, repairCost, negotiateCost, voteDemand, sysNeeds, get fxs() { return fxs; }, negotiate, startRebel, tunnelEnds, saveAll, readLocal, resumeRun, bestSave, parseCode, runCode, codeOf, splashUI, SCEN, repairPlace, repairSensor, buyOffer, price, sysOf, tunnelOpen, hud, get sc() { return sc; }, pins: () => pins.map(q => ({ x: rot ? window.innerWidth - q.y : q.x, y: rot ? q.x : q.y, i: q.i })),
-  redrawFee, chargeRedraw, upkeepDue, berths, docked, queueAt, stuckAt, stuckNote, startSwing, breakdowns, lateGame, ovT, crowdFix,
+  redrawFee, chargeRedraw, fixShips, worstTrouble, selLine, upkeepDue, berths, docked, queueAt, stuckAt, stuckNote, startSwing, breakdowns, lateGame, ovT, crowdFix,
   fast(sec) { const n = Math.round(sec / STEP); for (let i = 0; i < n && !S.over; i++) step(STEP); },
   screen(id) { const n = PL[IDX[id]], x = X(n.x), y = Y(n.y); return rot ? { x: window.innerWidth - y, y: x } : { x, y }; },
   linePoint(i) { const p = S.lines[i].segs[0].pts[12], x = X(p.x), y = Y(p.y); return rot ? { x: window.innerWidth - y, y: x } : { x, y }; },

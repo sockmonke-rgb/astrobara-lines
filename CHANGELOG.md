@@ -1,5 +1,9 @@
 # Changelog
 
+## 5.22
+- A breakdown can be fixed: tap the ship's line and Repair, or Repair on the note, at a storm repair's price. Repairing during the warning heads it off. Or wait it out.
+- A selected line's ends are easier to grab: anywhere near either knob (about twice the usual reach), or by dragging from the place the line ends at. A soft ring shows the reach. A tap on that place still opens the place, and with no line selected nothing changes.
+
 ## 5.21
 More friction, with a way through every time.
 - **Upkeep.** Ships and pods at work cost upkeep at each Alliance Shop visit, at that time's prices. It eases in over the first ten periods, and the top right shows the next bill. The budget can go below zero; then nothing can be bought until deliveries bring it back.
