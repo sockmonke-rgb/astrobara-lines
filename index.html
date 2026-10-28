@@ -514,7 +514,7 @@ button.link{height:auto;min-height:0;padding:2px 0;border:none;background:none;c
       <svg class="lines" id="splashLines" aria-hidden="true"></svg>
       <div class="big" aria-hidden="true"><svg viewBox="0 0 64 64"><use href="#capy"/></svg></div>
       <div class="txt">
-        <div class="eyebrow" id="splashEyebrow">Prototype 5.45</div>
+        <div class="eyebrow" id="splashEyebrow">Prototype 5.46</div>
         <h1>Astrobara Lines</h1>
         <p>Capybaras run the Lagrange Alliance’s freight. <b>Drag through places</b> to draw a shipping line. Freight shape = where it’s going. Too much waiting fills a red ring; a full ring ends the run.</p>
         <div class="scen" role="radiogroup" aria-label="Start in">
@@ -592,7 +592,7 @@ const $ = id => document.getElementById(id);
 const app = $('app'), cv = $('cv'), ctx = cv.getContext('2d');
 
 /* ================= Tuning ================= */
-const VERSION = '5.45';
+const VERSION = '5.46';
 const YEAR = 80, QTR = YEAR / 4, HORIZON = 10, Y0 = 2027, STEP = 1 / 30;
 const SOON = 30;   // seconds before a place opens that it, its countdown and the note all appear
 const SPEED = 80;                 // ship speed in map units per second
@@ -3473,7 +3473,11 @@ function tipPlace(i) {
   if (S.dmg[i]) bits.push('damaged · tap to repair');
   if (S.shield[i]) bits.push('protected');
   if (S.depot[i]) bits.push('storage');
-  if (S.fastDock && S.fastDock[i]) bits.push('fast dock');
+  if (S.fastDock && S.fastDock[i]) bits.push('fast dock ››');
+  if (S.toll && S.toll[i] > S.t) bits.push(`% toll · pays less for ${Math.ceil(S.toll[i] - S.t)}s`);
+  if (swingLive('strike', i)) bits.push('on strike · takes no deliveries');
+  if (swingLive('rush', i)) bits.push('rush · freight ×2');
+  if (stuckNote(i)) bits.push(`${stuckNote(i).n} stuck`);
   return `${shp(s)} <b>${esc(placeName(i))}</b> · ${sh.role}<br>${bits.join(' · ')}<br>${onLines(i) ? 'tap for storage, a shield or repair · drag to draw a line' : 'not on a line yet · drag from it to start one'}`;
 }
 function mapTip(p) {
@@ -3489,7 +3493,7 @@ function mapTip(p) {
     return { key: 's' + k, cur: 'pointer', html: `${gi('iSensor')} <b>${esc(z.name)}</b> · ${down ? 'knocked out by a storm · tap to repair' : owned ? 'on' : soon ? `for sale from ${sensorFrom(k)}` : `${fmt(z.cost)} · tap to buy`}<br>${z.kind === 'signal' ? 'hears unknown signals' : 'storm warnings'} ${z.bonus}s sooner · it carries no freight` };
   }
   const L = lineAt(p);
-  if (L) return { key: 'L' + L.id, cur: 'pointer', html: `<span class="sw" style="background:${L.color}"></span><b>${L.name} line</b> · ${L.stops.map(i => esc(placeName(i))).join(' → ')}${L.loop ? ' → back' : ''}<br>${L.ships.length} ship${L.ships.length === 1 ? '' : 's'} · tap to add ships or pods, or to remove it` };
+  if (L) return { key: 'L' + L.id, cur: 'pointer', html: `<span class="sw" style="background:${L.color}"></span><b>${L.name} line</b> · ${L.stops.map(i => esc(placeName(i))).join(' → ')}${L.loop ? ' → back' : ''}<br>${L.ships.length} ship${L.ships.length === 1 ? '' : 's'}${L.dry ? ` · <b>no ${shp('diamond')} fuel</b> (the crossed-out ${shp('diamond')}): ${Math.round((1 - FUEL_SLOW) * 100)}% slower${fuelNear(L) >= 0 ? `, add ${shp('diamond')} ${esc(placeName(fuelNear(L)))}` : ''}` : ''}${shipTrouble(L).length ? ' · 🔧 a ship breaking down' : ''} · tap to add ships or pods, or to remove it` };
   return null;
 }
 function hoverMap(e) {
@@ -3683,6 +3687,16 @@ function showLog(back, tab) {
 }
 function helpBody() {
   return `<ul>
+    <li><b>Map key.</b> What the little marks mean (with a mouse, rest on anything for a note):
+      <br>· a <b>place's shape</b> is what it is; <b>freight's shape</b> beside it is where that freight is going
+      <br>· <b>red ring closing</b> round a place: it's over full, and the run ends if the ring closes
+      <br>· <b>dashed blue ring</b>: shielded from storms (solid: theirs for good)
+      <br>· <b>second outline</b> and a ${gi('iDepot')} tag with a number: Storage (the number is how much it holds)
+      <br>· <b>››</b> at a place's corner: a fast dock · <b>%</b>: a toll, deliveries there pay less for a while
+      <br>· <b>red badge with a wrench</b>: storm damage, tap to repair · <b>orange flag</b>: restless crews (dashed orange outline: independent)
+      <br>· <b>crossed-out ${shp('diamond')}</b> halfway along a line: no ${shp('diamond')} fuel stop, its ships run ${Math.round((1 - FUEL_SLOW) * 100)}% slower
+      <br>· <b>numbered badges</b> on ships: ship 1, 2, 3 of the line · <b>amber outline / 🔧</b> on a ship: breaking down · <b>white ring</b>: the ship you picked
+      <br>· <b>dashed amber circle</b>: a storm on its way · <b>shaded orange circle</b>: a storm now · <b>NEW</b>: just opened · <b>arrows at the screen edge</b>: places off screen (red: crowding)</li>
     <li><b>Lines.</b> Drag from a place through others to draw a line. Drag the round knob at either end to extend it (dragging from a place starts a new line, unless a line is selected and ends there: then it extends that line; a selected line’s knobs can be grabbed from a little further away too), or drag the knob back along the line to cut stops off (as many as you like, down to two), or drop it on the line’s first stop to make a loop. While drawing, go back over the stops one by one to take them off (going straight back to the first stop makes a loop instead); with a mouse, Esc or the right button cancels the whole drag. Undo appears for a few seconds after every change. Changing a line you already have costs a little (never more than you have, and Undo gives it back); drawing a new one is free. Tap a line to add ships or pods, or to remove it.</li>
     <li><b>Ships.</b> On a line, ships shuttle back and forth between the ends. On a loop they go round, split between the two ways: if they bunch up going one way, one turns round at its next stop. On a loop with one ship, freight rides the long way round. The pointed end shows which way a ship is heading.</li>
     <li><b>Berths and fuel.</b> A place loads ${BERTHS} ships at once (a wormhole ${BERTHS + 2}); the rest queue just outside. A fast dock adds 2 berths. A long line (more than about Earth to the Moon and on to L2) with no ${shp('diamond')} fuel depot among its stops runs ${Math.round((1 - FUEL_SLOW) * 100)}% slower: the line’s bar says so, and names the nearest ${shp('diamond')} to add. That’s a ${shp('diamond')} place on the map, not the Storage you buy. Until a ${shp('diamond')} opens in a system, its long lines aren’t slowed.</li>

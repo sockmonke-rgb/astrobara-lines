@@ -1,5 +1,9 @@
 # Changelog
 
+## 5.46
+- **Map key** at the top of Help (≡ → Help) says what each mark on the map means: rings round places, Storage, fast dock ››, toll %, damage, unrest flags, the crossed-out ◆ on a line with no fuel, ship badges and rings, storms, NEW, and the edge arrows.
+- Mouse hover notes say more. A place mentions a toll, a strike, a rush or stuck freight. A line mentions no fuel (with the ◆ to add) and ships breaking down.
+
 ## 5.45
 - Fixed: on a crowding or overflow note that suggests a ◆ fuel stop, Show went to that ◆ (e.g. Quarry Well) instead of the place in trouble. It goes to the crowded place again; the ◆ to add is still named in the note.
 
