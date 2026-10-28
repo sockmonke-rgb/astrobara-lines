@@ -512,7 +512,7 @@ button.link{height:auto;min-height:0;padding:2px 0;border:none;background:none;c
       <svg class="lines" id="splashLines" aria-hidden="true"></svg>
       <div class="big" aria-hidden="true"><svg viewBox="0 0 64 64"><use href="#capy"/></svg></div>
       <div class="txt">
-        <div class="eyebrow" id="splashEyebrow">Prototype 5.32</div>
+        <div class="eyebrow" id="splashEyebrow">Prototype 5.33</div>
         <h1>Astrobara Lines</h1>
         <p>Capybaras run the Lagrange Alliance’s freight. <b>Drag through places</b> to draw a shipping line. Freight shape = where it’s going. Too much waiting fills a red ring; a full ring ends the run.</p>
         <div class="scen" role="radiogroup" aria-label="Start in">
@@ -590,7 +590,7 @@ const $ = id => document.getElementById(id);
 const app = $('app'), cv = $('cv'), ctx = cv.getContext('2d');
 
 /* ================= Tuning ================= */
-const VERSION = '5.32';
+const VERSION = '5.33';
 const YEAR = 80, QTR = YEAR / 4, HORIZON = 10, Y0 = 2027, STEP = 1 / 30;
 const SOON = 30;   // seconds before a place opens that it, its countdown and the note all appear
 const SPEED = 80;                 // ship speed in map units per second
@@ -2787,8 +2787,15 @@ let drag = null, pinch = null, pins = [], jump = null;
 const GRAB = 46;
 const selLine = () => (sel && sel.type === 'line' && S ? S.lines.find(L => L.id === sel.id && !L.loop && lineView(L)) || null : null);
 const touches = new Map();
+// 5.33: Esc or the right mouse button lets go of a line you're drawing or reshaping, leaving it as it was
+function cancelDrag() {
+  if (!drag || (drag.mode !== 'new' && drag.mode !== 'extend')) return false;
+  const shown = drag.moved && (drag.mode === 'extend' || drag.stops.length >= 2); drag = null; if (shown) toast('Cancelled'); return true;
+}
+cv.addEventListener('contextmenu', e => { e.preventDefault(); cancelDrag(); });
 cv.addEventListener('pointerdown', e => {
   if (!S || (S.over && !S.sandbox) || !$('modal').hidden || !$('splash').hidden) return;
+  if (e.pointerType === 'mouse' && e.button !== 0) { if (e.button === 2) cancelDrag(); return; }   // only the left button draws
   toggleSpeedMenu(false);
   // 5.32: with a mouse, a click on the map clears a tip the way its × does (only a tip that's showing and has one)
   if (e.pointerType === 'mouse' && S.hint && !$('banner').hidden && !$('bX').hidden) { S.hint = null; bannerSig = ''; hud(); }
@@ -2838,6 +2845,7 @@ cv.addEventListener('pointermove', e => {
     setView(pinch.s0 * Math.hypot(a.x - b.x, a.y - b.y) / pinch.d0, mid, pinch.w); return;
   }
   if (!drag || e.pointerId !== drag.id || drag.mode === 'used') return;
+  if (e.pointerType === 'mouse' && (e.buttons & 2)) { cancelDrag(); return; }   // right button pressed mid-drag
   drag.p = lp(e);
   if (!drag.moved && Math.hypot(drag.p.x - drag.x0, drag.p.y - drag.y0) > 9) drag.moved = true;
   if (!drag.moved) return;
@@ -3630,7 +3638,7 @@ function showLog(back, tab) {
 }
 function helpBody() {
   return `<ul>
-    <li><b>Lines.</b> Drag from a place through others to draw a line. Drag the round knob at either end to extend it (dragging from a place starts a new line, unless a line is selected and ends there: then it extends that line; a selected line’s knobs can be grabbed from a little further away too), or drag the knob back along the line to cut stops off (as many as you like, down to two), or drop it on the line’s first stop to make a loop. While drawing, go back to where you started to cancel, and Undo appears for a few seconds after every change. Changing a line you already have costs a little (never more than you have, and Undo gives it back); drawing a new one is free. Tap a line to add ships or pods, or to remove it.</li>
+    <li><b>Lines.</b> Drag from a place through others to draw a line. Drag the round knob at either end to extend it (dragging from a place starts a new line, unless a line is selected and ends there: then it extends that line; a selected line’s knobs can be grabbed from a little further away too), or drag the knob back along the line to cut stops off (as many as you like, down to two), or drop it on the line’s first stop to make a loop. While drawing, go back over the stops one by one to take them off (going straight back to the first stop makes a loop instead); with a mouse, Esc or the right button cancels the whole drag. Undo appears for a few seconds after every change. Changing a line you already have costs a little (never more than you have, and Undo gives it back); drawing a new one is free. Tap a line to add ships or pods, or to remove it.</li>
     <li><b>Ships.</b> On a line, ships shuttle back and forth between the ends. On a loop they go round, split between the two ways: if they bunch up going one way, one turns round at its next stop. On a loop with one ship, freight rides the long way round. The pointed end shows which way a ship is heading.</li>
     <li><b>Berths and fuel.</b> A place loads ${BERTHS} ships at once (a wormhole ${BERTHS + 2}); the rest queue just outside. A fast dock adds 2 berths. A long line (more than about Earth to the Moon and on to L2) with no ${shp('diamond')} fuel depot among its stops runs ${Math.round((1 - FUEL_SLOW) * 100)}% slower: the line’s bar says so.</li>
     <li><b>Freight.</b> Each load shows the kind of place it wants, not one particular place: ■ freight is happy at any station, Low Orbit or GEO. It boards any ship whose next stop brings it closer to one, changing lines where they meet.</li>
@@ -3653,7 +3661,7 @@ function helpBody() {
     <li><b>Other system’s storms.</b> When a storm or flare is coming on the map you’re not looking at and a shield there would help, a message says so and the ⇄ button turns amber.</li>
     <li><b>Alliance Shop.</b> The shop opens once a period (the countdown is at the top right). The Alliance sends a ship each time, and every third time a line too. Buy what you like from the budget, then pick one free upgrade, or skip it and bank the interest, to close the shop.</li>
     <li><b>Diagnostics.</b> Something odd? ≡ menu → Diag → Copy diagnostics (or Copy diag on the Network Lost card), and paste it to Claude. “Copy save too” adds the run itself, so it can be loaded exactly as it was.</li>
-    <li><b>Keyboard.</b> On a computer: Space plays or pauses, 1, 2, 3 and 5 set the speed, Esc closes the bar along the bottom. Scroll to zoom; drag empty space to pan.</li>
+    <li><b>Keyboard.</b> On a computer: Space plays or pauses, 1, 2, 3 and 5 set the speed, Esc closes the bar along the bottom. While you draw or reshape a line, Esc or the right mouse button cancels it. Scroll to zoom; drag empty space to pan.</li>
     <li><b>Speed.</b> Tap the speed button for 0.1× and 0.5× slow motion or 2×, 3× and 5× (5× asks first). When a new place opens, or a restless place votes on a demand or declares independence, the game pauses so you don’t miss it: white rings spread from any place that isn’t on a line yet, amber rings from a place that wants to talk, the play button pulses, and ▶ carries on. Turn the pause off with the “❚❚ new place · talks” switch in the same menu.</li>
     <li><b>Capybaras.</b> They run the Alliance. The quartermaster at the Alliance Shop has advice, and late in a run a capybara envoy can calm a restless place for free, once a period.</li>
     <li><b>Awards.</b> 22 to earn, from your first delivery to lines in three star systems. New ones show a gold note; reviews and the end of a run list what the run earned; the leaderboard’s 🏅 Awards shows them all.</li>
@@ -4549,13 +4557,13 @@ onTap($('splash'), splashAct);
 // 5.30: with a mouse, a click on the map around the start card does what its main button does
 bgClose($('splash'), () => { const id = bestSave() ? 'bCont' : pickScen === 'sol' && !tutDone() ? 'bTut' : 'bNow', b = $(id); splashAct(b.dataset.a, b); });
 $('codeIn').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); startCode(); } });
-// On a desktop: Space plays or pauses, 1 2 3 5 set the speed, Esc closes the bar that's open.
+// On a desktop: Space plays or pauses, 1 2 3 5 set the speed, Esc cancels a line being drawn or closes the bar that's open.
 document.addEventListener('keydown', e => {
   if (!S || e.target.matches('input, textarea') || e.metaKey || e.ctrlKey || e.altKey) return;
   if (!$('splash').hidden || !M.hidden || !$('board').hidden) return;
   if (e.key === ' ') { e.preventDefault(); if (S.started && !S.over) { S.paused = !S.paused; lastPlay = null; if (!S.paused && S.autoPaused != null) { S.autoPaused = null; if (S.hint && ['new', 'gate', 'worm', 'same', 'talks'].includes(S.hint.id)) S.hint = null; } hud(); } }
   else if (['1', '2', '3', '5'].includes(e.key)) { const v = +e.key; if (v === 5 && S.speed !== 5 && !fiveOK()) ask5(); else { S.speed = v; hud(); toast(`${spdText(v)}`, 1200); } }
-  else if (e.key === 'Escape' && sel) closePop();
+  else if (e.key === 'Escape') { if (!cancelDrag() && sel) closePop(); }
 });
 
 /* ================= Saving =================

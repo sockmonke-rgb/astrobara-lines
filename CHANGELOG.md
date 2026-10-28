@@ -1,5 +1,9 @@
 # Changelog
 
+## 5.33
+- While you draw a new line or reshape one with the mouse, **Esc** or the **right mouse button** cancels it and leaves everything as it was, with no redraw fee. Right-click on the map no longer opens the browser's menu or starts a drag.
+- The help no longer says going back to the start cancels a line. With three or more stops that makes a loop. Going back over the stops one by one takes them off.
+
 ## 5.32
 - **Choose where a new ship starts.** Tap a line, then +⛴: the bar lists the line's stops with how much is waiting at each, and the busiest is highlighted. Tap one, or tap the stop on the map; the line's stops pulse while you choose. × cancels. A ship that starts mid-line heads the way most of the freight there is going. The walkthrough keeps the one-tap add.
 - On a computer, a click on the map clears a tip, the same as its ×. Warnings without an × (overflow, storms, stuck freight, breakdowns) stay, and so does the "drag here" guide. Taps on phones and tablets are unchanged.
