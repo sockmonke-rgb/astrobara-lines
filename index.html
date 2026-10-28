@@ -512,7 +512,7 @@ button.link{height:auto;min-height:0;padding:2px 0;border:none;background:none;c
       <svg class="lines" id="splashLines" aria-hidden="true"></svg>
       <div class="big" aria-hidden="true"><svg viewBox="0 0 64 64"><use href="#capy"/></svg></div>
       <div class="txt">
-        <div class="eyebrow" id="splashEyebrow">Prototype 5.28</div>
+        <div class="eyebrow" id="splashEyebrow">Prototype 5.29</div>
         <h1>Astrobara Lines</h1>
         <p>Capybaras run the Lagrange Alliance’s freight. <b>Drag through places</b> to draw a shipping line. Freight shape = where it’s going. Too much waiting fills a red ring; a full ring ends the run.</p>
         <div class="scen" role="radiogroup" aria-label="Start in">
@@ -590,7 +590,7 @@ const $ = id => document.getElementById(id);
 const app = $('app'), cv = $('cv'), ctx = cv.getContext('2d');
 
 /* ================= Tuning ================= */
-const VERSION = '5.28';
+const VERSION = '5.29';
 const YEAR = 80, QTR = YEAR / 4, HORIZON = 10, Y0 = 2027, STEP = 1 / 30;
 const SOON = 30;   // seconds before a place opens that it, its countdown and the note all appear
 const SPEED = 80;                 // ship speed in map units per second
@@ -3488,7 +3488,7 @@ MC.addEventListener('pointerdown', () => { if (!lostRaf) return; if (lostSpeed >
 $('lostVeil').addEventListener('pointerdown', () => (lost ? showLost() : won ? showWin() : null), { passive: true });
 let modalKind = null, modalNext = null, wasPaused = false, backTo = null;
 function openModal(html, kind, next) { app.classList.add('modalopen'); MC.innerHTML = html; const win = /class="endc winc/.test(html); M.classList.toggle('lost', kind === 'lost'); M.classList.toggle('won', win); MC.classList.toggle('lostcard', kind === 'lost'); MC.classList.toggle('wincard', win); MC.classList.toggle('split', kind === 'log' || kind === 'meeting' || kind === 'talks'); M.hidden = false; MC.scrollTop = MC.querySelector('.endc.ready') ? MC.scrollHeight : 0; const lb = MC.querySelector('.lbody'); if (lb) lb.scrollTop = 0; modalKind = kind; modalNext = next || null; }
-onTap(M, (a, el) => {
+const modalAct = (a, el) => {
   if (a === 'buyUp') {
     const k = el.dataset.o, c = price(k), r = buyOffer(k);
     if (r) toast(r); else { S.meet.spent += c; meetingBought(k, c); }
@@ -3543,7 +3543,18 @@ onTap(M, (a, el) => {
   else if (a === 'copyDiag') { const t = diagText(); $('diagText').value = t; copyText(t, 'Diagnostics'); }
   else if (a === 'copySave') saveText().then(t => { $('diagText').value = t; copyText(t, `Save (${Math.round(t.length / 1024)} KB)`); });
   else if (a === 'close') { const b = backTo; backTo = null; M.hidden = true; modalKind = null; if (b) b(); else if (!wasPaused) { S.paused = false; lastPlay = null; } }
-});
+};
+onTap(M, modalAct);
+// 5.29: with a mouse, a click on the map around a panel closes it, as its own Close or Not now would. Panels that
+// need a choice (the Alliance Shop, the end of a run) stay; touch is unchanged, so a stray tap can't close one.
+const BG_CLOSE = { log: 'close', talks: 'close', five: 'no5' };
+function bgClose(ov, close) {
+  let down = false;
+  ov.addEventListener('pointerdown', e => { down = e.target === ov && e.pointerType === 'mouse'; });
+  ov.addEventListener('click', e => { if (down && e.target === ov) close(); down = false; });
+}
+bgClose(M, () => { const a = BG_CLOSE[modalKind], b = a && MC.querySelector(`[data-a="${a}"]`); if (b) modalAct(a, b); });
+bgClose($('board'), () => { $('board').hidden = true; boardArm = null; });
 // Let the chosen card glow for a moment, then close, resume, and show the money moving on the game's budget.
 function endMeeting(msg, gain) {
   const spent = S.meet ? S.meet.spent : 0;

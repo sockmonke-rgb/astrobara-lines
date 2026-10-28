@@ -1,5 +1,8 @@
 # Changelog
 
+## 5.29
+- On a computer, clicking the map around a panel closes it, the same as its Close or Not now: the ≡ menu (Timeline, Log, Help, Diag), talks, the 5× question and the leaderboard. The Alliance Shop and the end-of-run card wait for a choice. Phones and tablets are unchanged, so a stray tap can't close anything.
+
 ## 5.28
 - When the game is paused, the world stands still: a pulsar's beams, a binary pair's orbit, wormhole swirls, the Visitor Gate's pulse, and storm and debris drift all stop, and pick up again on ▶. Warnings and hints still blink so they catch your eye.
 
