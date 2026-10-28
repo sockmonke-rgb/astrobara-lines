@@ -1,5 +1,8 @@
 # Changelog
 
+## 5.34
+- On a computer, hold the **middle mouse button** and drag to pan the map from anywhere, even over a place or a line. It never draws or selects anything, and doesn't trigger the browser's autoscroll. The left button still draws, the right button cancels, and dragging empty space still pans.
+
 ## 5.33
 - While you draw a new line or reshape one with the mouse, **Esc** or the **right mouse button** cancels it and leaves everything as it was, with no redraw fee. Right-click on the map no longer opens the browser's menu or starts a drag.
 - The help no longer says going back to the start cancels a line. With three or more stops that makes a loop. Going back over the stops one by one takes them off.
