@@ -1,5 +1,8 @@
 # Changelog
 
+## 5.38
+- **Pick a ship.** Tapping a ship out on its line selects the line with that ship picked: it gets a white ring, and its number is marked in the bar. You can also tap the ship numbers in the bar. +pod then goes to that ship, and −ship takes that ship off. If the picked ship already has all its pods, it says so instead of giving the pod to another ship. With no ship picked, it works as before: the ship with the fewest pods gets it.
+
 ## 5.37
 - A place now counts as crowding only when it's at least three quarters full, as well as within 3 loads of full (5 late in a run). Late in a run, 10/14 or 6/10 no longer says crowding; 11/14 and 8/10 do. Bigger places keep the same margin. It's only the warning: the red ring still starts once a place is over full.
 

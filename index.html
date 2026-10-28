@@ -402,6 +402,7 @@ button.link{height:auto;min-height:0;padding:2px 0;border:none;background:none;c
 #sel small.short{color:#ff9a9a}
 @keyframes tick{0%{color:#9ff0b8;transform:scale(1.6)}100%{transform:none}}
 #sel .hull.new{animation:hullIn .7s cubic-bezier(.3,1.7,.5,1)}
+#sel .hull[data-a]{cursor:pointer}#sel .hull.on{box-shadow:0 0 0 2px #fff;outline:none}
 @keyframes hullIn{0%{transform:scale(0);box-shadow:0 0 0 0 rgba(255,255,255,.9)}50%{box-shadow:0 0 0 5px rgba(255,255,255,0)}100%{transform:none}}
 .chip.got{animation:okPop .6s ease-out}
 @keyframes toastPop{0%{transform:scale(.85)}60%{transform:scale(1.06)}100%{transform:none}}
@@ -512,7 +513,7 @@ button.link{height:auto;min-height:0;padding:2px 0;border:none;background:none;c
       <svg class="lines" id="splashLines" aria-hidden="true"></svg>
       <div class="big" aria-hidden="true"><svg viewBox="0 0 64 64"><use href="#capy"/></svg></div>
       <div class="txt">
-        <div class="eyebrow" id="splashEyebrow">Prototype 5.37</div>
+        <div class="eyebrow" id="splashEyebrow">Prototype 5.38</div>
         <h1>Astrobara Lines</h1>
         <p>Capybaras run the Lagrange Alliance’s freight. <b>Drag through places</b> to draw a shipping line. Freight shape = where it’s going. Too much waiting fills a red ring; a full ring ends the run.</p>
         <div class="scen" role="radiogroup" aria-label="Start in">
@@ -590,7 +591,7 @@ const $ = id => document.getElementById(id);
 const app = $('app'), cv = $('cv'), ctx = cv.getContext('2d');
 
 /* ================= Tuning ================= */
-const VERSION = '5.37';
+const VERSION = '5.38';
 const YEAR = 80, QTR = YEAR / 4, HORIZON = 10, Y0 = 2027, STEP = 1 / 30;
 const SOON = 30;   // seconds before a place opens that it, its countdown and the note all appear
 const SPEED = 80;                 // ship speed in map units per second
@@ -1236,17 +1237,18 @@ function addShip(L, at) {
   S.inv.ships--; L.ships.push({ k, dir, d: 0, state: 'stop', dwell: 0.2, cargo: [], pods: 0, wait: 0 });
   trayUI(); return null;
 }
-function removeShip(L) {
+function removeShip(L, pick) {
   if (!L.ships.length) return 'No ships here';
-  const sh = L.ships.reduce((a, b) => (b.cargo.length < a.cargo.length ? b : a));
+  const sh = pick && L.ships.includes(pick) ? pick : L.ships.reduce((a, b) => (b.cargo.length < a.cargo.length ? b : a));
   dumpCargo(sh, L.stops[sh.k]); L.ships = L.ships.filter(x => x !== sh); S.inv.ships++; S.inv.pods += sh.pods;
   trayUI(); return null;
 }
-function addPod(L) {
+// 5.38: `pick` is the ship you tapped; without one, the ship with fewest pods
+function addPod(L, pick) {
   if (S.inv.pods < 1) return `No spare ${gi('iPod')}`;
   if (!L.ships.length) return `Add a ${gi('iShip')} first`;
-  const sh = L.ships.reduce((a, b) => (b.pods < a.pods ? b : a));
-  if (sh.pods >= MAX_PODS) return 'Pods full here';
+  const mine = pick && L.ships.includes(pick), sh = mine ? pick : L.ships.reduce((a, b) => (b.pods < a.pods ? b : a));
+  if (sh.pods >= MAX_PODS) return mine ? `Ship ${L.ships.indexOf(sh) + 1} has all its ${gi('iPod')} pods` : 'Pods full here';
   S.inv.pods--; sh.pods++; trayUI(); return null;
 }
 function shieldPlace(i) {
@@ -2780,6 +2782,9 @@ function endAt(i, p) {
   return best;
 }
 // 5.23: the line of a broken-down (or about to break down) ship near p, wrench included
+// 5.38: where each ship was last drawn (screen), for tapping a particular ship
+let shipSpots = [];
+function shipHit(p) { let best = null, bd = 20; for (const q of shipSpots) { const d = Math.hypot(q.x - p.x, q.y - p.y) - Math.min(q.r, 16) * .5; if (d < bd) { bd = d; best = q; } } return best; }
 function troubleAt(p) {
   for (const L of S.lines) if (lineView(L)) for (const x of shipTrouble(L)) { const q = shipAt(L, x); if (Math.hypot(X(q.x) - p.x, Y(q.y) - 12 * uk - p.y) < 34) return L; }
   return null;
@@ -2919,7 +2924,7 @@ cv.addEventListener('pointerup', e => {
     if (sk >= 0 && d.startPlace < 0 && !(d.handle && d.mode === 'extend')) { select('sensor', sk); return; }
     if (d.handle && d.mode === 'extend' && !d.viaPlace) select('line', d.handle.L.id);
     else if (d.startPlace >= 0) select('place', d.startPlace);
-    else { const L = troubleAt(d.p) || lineAt(d.p); if (L) select('line', L.id); else closePop(); }
+    else { const hit = shipHit(d.p), L = troubleAt(d.p) || (hit && hit.L) || lineAt(d.p); if (L) { select('line', L.id); if (hit && hit.L === L) { sel.ship = hit.sh; refreshPop(true); } } else closePop(); }
   }
 });
 cv.addEventListener('pointercancel', e => { touches.delete(e.pointerId); if (touches.size < 2) pinch = null; drag = null; });
@@ -3000,7 +3005,7 @@ function refreshPop(force) {
       const pods = L.ships.reduce((a, s) => a + s.pods, 0), cap = L.ships.reduce((a, s) => a + shipCap(s), 0);
       const how = lineHow(L);
       // one little hull per ship, numbered like the badges on the map
-      const nowMs = performance.now(), hulls = L.ships.map((sh, k) => `<span class="hull${bornAt.has(sh) && nowMs - bornAt.get(sh) < 700 ? ' new' : ''}" style="--c:${L.color}">${k + 1}${sh.pods ? '<i></i>'.repeat(sh.pods) : ''}${sh.fix || sh.brk ? '🔧' : ''}</span>`).join('');
+      const nowMs = performance.now(), hulls = L.ships.map((sh, k) => `<span class="hull${bornAt.has(sh) && nowMs - bornAt.get(sh) < 700 ? ' new' : ''}${sel.ship === sh ? ' on' : ''}" data-a="pickHull" data-k="${k}" role="button" aria-label="Ship ${k + 1}" style="--c:${L.color}">${k + 1}${sh.pods ? '<i></i>'.repeat(sh.pods) : ''}${sh.fix || sh.brk ? '🔧' : ''}</span>`).join('');
       const html = `${hulls}<span>${how} · holds ${cap}${L.dry ? ` · no ${shp('diamond')} fuel, slow` : ''}</span>`;
       const el = P.querySelector('[data-f="lst"]'); if (el && el.dataset.sig !== html) { el.dataset.sig = html; el.innerHTML = html; }
       setF('nShips', String(S.inv.ships), true); setF('nPods', String(S.inv.pods), true); setF('lyr', yrTag(L.stops));
@@ -3110,9 +3115,10 @@ onTap(P, (a, el) => {
     else if (a === 'shipAt') { sel.pickShip = false; placeShip(L, +el.dataset.k, el); refreshPop(true); return; }
     else if (a === 'cancelPick') { sel.pickShip = false; refreshPop(true); return; }
     else if (a === 'fixShip') { const r = fixShips(L); if (r) { why(r); noFx(el); } else { const sh = L.ships[0], p = sh ? shipAt(L, sh) : PL[L.stops[0]]; burst(p.x, p.y, sysOf(L.stops[0]), 'repaired', L.color); deployFx(el, `🔧 ${esc(L.name)} running`); refreshPop(true); return; } }
-    else if (a === 'rmShip') { const r = removeShip(L); if (r) { why(r); noFx(el); } else deployFx(el, `${gi('iShip')} back to spare · ${S.inv.ships}`, true); }
+    else if (a === 'rmShip') { const r = removeShip(L, sel.ship); if (r) { why(r); noFx(el); } else { sel.ship = null; deployFx(el, `${gi('iShip')} back to spare · ${S.inv.ships}`, true); } }
+    else if (a === 'pickHull') { const sh = L.ships[+el.dataset.k]; sel.ship = sel.ship === sh ? null : sh; refreshPop(); return; }
     else if (a === 'addPod') {
-      const tgt = L.ships.length ? L.ships.reduce((x, y) => (y.pods < x.pods ? y : x)) : null, r = addPod(L);
+      const pick = sel.ship && L.ships.includes(sel.ship) ? sel.ship : null, tgt = pick || (L.ships.length ? L.ships.reduce((x, y) => (y.pods < x.pods ? y : x)) : null), r = addPod(L, pick);
       if (r) { why(r); noFx(el); }
       else { const p = shipAt(L, tgt); bornAt.set(tgt, performance.now()); burst(p.x, p.y, sysOf(L.stops[0]), `+pod · holds ${shipCap(tgt)}`, L.color);
         deployFx(el, `+1 ${gi('iPod')} ship ${L.ships.indexOf(tgt) + 1} holds ${shipCap(tgt)}`); }
@@ -3994,6 +4000,7 @@ function draw(rdt) {
     if (drag.mode === 'extend') previewPath(drag.stops, drag.L.color, drag.p, drag.loop && drag.stops.length >= 3, false, `${drag.L.name} line${redrawFee() ? ' · −' + fmt(redrawFee()) : ''}`);
   }
   // ships (the selected line's last, bigger, outlined and numbered)
+  shipSpots = [];
   for (const L of order) for (let si = 0; si < L.ships.length; si++) {
     const sh = L.ships[si], chosen = L.id === selId;
     let pos;
@@ -4010,6 +4017,8 @@ function draw(rdt) {
     const bt = bornAt.has(sh) ? (performance.now() - bornAt.get(sh)) / 1000 : 9, pop = bt < .45 ? 1 + .55 * Math.sin(bt / .45 * Math.PI) : 1;
     const zk = uk * (chosen ? 1.3 : 1) * pop, x = X(pos.x), y = Y(pos.y), len = (22 + 8 * sh.pods) * zk, wid = 11 * zk, hl = len / 2, hw = wid / 2, nose = 6 * zk, rr = 3 * zk;
     if (chosen) { ctx.fillStyle = 'rgba(255,255,255,.1)'; ctx.beginPath(); ctx.arc(x, y, hl + 4, 0, Math.PI * 2); ctx.fill(); }
+    shipSpots.push({ L, sh, x, y, r: hl });
+    if (sel && sel.ship === sh) { ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2.5; ctx.globalAlpha = .7 + .25 * Math.sin(clock * 5); ctx.beginPath(); ctx.arc(x, y, hl + 6, 0, Math.PI * 2); ctx.stroke(); ctx.globalAlpha = 1; }   // 5.38: the ship you picked
     if (bt < 1.6) { ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2.5; ctx.globalAlpha = 1 - bt / 1.6; ctx.beginPath(); ctx.arc(x, y, hl + 5 + bt * 14, 0, Math.PI * 2); ctx.stroke(); ctx.globalAlpha = 1; }
     ctx.save(); ctx.translate(x, y); ctx.rotate(pos.ang); ctx.globalAlpha = selId != null && !chosen ? .3 : 1;
     const sick = sh.fix || (sh.brk && Math.sin(clock * 10) > 0);
@@ -4709,7 +4718,7 @@ requestAnimationFrame(frame);
 // Hooks for headless balancing and input tests.
 window.LC = {
   get S() { return S; }, get GEN() { return GEN; }, plx: () => PLX.map(L => ({ ux: L.ux, uy: L.uy, k: L.k, ls: Math.pow(sc / sc0, L.d) })), IDX, PL, YEAR, startRun, step, tutGo, tutEnd, createLine, setStops, removeLine, addShip, removeShip, addPod, shieldPlace, buildDepot, select, room, setLine, openLoop, undo,
-  snapCam, cal, calOf, perOf, lineYear, showLog, buySensor, SENSORS, setSys, setAutoPause, inScen, trayUI, recordRun, readBoard, openBoard, showLost, endLost, showWin, award, readAch, needList, lookAt, ACH, ask5, qmTip, diagText, saveText, loadSaveText, perf, get capyImg() { return capyImg; }, get won() { return won; }, get lost() { return lost; }, get boardAll() { return boardAll; }, scrap, scrapVal, repairCost, negotiateCost, voteDemand, sysNeeds, get fxs() { return fxs; }, negotiate, startRebel, tunnelEnds, saveAll, readLocal, resumeRun, bestSave, parseCode, runCode, codeOf, splashUI, SCEN, repairPlace, repairSensor, buyOffer, price, sysOf, tunnelOpen, hud, get sc() { return sc; }, UPKEEP, upkeepShare, openPlace, fuelNear, crowdAt, warnRoom, get wclock() { return wclock; }, pins: () => pins.map(q => ({ x: rot ? window.innerWidth - q.y : q.x, y: rot ? q.x : q.y, i: q.i })),
+  snapCam, cal, calOf, perOf, lineYear, showLog, buySensor, SENSORS, setSys, setAutoPause, inScen, trayUI, recordRun, readBoard, openBoard, showLost, endLost, showWin, award, readAch, needList, lookAt, ACH, ask5, qmTip, diagText, saveText, loadSaveText, perf, get capyImg() { return capyImg; }, get won() { return won; }, get lost() { return lost; }, get boardAll() { return boardAll; }, scrap, scrapVal, repairCost, negotiateCost, voteDemand, sysNeeds, get fxs() { return fxs; }, negotiate, startRebel, tunnelEnds, saveAll, readLocal, resumeRun, bestSave, parseCode, runCode, codeOf, splashUI, SCEN, repairPlace, repairSensor, buyOffer, price, sysOf, tunnelOpen, hud, get sc() { return sc; }, UPKEEP, upkeepShare, openPlace, fuelNear, crowdAt, warnRoom, shipSpots: () => shipSpots, get wclock() { return wclock; }, pins: () => pins.map(q => ({ x: rot ? window.innerWidth - q.y : q.x, y: rot ? q.x : q.y, i: q.i })),
   redrawFee, chargeRedraw, fixShips, whyCrowded, worstTrouble, selLine, checkUpdate, verNum, get newer() { return newer; }, upkeepDue, berths, docked, queueAt, stuckAt, stuckNote, startSwing, breakdowns, lateGame, ovT, crowdFix,
   fast(sec) { const n = Math.round(sec / STEP); for (let i = 0; i < n && !S.over; i++) step(STEP); },
   screen(id) { const n = PL[IDX[id]], x = X(n.x), y = Y(n.y); return rot ? { x: window.innerWidth - y, y: x } : { x, y }; },
