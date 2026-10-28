@@ -85,6 +85,7 @@ body{font-family:var(--f-body);font-size:14px;-webkit-user-select:none;user-sele
 #banner.coach.act{border-color:rgba(242,166,90,.7)}
 #banner .k{font:600 10.5px/1 var(--f-display);letter-spacing:.12em;text-transform:uppercase;color:var(--capy);margin-right:6px}
 #banner .bt{flex:1;min-width:0}
+#banner.to .bt{pointer-events:auto;cursor:pointer}   /* 5.43: a note about a place or line: tap it to go there */
 textarea.diag{width:100%;box-sizing:border-box;height:150px;margin-top:8px;padding:8px 10px;border-radius:8px;border:1px solid var(--rule);background:#05070d;color:#c3cad8;
   font:400 11px/1.4 var(--f-data);resize:vertical;white-space:pre;overflow:auto;-webkit-user-select:text;user-select:text;touch-action:auto}
 #banner button.go{height:30px;min-width:0;padding:0 10px;border:1px solid var(--capy);border-radius:8px;background:rgba(242,166,90,.2);color:#ffd8a8;
@@ -483,7 +484,7 @@ button.link{height:auto;min-height:0;padding:2px 0;border:none;background:none;c
     <div id="prog"></div>
   </div>
 
-  <div id="banner" hidden><div class="bt" id="bText"></div><button data-a="bGo" id="bGo" class="go" hidden></button><span class="cd" id="bCd"></span><button data-a="dismiss" id="bX" aria-label="Dismiss">×</button></div>
+  <div id="banner" hidden><div class="bt" id="bText" data-a="bTo"></div><button data-a="bGo" id="bGo" class="go" hidden></button><span class="cd" id="bCd"></span><button data-a="dismiss" id="bX" aria-label="Dismiss">×</button></div>
   <div id="toast" class="out"></div>
   <div id="speedMenu" hidden role="menu" aria-label="Game speed"></div>
   <div id="tut" hidden><div class="tt" id="tutText" data-a="tutBody"></div><div class="th"><svg class="tcapy" viewBox="0 0 64 64" aria-hidden="true"><use href="#capy"/></svg><span class="tc" id="tutStep"></span><button class="skip" data-a="tutSkip">Skip</button><button class="primary" data-a="tutNext" id="tutNext">Next</button></div></div>
@@ -513,7 +514,7 @@ button.link{height:auto;min-height:0;padding:2px 0;border:none;background:none;c
       <svg class="lines" id="splashLines" aria-hidden="true"></svg>
       <div class="big" aria-hidden="true"><svg viewBox="0 0 64 64"><use href="#capy"/></svg></div>
       <div class="txt">
-        <div class="eyebrow" id="splashEyebrow">Prototype 5.42</div>
+        <div class="eyebrow" id="splashEyebrow">Prototype 5.43</div>
         <h1>Astrobara Lines</h1>
         <p>Capybaras run the Lagrange Alliance’s freight. <b>Drag through places</b> to draw a shipping line. Freight shape = where it’s going. Too much waiting fills a red ring; a full ring ends the run.</p>
         <div class="scen" role="radiogroup" aria-label="Start in">
@@ -591,7 +592,7 @@ const $ = id => document.getElementById(id);
 const app = $('app'), cv = $('cv'), ctx = cv.getContext('2d');
 
 /* ================= Tuning ================= */
-const VERSION = '5.42';
+const VERSION = '5.43';
 const YEAR = 80, QTR = YEAR / 4, HORIZON = 10, Y0 = 2027, STEP = 1 / 30;
 const SOON = 30;   // seconds before a place opens that it, its countdown and the note all appear
 const SPEED = 80;                 // ship speed in map units per second
@@ -1519,7 +1520,7 @@ function openPlace(i) {
   const tn = tunnels().find(([a]) => a === i), hm = tn ? tn[0] : -1, fm = tn ? tn[1] : -1;
   if (i === IDX.RX) {
     log(`A gate nobody built opened near ${placeName(nearestOpen(i))}. Visitors trade through it: freight to it pays ${fmt(SHAPES.alien.pay)} a load, and it sends out plenty of its own.`, 'warn');
-    if (!S.auto) S.hint = { id: 'gate', html: `${shp('alien')} <b>Visitor Gate</b> opened · ${fmt(SHAPES.alien.pay)}/load · it needs a line`, t: S.clock };
+    if (!S.auto) S.hint = { id: 'gate', to: { place: i }, html: `${shp('alien')} <b>Visitor Gate</b> opened · ${fmt(SHAPES.alien.pay)}/load · it needs a line`, t: S.clock };
     newPlacePause(i);
     return;
   }
@@ -1528,7 +1529,7 @@ function openPlace(i) {
     const to = sysOf(fm), rift = i === IDX.RIFT, where = S.scen === 'sol' && !rift ? 'past Saturn' : `near ${placeName(nearestOpen(i))}`;
     const what = to === 'far' ? 'the Proxima Centauri system' : `an uncharted system, ${GEN.name} (a ${GEN.star.type})`;
     log(`${rift ? 'A second wormhole, the Rift,' : 'A wormhole'} opened ${where}, to ${what}. Freight dropped at one end comes out the other. The Alliance sends 2 lines and 2 ships for the far side.${S.scen === 'sol' && !rift ? ' (Science fiction from here on.)' : ''}`, 'good');
-    if (!S.auto) { S.hint = { id: 'worm', html: `${shp('worm')} <b>${rift ? 'Rift' : 'Wormhole'}</b> to ${sysName(to)} · +2 ${gi('iLine')} +2 ${gi('iShip')} · line to it, then ${sysLabel(to)}`, t: S.clock }; }
+    if (!S.auto) { S.hint = { id: 'worm', to: { place: i }, html: `${shp('worm')} <b>${rift ? 'Rift' : 'Wormhole'}</b> to ${sysName(to)} · +2 ${gi('iLine')} +2 ${gi('iShip')} · line to it, then ${sysLabel(to)}`, t: S.clock }; }
     newPlacePause(i);
     return;
   }
@@ -1536,7 +1537,7 @@ function openPlace(i) {
   log(`${placeName(i)} opens as a ${SHAPES[S.shape[i]].role.toLowerCase()}. ${o.st === 'fic' ? 'Science fiction' : 'Real world: ' + STATUS[o.st].toLowerCase()}, ~${o.y}. ${o.note}`, 'good');
   const msg = `${shp(S.shape[i])} ${placeName(i)} open · ${o.st === 'fic' ? '' : 'IRL '}${o.y}`;
   if (fresh) { if (S.hint && S.hint.id !== 'start') S.hint = null; hint('shape', i); }
-  else if (!S.hints.same && !S.auto) { S.hints.same = true; S.hint = { id: 'same', html: HINTS.same(i), t: S.clock }; }
+  else if (!S.hints.same && !S.auto) { S.hints.same = true; S.hint = { id: 'same', to: { place: i }, html: HINTS.same(i), t: S.clock }; }
   else if (!S.auto && !willPause()) toast(msg, 3500);
   newPlacePause(i);
 }
@@ -1549,7 +1550,7 @@ function newPlacePause(i) {
   if (!willPause()) return;
   S.paused = true; S.autoPaused = i; lastPlay = null;
   if (S.hint && S.hint.t === S.clock && ['gate', 'worm', 'same'].includes(S.hint.id)) S.hint.html += ' · paused, ▶ to go on';
-  else { const o = S.irl[i]; S.hint = { id: 'new', html: `New ${shp(S.shape[i])} <b>${esc(placeName(i))}</b>${o && o.y ? ` (${o.st === 'fic' ? '' : 'IRL '}${o.y})` : ''}${via(i)} · paused · ▶ to go on`, t: S.clock }; }
+  else { const o = S.irl[i]; S.hint = { id: 'new', to: { place: i }, html: `New ${shp(S.shape[i])} <b>${esc(placeName(i))}</b>${o && o.y ? ` (${o.st === 'fic' ? '' : 'IRL '}${o.y})` : ''}${via(i)} · paused · ▶ to go on`, t: S.clock }; }
   if (camManual && inView(i)) { const { side, top, rw, rh } = mapBox(); jump = { a: worldAt({ x: side + rw / 2, y: top + rh / 2 }), b: { x: PL[i].x, y: PL[i].y }, t: 0 }; }
 }
 
@@ -2589,7 +2590,7 @@ const HINTS = {
 function hint(id, arg) {
   if (S.hints[id] || S.auto || S.tut) return;
   if (S.hint && S.hint.id !== 'start' && id !== 'shape') return;
-  S.hints[id] = true; S.hint = { id, html: HINTS[id](arg), t: S.clock };
+  S.hints[id] = true; S.hint = { id, html: HINTS[id](arg), t: S.clock, to: toOf(arg) };
 }
 function clearHint(id) { if (S.hint && (!id || S.hint.id === id)) S.hint = null; }
 let toastT = 0;
@@ -2696,6 +2697,13 @@ function camTarget() {
 }
 function snapCam() { camManual = false; cam = camTarget(); fitCam(); }
 // Glide in on a place and zoom to it (the banner's Show); Fit brings the whole map back.
+// 5.43: what a note is about, from what it was made from (a place index or a line), and going there
+const toOf = arg => (typeof arg === 'number' && arg >= 0 && arg < NP ? { place: arg } : arg && arg.stops ? { line: arg.id } : null);
+function goTo(t) {
+  if (t.place != null) { const i = t.place; if (!inView(i)) setSys(sysOf(i)); if (S.open[i]) select('place', i); zoomTo(i); return; }
+  const L = S.lines.find(x => x.id === t.line); if (!L) return;
+  if (!lineView(L)) setSys(sysOf(L.stops[0])); select('line', L.id); zoomTo(L.stops[Math.floor((L.stops.length - 1) / 2)]);
+}
 function zoomTo(i) {
   const { side, top, rw, rh } = mapBox();
   jump = { a: worldAt({ x: side + rw / 2, y: top + rh / 2 }), b: { x: PL[i].x, y: PL[i].y }, t: 0, s0: sc, s1: Math.max(sc, sc0 * 1.9) };
@@ -3297,10 +3305,10 @@ function trayUI() {
   $('cDocks').hidden = !(S.inv.docks > 0); $('tDocks').textContent = S.inv.docks || 0;
   for (const [id, v] of [['tShips', S.inv.ships], ['tPods', S.inv.pods], ['tDepots', S.inv.depots], ['tShields', S.inv.shields]]) { $(id).textContent = v; $(id).parentElement.classList.toggle('zero', !v); }
 }
-let bannerSig = '', bannerGo = null;
+let bannerSig = '', bannerGo = null, bannerTo = null;
 function banner() {
   const h = S.haz, el = $('banner');
-  let cls = '', html = '', cd = '', x = false, go = null;
+  let cls = '', html = '', cd = '', x = false, go = null, to = null;
   // while the game is paused for something (a new place, a vote), its note shows even over a storm warning
   const held = S.paused && S.autoPaused != null && S.hint && ['new', 'gate', 'worm', 'same', 'talks'].includes(S.hint.id);
   // 5.19: a place overflowing is how a run ends, so it outranks every other note: red, with the time left and Show
@@ -3308,22 +3316,24 @@ function banner() {
   if (ov >= 0) {
     const why = whyCrowded(ov);
     cls = 'live'; html = `${shp(S.shape[ov])} <b>${esc(placeName(ov))}</b> overflowing ${S.Q[ov].length}/${room(ov)} · ${why.note}${S.paused && S.autoPaused === ov ? ' · paused' : ''}${via(ov)}`;
-    cd = Math.max(0, Math.ceil((1 - S.of[ov]) * ovT())) + 's'; go = why.go || { label: 'Show', place: ov };
+    cd = Math.max(0, Math.ceil((1 - S.of[ov]) * ovT())) + 's'; go = why.go || { label: 'Show', place: ov }; to = { place: ov };
   }
   // a storm or debris you're already protected from needs no banner
   else if (h && !held && !quietHaz(h)) {
     cls = h.phase; html = `<b>${hazIcon(h)} ${esc(h.title)}</b>${h.early ? ' ' + gi('iSensor') : ''} ${h.phase === 'warn' || h.type === 'drifter' || h.type === 'rush' || h.type === 'strike' ? hazWhat(h) : h.type === 'surge' ? '' : hazAction(h)}`;
     cd = (h.phase === 'warn' ? '' : 'now ') + Math.max(0, Math.ceil((h.phase === 'warn' ? h.at : h.until) - S.t)) + 's';
+    { const t = h.type === 'debris' ? IDX.LEO : (zonesOf(h).map(z => z.i).find(i => i != null) ?? h.i); if (t != null && t >= 0) to = { place: t }; }
   } else if (stuckWorst() >= 0 && !S.tut) {
     const i = stuckWorst(), st = stuckNote(i), w = Object.keys(st.by).sort((a, b) => st.by[b] - st.by[a])[0];
-    cls = 'coach act'; html = `${shp(w)} <b>${st.n} stuck at ${esc(placeName(i))}</b> · ${st.noRoute >= st.n / 2 ? `no line reaches ${shp(w)}` : `no ship goes their way`}${via(i)}`; go = { label: 'Show', place: i };
+    cls = 'coach act'; html = `${shp(w)} <b>${st.n} stuck at ${esc(placeName(i))}</b> · ${st.noRoute >= st.n / 2 ? `no line reaches ${shp(w)}` : `no ship goes their way`}${via(i)}`; go = { label: 'Show', place: i }; to = { place: i };
   } else if (worstTrouble() && !S.tut) {
     const w = worstTrouble(), secs = Math.max(0, Math.ceil((w.x.fix || w.x.brk) - S.t));
     cls = 'coach act'; html = `🔧 <b>${esc(w.L.name)} ship ${w.k + 1}</b> ${w.x.fix ? `stopped · ${secs}s` : `breaks down in ${secs}s`}${sysOf(w.L.stops[0]) !== S.view ? ' · ' + esc(sysLabel(sysOf(w.L.stops[0]))) : ''}`;
-    go = { label: `Repair ${fmt(repairCost())}`, line: w.L.id, icon: '' };
-  } else if (S.hint) { cls = 'hint'; html = S.hint.html; x = S.hint.id !== 'start'; go = S.hint.go || null; }
-  else { const c = coach(); if (c) { cls = 'coach' + (c.act ? ' act' : ''); html = c.html; go = c.go || null; } }
-  bannerGo = go;
+    go = { label: `Repair ${fmt(repairCost())}`, line: w.L.id, icon: '' }; to = { line: w.L.id };
+  } else if (S.hint) { cls = 'hint'; html = S.hint.html; x = S.hint.id !== 'start'; go = S.hint.go || null; to = S.hint.to || (S.hint.i != null ? { place: S.hint.i } : null) || (go && go.place != null ? { place: go.place } : go && go.talk != null ? { place: go.talk } : null); }
+  else { const c = coach(); if (c) { cls = 'coach' + (c.act ? ' act' : ''); html = c.html; go = c.go || null; to = c.to || null; } }
+  if (to) cls += ' to';
+  bannerGo = go; bannerTo = to;
   const sig = cls + html + x + (go ? go.label : '');
   if (sig !== bannerSig) {
     bannerSig = sig; el.className = cls; $('bText').innerHTML = (html && /^(hint|coach)/.test(cls) ? '<svg class="bcapy" viewBox="0 0 64 64" aria-hidden="true"><use href="#capy"/></svg>' : '') + html; $('bX').hidden = !x; el.hidden = !html;
@@ -3380,23 +3390,23 @@ function crowdFix(i) {
 function coach() {
   if (!S.started || S.tut || S.over) return null;
   const on = new Set(); S.lines.forEach(L => L.stops.forEach(i => on.add(i)));
-  for (let i = 0; i < NP; i++) if (S.open[i] && !on.has(i)) return { act: true, html: `${shp(S.shape[i])} <b>${esc(placeName(i))}</b> needs a line${via(i)}` };
+  for (let i = 0; i < NP; i++) if (S.open[i] && !on.has(i)) return { act: true, to: { place: i }, html: `${shp(S.shape[i])} <b>${esc(placeName(i))}</b> needs a line${via(i)}` };
   const idle = S.lines.find(L => !L.ships.length);
-  if (idle) return { act: true, html: `<b>${idle.name}</b> line has no ${gi('iShip')}` };
+  if (idle) return { act: true, to: { line: idle.id }, html: `<b>${idle.name}</b> line has no ${gi('iShip')}` };
   let worst = -1, margin = Infinity;
   for (let i = 0; i < NP; i++) if (S.open[i] && S.Q[i].length >= crowdAt(i) && room(i) - S.Q[i].length < margin) { margin = room(i) - S.Q[i].length; worst = i; }
-  if (worst >= 0) { const why = whyCrowded(worst); return { act: true, html: `${shp(S.shape[worst])} <b>${esc(placeName(worst))}</b> ${S.Q[worst].length}/${room(worst)} · ${why.note}${via(worst)}`, go: why.go || null }; }
+  if (worst >= 0) { const why = whyCrowded(worst); return { act: true, to: { place: worst }, html: `${shp(S.shape[worst])} <b>${esc(placeName(worst))}</b> ${S.Q[worst].length}/${room(worst)} · ${why.note}${via(worst)}`, go: why.go || null }; }
   const dm = S.dmg.findIndex((v, i) => v && S.open[i]);
-  if (dm >= 0) return { act: true, html: `🔧 <b>${esc(placeName(dm))}</b> damaged · ${S.fund >= repairCost() ? fmt(repairCost()) : `short ${fmt(repairCost() - S.fund)}, scrap spares`}${via(dm)}`, go: { label: 'Repair', place: dm, icon: '🔧' } };
+  if (dm >= 0) return { act: true, to: { place: dm }, html: `🔧 <b>${esc(placeName(dm))}</b> damaged · ${S.fund >= repairCost() ? fmt(repairCost()) : `short ${fmt(repairCost() - S.fund)}, scrap spares`}${via(dm)}`, go: { label: 'Repair', place: dm, icon: '🔧' } };
   let ur = -1; for (let i = 0; i < NP; i++) if (S.open[i] && S.unrest && (rebelNow(i) || S.unrest[i] >= .6) && (ur < 0 || S.unrest[i] > S.unrest[ur])) ur = i;
-  if (ur >= 0) return { act: true, html: `${gi('iFlag')} <b>${esc(placeName(ur))}</b> ${rebelNow(ur) ? `independent · ${Math.ceil(S.rebel[ur] - S.t)}s` : 'restless'}${S.demand && demandOK(ur, S.demand[ur]) ? ` · wants ${esc(demandShort(S.demand[ur]))}` : ''}${via(ur)}`, go: { label: 'Negotiate', talk: ur } };
+  if (ur >= 0) return { act: true, to: { place: ur }, html: `${gi('iFlag')} <b>${esc(placeName(ur))}</b> ${rebelNow(ur) ? `independent · ${Math.ceil(S.rebel[ur] - S.t)}s` : 'restless'}${S.demand && demandOK(ur, S.demand[ur]) ? ` · wants ${esc(demandShort(S.demand[ur]))}` : ''}${via(ur)}`, go: { label: 'Negotiate', talk: ur } };
   if (S.inv.pods && S.lines.length) return { act: true, html: `${gi('iPod')} spare pod · tap a line` };
   if (S.inv.depots) return { act: true, html: `${gi('iDepot')} spare storage · tap a place` };
   const sk = SENSORS.findIndex((z, k) => sensorPlay(k) && !S.sensor[k] && cal(S.t) >= sensorFrom(k) && S.fund >= z.cost + 50);
   if (sk >= 0 && S.log.some(e => e.kind === 'warn' && /Storm|Flare|Pulse|signal/.test(e.text))) return { act: false, html: `${gi('iSensor')} ${SENSORS[sk].short} for sale · ${fmt(SENSORS[sk].cost)}${via(sensorSys(SENSORS[sk]) === 'far' ? IDX.WORMF : sensorSys(SENSORS[sk]) === 'rnd' ? IDX.RW : IDX.EARTH)}` };
   const n = nextOpening();
   if (n === IDX.RX && S.at[n] - S.t < SOON) return { act: false, html: `${gi('iAlien')} <b>Unknown signal</b> · ${Math.ceil(S.at[n] - S.t)}s` };
-  if (n >= 0 && S.at[n] - S.t < SOON) return { act: false, html: `${shp(S.shape[n])} <b>${esc(placeName(n))}</b> opens · ${Math.ceil(S.at[n] - S.t)}s${homeMouth(n) && n !== IDX.RIFT ? '' : via(n)}` };
+  if (n >= 0 && S.at[n] - S.t < SOON) return { act: false, to: { place: n }, html: `${shp(S.shape[n])} <b>${esc(placeName(n))}</b> opens · ${Math.ceil(S.at[n] - S.t)}s${homeMouth(n) && n !== IDX.RIFT ? '' : via(n)}` };
   return null;
 }
 const TRAY_HELP = {
@@ -3544,6 +3554,7 @@ onTap($('speedMenu'), (a, el) => {
 });
 onTap($('banner'), a => {
   if (a === 'dismiss') { S.hint = null; bannerSig = ''; hud(); }
+  if (a === 'bTo' && bannerTo) goTo(bannerTo);
   if (a === 'bGo' && bannerGo) {
     const g = bannerGo;
     if (g.talk != null) openTalks(g.talk);

@@ -1,5 +1,8 @@
 # Changelog
 
+## 5.43
+- Tap a note at the top to go to what it's about. The view switches system if needed, moves to the place and opens it, or opens the line. This works for every note that names a place or line: needs a line, a line with no ship, crowding and overflow, storms, stuck freight, breakdowns, damage, unrest, a place about to open, and new places and wormholes. Notes about nothing in particular, like a spare pod, stay as they are. Show, Repair and Negotiate work as before.
+
 ## 5.42
 - The backing behind waiting freight is lighter and rounder: a half-transparent shadow that follows the shapes instead of a solid box, so the line underneath still shows. The shapes' dark edges are a touch thinner.
 
