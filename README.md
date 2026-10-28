@@ -67,7 +67,7 @@ Every run has a code like `SOL-HALO-417`. Type it on the start screen to play th
 
 ## Reporting a problem
 
-Open ≡ → **Diag** → **Copy diagnostics**. This copies a short text report covering version, device, frame rate, the run's state, the recent log and any errors. **Copy save too** adds the run itself, compressed, so the exact moment can be loaded and looked at.
+Open ≡ → **Diag** → **Copy diagnostics**, or tap **Copy diag** on the Network Lost card. This copies a short text report covering version, device, frame rate, the run's state, the recent log and any errors. **Copy save too** adds the run itself, compressed, so the exact moment can be loaded and looked at.
 
 ## Credits
 
