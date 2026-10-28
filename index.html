@@ -513,7 +513,7 @@ button.link{height:auto;min-height:0;padding:2px 0;border:none;background:none;c
       <svg class="lines" id="splashLines" aria-hidden="true"></svg>
       <div class="big" aria-hidden="true"><svg viewBox="0 0 64 64"><use href="#capy"/></svg></div>
       <div class="txt">
-        <div class="eyebrow" id="splashEyebrow">Prototype 5.38</div>
+        <div class="eyebrow" id="splashEyebrow">Prototype 5.39</div>
         <h1>Astrobara Lines</h1>
         <p>Capybaras run the Lagrange Alliance’s freight. <b>Drag through places</b> to draw a shipping line. Freight shape = where it’s going. Too much waiting fills a red ring; a full ring ends the run.</p>
         <div class="scen" role="radiogroup" aria-label="Start in">
@@ -591,7 +591,7 @@ const $ = id => document.getElementById(id);
 const app = $('app'), cv = $('cv'), ctx = cv.getContext('2d');
 
 /* ================= Tuning ================= */
-const VERSION = '5.38';
+const VERSION = '5.39';
 const YEAR = 80, QTR = YEAR / 4, HORIZON = 10, Y0 = 2027, STEP = 1 / 30;
 const SOON = 30;   // seconds before a place opens that it, its countdown and the note all appear
 const SPEED = 80;                 // ship speed in map units per second
@@ -2009,7 +2009,7 @@ const PRICE = { ship: 150, pod: 120, depot: 120, shield: 150, line: 400, fast: 6
 const price = k => Math.round(PRICE[k] * Math.pow(1.5, S.bought[k] || 0) * (1 + S.t / YEAR / 12));
 const canBuy = k => !(k === 'line' && S.inv.lines >= maxLines()) && !(OFFERS[k].up && S.up[OFFERS[k].up] >= OFFERS[k].max);
 function buyOffer(k) {
-  if (!canBuy(k)) return 'Maxed out';
+  if (!canBuy(k)) return whyNot(k) === 'maxed' ? `${OFFERS[k].name}: maxed` : `You have ${whyNot(k)}`;
   const c = price(k); if (S.fund < c) return `Need ${fmt(c)}`;
   S.fund -= c; S.bought[k] = (S.bought[k] || 0) + 1; applyOffer(k);
   log(`You bought ${OFFERS[k].name.toLowerCase()} for ${fmt(c)}.`, ''); return null;
@@ -2018,7 +2018,10 @@ function buyOffer(k) {
 const BANK_RATE = .04;
 const bankPay = () => Math.max(5, Math.min(Math.round(S.fund * BANK_RATE), Math.round(.5 * Math.min(...S.meet.pair.map(price)))));
 const haveNow = k => (OFFERS[k].up ? `level ${S.up[OFFERS[k].up]} of ${OFFERS[k].max}` : OFFERS[k].have());
-const shopHTML = () => Object.keys(PRICE).filter(canBuy).map(k => `<button class="buy" data-a="buyUp" data-o="${k}" ${S.fund < price(k) ? 'aria-disabled="true"' : ''} title="${OFFERS[k].name}">${ICON(OFFERS[k].icon)}<span><b>${OFFERS[k].name}</b>${fmt(price(k))}<small>${haveNow(k)}</small></span></button>`).join('');
+// 5.39: everything is always listed; what you can't buy now is greyed out and says why
+const whyNot = k => (k === 'line' && S.inv.lines >= maxLines() ? `all ${maxLines()} lines` : OFFERS[k].up && S.up[OFFERS[k].up] >= OFFERS[k].max ? 'maxed' : null);
+const shopHTML = () => Object.keys(PRICE).map(k => { const no = whyNot(k), short = !no && S.fund < price(k);
+  return `<button class="buy${no ? ' maxed' : ''}" data-a="buyUp" data-o="${k}" ${no || short ? 'aria-disabled="true"' : ''} title="${OFFERS[k].name}">${ICON(OFFERS[k].icon)}<span><b>${OFFERS[k].name}</b>${no || fmt(price(k))}<small>${haveNow(k)}${short ? ` · need ${fmt(price(k) - S.fund)} more` : ''}${k === 'depot' ? ' · was Depot' : ''}</small></span></button>`; }).join('');
 const offersHTML = () => S.meet.pair.map(o => `<button class="offer" data-a="offer" data-o="${o}">${ICON(OFFERS[o].icon)}<span class="ot"><b>${OFFERS[o].name}</b><span>${OFFERS[o].desc()}</span><em>${offerHave(o)}</em></span></button>`).join('');
 // The shop's capybara quartermaster says one useful thing, or failing that something capybara.
 function qmTip() {

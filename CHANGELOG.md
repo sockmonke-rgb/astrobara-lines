@@ -1,5 +1,9 @@
 # Changelog
 
+## 5.39
+- The Alliance Shop always lists all nine things. What you can't buy right now is greyed out and says why: "maxed", "all 9 lines", or how much more money you need. Tap it for the reason. Before, maxed things disappeared.
+- Storage is marked "was Depot" in the shop for now, since it was renamed in 5.36.
+
 ## 5.38
 - **Pick a ship.** Tapping a ship out on its line selects the line with that ship picked: it gets a white ring, and its number is marked in the bar. You can also tap the ship numbers in the bar. +pod then goes to that ship, and −ship takes that ship off. If the picked ship already has all its pods, it says so instead of giving the pod to another ship. With no ship picked, it works as before: the ship with the fewest pods gets it.
 
