@@ -1,5 +1,8 @@
 # Changelog
 
+## 5.44
+- A ship you've just added is picked straight away, so a +pod right after goes to it rather than to the line's emptiest ship.
+
 ## 5.43
 - Tap a note at the top to go to what it's about. The view switches system if needed, moves to the place and opens it, or opens the line. This works for every note that names a place or line: needs a line, a line with no ship, crowding and overflow, storms, stuck freight, breakdowns, damage, unrest, a place about to open, and new places and wormholes. Notes about nothing in particular, like a spare pod, stay as they are. Show, Repair and Negotiate work as before.
 

@@ -514,7 +514,7 @@ button.link{height:auto;min-height:0;padding:2px 0;border:none;background:none;c
       <svg class="lines" id="splashLines" aria-hidden="true"></svg>
       <div class="big" aria-hidden="true"><svg viewBox="0 0 64 64"><use href="#capy"/></svg></div>
       <div class="txt">
-        <div class="eyebrow" id="splashEyebrow">Prototype 5.43</div>
+        <div class="eyebrow" id="splashEyebrow">Prototype 5.44</div>
         <h1>Astrobara Lines</h1>
         <p>Capybaras run the Lagrange Alliance’s freight. <b>Drag through places</b> to draw a shipping line. Freight shape = where it’s going. Too much waiting fills a red ring; a full ring ends the run.</p>
         <div class="scen" role="radiogroup" aria-label="Start in">
@@ -592,7 +592,7 @@ const $ = id => document.getElementById(id);
 const app = $('app'), cv = $('cv'), ctx = cv.getContext('2d');
 
 /* ================= Tuning ================= */
-const VERSION = '5.43';
+const VERSION = '5.44';
 const YEAR = 80, QTR = YEAR / 4, HORIZON = 10, Y0 = 2027, STEP = 1 / 30;
 const SOON = 30;   // seconds before a place opens that it, its countdown and the note all appear
 const SPEED = 80;                 // ship speed in map units per second
@@ -2969,6 +2969,7 @@ function placeShip(L, k, el) {
   const r = addShip(L, k);
   if (r) { why(r); noFx(el); return r; }
   const sh = L.ships[L.ships.length - 1], p = shipAt(L, sh); bornAt.set(sh, performance.now()); burst(p.x, p.y, sysOf(L.stops[0]), `+ship ${L.ships.length}`, L.color);
+  if (sel && sel.type === 'line' && sel.id === L.id) sel.ship = sh;   // 5.44: the ship you just added is the one picked
   deployFx(el, `+1 ${gi('iShip')} ${esc(L.name)} · from ${esc(placeName(L.stops[sh.k]))} · ${L.ships.length} ship${L.ships.length > 1 ? 's' : ''}`);
   return null;
 }
