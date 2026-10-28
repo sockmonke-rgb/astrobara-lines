@@ -1,5 +1,9 @@
 # Changelog
 
+## 5.31
+- **Bigger upkeep that grows with your network.** At each Alliance Shop visit, upkeep is now a share of what the network earned since the last one: a few percent for each ship at work (a pod counts as part of a ship), more per ship as the fleet grows, up to 60%. Before, it was a small fixed price per ship, so in Uncharted and Proxima, where loads pay more, it was only about 7% of income. Now it's about half of income in the middle of a run in every system. It eases in over the first two visits instead of ten, and since it never takes more than the network brought in, it can't sink a run.
+- The shop shows upkeep as a share of what you earned, e.g. "upkeep −$420M (55%)".
+
 ## 5.30
 - On a computer, clicking the map around the start screen does what its main button does: Continue your saved run, the walkthrough the first time on Earth–Moon, or Play. Clicks on the card itself, and taps on phones and tablets, are unchanged.
 

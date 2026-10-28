@@ -478,7 +478,7 @@ button.link{height:auto;min-height:0;padding:2px 0;border:none;background:none;c
       <div class="col" id="hFundBox"><span class="lbl">Budget</span><span class="num" id="hFund">$100M</span></div>
     </div>
     <div class="col" data-tip="<b>The date</b> · a year per period at first; after the ten-year review the calendar speeds up"><span class="num" id="hDate">Q1 2027</span><span class="sub" id="hYear">Year 1 of 10</span></div>
-    <div class="col right" data-tip="<b>Alliance Shop</b> · the next visit brings a free ship and a pick, and charges upkeep for the ships at work · ★ a boom: deliveries of that kind pay double"><span class="sub" id="hMeet"></span><span class="sub" id="hBoom"></span></div>
+    <div class="col right" data-tip="<b>Alliance Shop</b> · the next visit brings a free ship and a pick, and takes upkeep for the ships at work: a share of what they earned, more for a bigger fleet · ★ a boom: deliveries of that kind pay double"><span class="sub" id="hMeet"></span><span class="sub" id="hBoom"></span></div>
     <div id="prog"></div>
   </div>
 
@@ -512,7 +512,7 @@ button.link{height:auto;min-height:0;padding:2px 0;border:none;background:none;c
       <svg class="lines" id="splashLines" aria-hidden="true"></svg>
       <div class="big" aria-hidden="true"><svg viewBox="0 0 64 64"><use href="#capy"/></svg></div>
       <div class="txt">
-        <div class="eyebrow" id="splashEyebrow">Prototype 5.30</div>
+        <div class="eyebrow" id="splashEyebrow">Prototype 5.31</div>
         <h1>Astrobara Lines</h1>
         <p>Capybaras run the Lagrange Alliance’s freight. <b>Drag through places</b> to draw a shipping line. Freight shape = where it’s going. Too much waiting fills a red ring; a full ring ends the run.</p>
         <div class="scen" role="radiogroup" aria-label="Start in">
@@ -590,7 +590,7 @@ const $ = id => document.getElementById(id);
 const app = $('app'), cv = $('cv'), ctx = cv.getContext('2d');
 
 /* ================= Tuning ================= */
-const VERSION = '5.30';
+const VERSION = '5.31';
 const YEAR = 80, QTR = YEAR / 4, HORIZON = 10, Y0 = 2027, STEP = 1 / 30;
 const SOON = 30;   // seconds before a place opens that it, its countdown and the note all appear
 const SPEED = 80;                 // ship speed in map units per second
@@ -599,7 +599,10 @@ const ROOM = 10, DEPOT_ROOM = 8;  // freight a place holds before it starts to o
 const OVERFLOW = 30;              // seconds a place may stay over capacity
 // 5.21: friction that bites but always leaves you a move
 const OVERFLOW_LATE = 20;         // ...late in a run the ring fills faster, and crowding warnings start earlier
-const UPKEEP = { ship: 3.5, pod: 1.5 };   // per ship and pod in service, charged at each shop visit, at today's prices
+// 5.31: upkeep is a share of what the network earned since the last shop visit: `ship` per ship in service (a pod counts
+// as `pod` of a ship), growing with the fleet (×(1 + n/fleet)), eased in over the first `ease` visits, at most `cap`.
+// So it follows each system's pay and the decades by itself, and can never take more than the network brought in.
+const UPKEEP = { ship: .035, pod: .4, fleet: 12, ease: 2, cap: .6 };
 const FUEL_RANGE = 900, FUEL_SLOW = .7;   // a line longer than this with no ◆ fuel stop runs this much slower
 const BERTHS = 3;                 // ships a place loads at once (a fast dock adds 2, a wormhole has 2 more)
 const BRK_WARN = 8, BRK_DUR = 20; // late in a run a ship now and then breaks down: warning, then time stopped
@@ -2016,7 +2019,7 @@ function meetingHTML() {
   const m = S.meet, multi = m.span.includes('–');
   return `<div class="mhead"><div class="col"><div class="eyebrow">Alliance Shop · ${multi ? qLabel(S.t) + ' · ' + eraNow() : 'end of ' + m.span}</div>
       <div class="mfund" id="mFundBox"><span class="lbl">Budget</span><b id="mFund">${fmt(S.fund)}</b></div></div>
-      <span class="credit mnote">${m.earned != null ? `earned ${fmt(m.earned)}` : S.fund - m.last + m.spent >= 0 ? `earned ${fmt(S.fund - m.last + m.spent)}` : `budget down ${fmt(m.last - m.spent - S.fund)}`} ${multi ? 'since the last visit' : 'this year'}<br>${m.up ? `upkeep −${fmt(m.up)} · ` : ''}+1 ${gi('iShip')}${m.freeLine ? ` +1 ${gi('iLine')}` : ''} from the Alliance</span></div>
+      <span class="credit mnote">${m.earned != null ? `earned ${fmt(m.earned)}` : S.fund - m.last + m.spent >= 0 ? `earned ${fmt(S.fund - m.last + m.spent)}` : `budget down ${fmt(m.last - m.spent - S.fund)}`} ${multi ? 'since the last visit' : 'this year'}<br>${m.up ? `upkeep −${fmt(m.up)}${m.earned ? ` (${Math.round(m.up / m.earned * 100)}%)` : ''} · ` : ''}+1 ${gi('iShip')}${m.freeLine ? ` +1 ${gi('iLine')}` : ''} from the Alliance</span></div>
     <div class="lbody">
       <div class="qm"><svg viewBox="0 0 64 64" aria-hidden="true"><use href="#capy"/></svg><span><b>Quartermaster:</b> ${esc(qmTip())}</span></div>
       <div class="eyebrow">1 · Buy from the budget, if you like</div><div class="shop" id="mShop">${shopHTML()}</div>
@@ -2102,12 +2105,13 @@ function drawFx() {
 }
 // The same on the budget at the top left of the game.
 function fundFx(delta) { if (S && !S.auto && delta) { floatFx($('hFundBox'), delta); const el = $('hFund'); el.classList.remove('down', 'up'); void el.offsetWidth; el.classList.add(delta < 0 ? 'down' : 'up'); } }
-// 5.21: ships and pods in service cost upkeep, charged at each shop visit at today's prices. It eases in over the
-// first ten periods. The budget can go below zero; then nothing can be bought until deliveries bring it back.
-function upkeepDue() {
-  let sh = 0, pd = 0; for (const L of S.lines) for (const x of L.ships) { sh++; pd += x.pods; }
-  return Math.round((UPKEEP.ship * sh + UPKEEP.pod * pd) * costK() * Math.min(1, S.t / YEAR / 10));
+// 5.21: ships and pods in service cost upkeep, charged at each shop visit at today's prices. The budget can go below
+// zero; then nothing can be bought until deliveries bring it back. 5.31: see UPKEEP.
+function upkeepShare() {
+  let n = 0; for (const L of S.lines) for (const x of L.ships) n += 1 + UPKEEP.pod * x.pods;
+  return Math.min(UPKEEP.cap, UPKEEP.ship * n * (1 + n / UPKEEP.fleet)) * Math.min(1, S.t / YEAR / UPKEEP.ease);
 }
+function upkeepDue() { return Math.round(upkeepShare() * Math.max(0, S.earned - (S.earnedMeet || 0))); }
 function meeting(y) {
   S.meetDue = null; recordRun();
   const up = upkeepDue();
@@ -2117,10 +2121,10 @@ function meeting(y) {
   const freeLine = y % FREE_LINE_EVERY === 0 && S.inv.lines < maxLines();
   if (freeLine) S.inv.lines++;
   const pair = offerPair();
+  const earned = S.earnedMeet != null ? S.earned - S.earnedMeet : null; S.earnedMeet = S.earned;
   if (S.auto) { const pick = S.auto('meeting', pair); applyOffer(pick); S.meet = null; log(`Alliance Shop: new ship${freeLine ? ', new line' : ''} and ${OFFERS[pick].name.toLowerCase()}.`, ''); return; }
   S.paused = true; closePop();
   const last = S.hist.length > 4 ? S.hist[S.hist.length - 5].fund : SEED_FUND;
-  const earned = S.earnedMeet != null ? S.earned - S.earnedMeet : null; S.earnedMeet = S.earned;
   S.meet = { pair, freeLine, span: periodSpan(y - 1), last, spent: 0, done: false, earned, up };
   openModal(meetingHTML(), 'meeting');
 }
@@ -3600,7 +3604,7 @@ function helpBody() {
     <li><b>Ships.</b> On a line, ships shuttle back and forth between the ends. On a loop they go round, split between the two ways: if they bunch up going one way, one turns round at its next stop. On a loop with one ship, freight rides the long way round. The pointed end shows which way a ship is heading.</li>
     <li><b>Berths and fuel.</b> A place loads ${BERTHS} ships at once (a wormhole ${BERTHS + 2}); the rest queue just outside. A fast dock adds 2 berths. A long line (more than about Earth to the Moon and on to L2) with no ${shp('diamond')} fuel depot among its stops runs ${Math.round((1 - FUEL_SLOW) * 100)}% slower: the line’s bar says so.</li>
     <li><b>Freight.</b> Each load shows the kind of place it wants, not one particular place: ■ freight is happy at any station, Low Orbit or GEO. It boards any ship whose next stop brings it closer to one, changing lines where they meet.</li>
-    <li><b>Upkeep.</b> Every ship and pod at work costs upkeep, charged at each Alliance Shop visit at that time’s prices; the top right shows the next bill. It eases in over the first ten periods. If it takes the budget below zero you can’t buy anything until deliveries bring it back.</li>
+    <li><b>Upkeep.</b> Every ship and pod at work costs upkeep, taken at each Alliance Shop visit as a share of what the network earned since the last one: a few percent for each ship, more per ship as the fleet grows, up to 60%. The top right shows the bill so far. It eases in over the first two visits, and never takes more than the network brought in.</li>
     <li><b>Budget.</b> Deliveries earn budget. Spend it in the Alliance Shop to buy more of anything (prices rise each time), on storm sensors, and on repairs: a storm damages the place it’s named after unless it’s protected, and a damaged place holds 4 less until you repair it. Storms also knock sensors out for a minute.</li>
     <li><b>Upgrades.</b> Each Alliance Shop visit offers two free ones, or skip them to bank ${Math.round(BANK_RATE * 100)}% interest on your budget (never more than half what the cheaper upgrade would cost). Some you place: lines, ships and pods on lines; depots (more room), fast docks (twice-as-fast loading) and shields on places. Others improve the whole network at once and stack a few levels: faster ships, bigger holds, bigger stops. Each card shows how many you already have.</li>
     <li><b>Crowding.</b> A place holds ${ROOM} loads; a depot raises that to ${ROOM + DEPOT_ROOM}. Past the limit a red ring starts to close. If it closes, the run ends. It takes ${OVERFLOW} seconds, and ${OVERFLOW_LATE} late in a run (from 2070 in Earth–Moon runs, six periods in elsewhere).</li>
@@ -4639,7 +4643,7 @@ requestAnimationFrame(frame);
 // Hooks for headless balancing and input tests.
 window.LC = {
   get S() { return S; }, get GEN() { return GEN; }, plx: () => PLX.map(L => ({ ux: L.ux, uy: L.uy, k: L.k, ls: Math.pow(sc / sc0, L.d) })), IDX, PL, YEAR, startRun, step, tutGo, tutEnd, createLine, setStops, removeLine, addShip, removeShip, addPod, shieldPlace, buildDepot, select, room, setLine, openLoop, undo,
-  snapCam, cal, calOf, perOf, lineYear, showLog, buySensor, SENSORS, setSys, setAutoPause, inScen, trayUI, recordRun, readBoard, openBoard, showLost, endLost, showWin, award, readAch, needList, lookAt, ACH, ask5, qmTip, diagText, saveText, loadSaveText, perf, get capyImg() { return capyImg; }, get won() { return won; }, get lost() { return lost; }, get boardAll() { return boardAll; }, scrap, scrapVal, repairCost, negotiateCost, voteDemand, sysNeeds, get fxs() { return fxs; }, negotiate, startRebel, tunnelEnds, saveAll, readLocal, resumeRun, bestSave, parseCode, runCode, codeOf, splashUI, SCEN, repairPlace, repairSensor, buyOffer, price, sysOf, tunnelOpen, hud, get sc() { return sc; }, get wclock() { return wclock; }, pins: () => pins.map(q => ({ x: rot ? window.innerWidth - q.y : q.x, y: rot ? q.x : q.y, i: q.i })),
+  snapCam, cal, calOf, perOf, lineYear, showLog, buySensor, SENSORS, setSys, setAutoPause, inScen, trayUI, recordRun, readBoard, openBoard, showLost, endLost, showWin, award, readAch, needList, lookAt, ACH, ask5, qmTip, diagText, saveText, loadSaveText, perf, get capyImg() { return capyImg; }, get won() { return won; }, get lost() { return lost; }, get boardAll() { return boardAll; }, scrap, scrapVal, repairCost, negotiateCost, voteDemand, sysNeeds, get fxs() { return fxs; }, negotiate, startRebel, tunnelEnds, saveAll, readLocal, resumeRun, bestSave, parseCode, runCode, codeOf, splashUI, SCEN, repairPlace, repairSensor, buyOffer, price, sysOf, tunnelOpen, hud, get sc() { return sc; }, UPKEEP, upkeepShare, get wclock() { return wclock; }, pins: () => pins.map(q => ({ x: rot ? window.innerWidth - q.y : q.x, y: rot ? q.x : q.y, i: q.i })),
   redrawFee, chargeRedraw, fixShips, whyCrowded, worstTrouble, selLine, checkUpdate, verNum, get newer() { return newer; }, upkeepDue, berths, docked, queueAt, stuckAt, stuckNote, startSwing, breakdowns, lateGame, ovT, crowdFix,
   fast(sec) { const n = Math.round(sec / STEP); for (let i = 0; i < n && !S.over; i++) step(STEP); },
   screen(id) { const n = PL[IDX[id]], x = X(n.x), y = Y(n.y); return rot ? { x: window.innerWidth - y, y: x } : { x, y }; },
