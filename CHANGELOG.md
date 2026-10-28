@@ -1,5 +1,9 @@
 # Changelog
 
+## 5.27
+- Diagnostics name each place and its kind ("R1 Tarn Yard (Station)"), so they match the log, and mark places with no line. Shapes in notes read as words ("no line reaches [Fuel depot]") instead of vanishing.
+- A loaded save's diagnostics still say where and why the run was lost.
+
 ## 5.26
 - The Network Lost card has **Copy diag**: one tap copies the diagnostics to paste to Claude, and opens them so you can press and hold to copy if your phone blocks it. (The ≡ menu sits behind the card, so it wasn't reachable there.)
 - Diagnostics say more about a loss: what the crowded places were waiting to send, stuck loads and queues, where ships left full, each line's length, fuel and breakdowns, and why the run was lost.

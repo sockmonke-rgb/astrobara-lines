@@ -512,7 +512,7 @@ button.link{height:auto;min-height:0;padding:2px 0;border:none;background:none;c
       <svg class="lines" id="splashLines" aria-hidden="true"></svg>
       <div class="big" aria-hidden="true"><svg viewBox="0 0 64 64"><use href="#capy"/></svg></div>
       <div class="txt">
-        <div class="eyebrow" id="splashEyebrow">Prototype 5.26</div>
+        <div class="eyebrow" id="splashEyebrow">Prototype 5.27</div>
         <h1>Astrobara Lines</h1>
         <p>Capybaras run the Lagrange Alliance’s freight. <b>Drag through places</b> to draw a shipping line. Freight shape = where it’s going. Too much waiting fills a red ring; a full ring ends the run.</p>
         <div class="scen" role="radiogroup" aria-label="Start in">
@@ -590,7 +590,7 @@ const $ = id => document.getElementById(id);
 const app = $('app'), cv = $('cv'), ctx = cv.getContext('2d');
 
 /* ================= Tuning ================= */
-const VERSION = '5.26';
+const VERSION = '5.27';
 const YEAR = 80, QTR = YEAR / 4, HORIZON = 10, Y0 = 2027, STEP = 1 / 30;
 const SOON = 30;   // seconds before a place opens that it, its countdown and the note all appear
 const SPEED = 80;                 // ship speed in map units per second
@@ -2478,7 +2478,7 @@ onTap($('board'), (a, el) => {
    The ≡ menu's Diag tab: a plain-text report (version, device, speed of play, the run's state, recent
    log, any errors) to copy and paste to Claude, and the save itself, packed small, to load the exact
    moment back up. Nothing personal: no account id, no budget history beyond the run. */
-const plainText = t => String(t).replace(ICON_RE, (m, n) => ({ iShield: 'shield', iSun: 'sun', iDebris: 'debris', iFlag: 'flag', iShip: 'ship', iPod: 'pod', iDepot: 'depot', iDock: 'dock', iAlien: 'alien', iSensor: 'sensor', iLine: 'line', iLoop: 'loop', iCapy: 'capybara' }[n] || '')).replace(/<[^>]+>/g, '').replace(/&amp;/g, '&');
+const plainText = t => String(t).replace(ICON_RE, (m, n) => ({ iShield: 'shield', iSun: 'sun', iDebris: 'debris', iFlag: 'flag', iShip: 'ship', iPod: 'pod', iDepot: 'depot', iDock: 'dock', iAlien: 'alien', iSensor: 'sensor', iLine: 'line', iLoop: 'loop', iCapy: 'capybara' }[n] || '')).replace(/<svg class="shp"[^>]*aria-label="([^"]*)"[^>]*>[\s\S]*?<\/svg>/g, '[$1]').replace(/<[^>]+>/g, '').replace(/&amp;/g, '&');   // 5.27: shapes become [Fuel depot]
 function perfLine() {
   const d = perf.dt.filter(x => x > 0 && x < 1000), s = perf.step;
   if (!d.length) return 'no frames yet';
@@ -2498,14 +2498,15 @@ function diagText() {
     L.push(`lines ${S.lines.length}/${S.inv.lines}:`);
     for (const ln of S.lines) { const cl = (ln.segs || []).filter(x => x.closed).length, br = ln.ships.filter(x => x.brk || x.fix).length; L.push(`  ${ln.name}${ln.loop ? ' (loop)' : ''}: ${ln.stops.map(i => PL[i].id).join('-')} · ships ${ln.ships.length} · pods ${ln.ships.reduce((a, x) => a + x.pods, 0)} · carried ${ln.carried || 0} · length ${Math.round(ln.len || 0)}${ln.dry ? ' · NO FUEL' : ''}${br ? ' · broken ' + br : ''}${cl ? ' · closed stretches ' + cl : ''}`); }
     // 5.26: what the crowded places hold, and where ships left full
+    const nm = i => `${PL[i].id} ${placeName(i)}`, kind = i => (SHAPES[S.shape[i]] || { short: S.shape[i] }).short;   // 5.27: names and kinds, to match the log
     const wants = i => { const by = {}; for (const c of S.Q[i]) by[c.want] = (by[c.want] || 0) + 1; return Object.keys(by).sort((a, b) => by[b] - by[a]).map(k => `${SHAPES[k].short} ${by[k]}`).join(', '); };
     const busy = PL.map((p, i) => i).filter(i => S.open[i] && S.Q[i].length >= room(i) / 2).sort((a, b) => S.Q[b].length / room(b) - S.Q[a].length / room(a)).slice(0, 5);
-    if (busy.length) L.push(`crowded: ` + busy.map(i => `${PL[i].id} ${S.Q[i].length}/${room(i)} wants ${wants(i)}${stuckAt(i) ? ' · stuck ' + stuckAt(i).n + (stuckAt(i).noRoute ? ' (no route ' + stuckAt(i).noRoute + ')' : '') : ''}${queueAt(i) ? ' · queue ' + queueAt(i) : ''}`).join(' | '));
-    if (S.leftFull) { const lf = Object.keys(S.leftFull).filter(p => S.t - S.leftFull[p].t < 30); if (lf.length) L.push(`left full (30s): ` + lf.map(p => `${PL[p].id} by ${(S.lines.find(x => x.id === S.leftFull[p].L) || { name: '?' }).name} ${Math.round(S.t - S.leftFull[p].t)}s ago`).join(', ')); }
-    if (S.over && lost) L.push(`LOST at ${PL[lost.i].id} ${lost.waiting}/${lost.room} · wants ${wants(lost.i)} · lines ${S.lines.filter(x => x.stops.includes(lost.i)).map(x => `${x.name}:${x.ships.length}`).join(' ') || 'none'} · why: ${plainText(lost.why || '-')}`);
-    L.push(`places: ` + PL.map((pl, i) => (S.open[i] ? `${pl.id} ${S.Q[i].length}/${room(i)}${S.of[i] > 0 ? ' ring ' + Math.round(S.of[i] * 100) + '%' : ''}${S.dmg[i] ? ' damaged' : ''}${S.shield[i] ? ' shield' : ''}${S.depot[i] ? ' depot' : ''}${S.fastDock && S.fastDock[i] ? ' dock' : ''}${S.unrest && S.unrest[i] >= .3 ? ' unrest ' + Math.round(S.unrest[i] * 100) + '%' : ''}${rebelNow(i) ? ' INDEPENDENT' : ''}` : '')).filter(Boolean).join(', '));
+    if (busy.length) L.push(`crowded: ` + busy.map(i => `${nm(i)} ${S.Q[i].length}/${room(i)}${onLines(i) ? '' : ' · NO LINE'} wants ${wants(i)}${stuckAt(i) ? ' · stuck ' + stuckAt(i).n + (stuckAt(i).noRoute ? ' (no route ' + stuckAt(i).noRoute + ')' : '') : ''}${queueAt(i) ? ' · queue ' + queueAt(i) : ''}`).join(' | '));
+    if (S.leftFull) { const lf = Object.keys(S.leftFull).filter(p => S.t - S.leftFull[p].t < 30); if (lf.length) L.push(`left full (30s): ` + lf.map(p => `${nm(p)} by ${(S.lines.find(x => x.id === S.leftFull[p].L) || { name: '?' }).name} ${Math.round(S.t - S.leftFull[p].t)}s ago`).join(', ')); }
+    { const f = S.over ? (lost ? lost.i : S.fail) : null; if (f != null) L.push(`LOST at ${nm(f)} ${lost ? lost.waiting : S.Q[f].length}/${lost ? lost.room : room(f)} · wants ${wants(f)} · lines ${S.lines.filter(x => x.stops.includes(f)).map(x => `${x.name}:${x.ships.length}`).join(' ') || 'none'} · why: ${plainText((lost && lost.why) || whyCrowded(f).story || '-')}`); }
+    L.push(`places: ` + PL.map((pl, i) => (S.open[i] ? `${nm(i)} (${kind(i)}${onLines(i) ? '' : ', NO LINE'}) ${S.Q[i].length}/${room(i)}${S.of[i] > 0 ? ' ring ' + Math.round(S.of[i] * 100) + '%' : ''}${S.dmg[i] ? ' damaged' : ''}${S.shield[i] ? ' shield' : ''}${S.depot[i] ? ' depot' : ''}${S.fastDock && S.fastDock[i] ? ' dock' : ''}${S.unrest && S.unrest[i] >= .3 ? ' unrest ' + Math.round(S.unrest[i] * 100) + '%' : ''}${rebelNow(i) ? ' INDEPENDENT' : ''}` : '')).filter(Boolean).join(', '));
     L.push(`hazard: ${S.haz ? `${S.haz.type} ${S.haz.phase} "${plainText(S.haz.title)}" at ${S.haz.at.toFixed(1)}` : 'none'} · next at ${S.nextHaz != null ? S.nextHaz.toFixed(0) : '-'} · boom ${S.boom ? S.boom.shape : 'none'} · opening act ${JSON.stringify(S.script || [])}`);
-    { const ov = overflowing(); if (ov >= 0) L.push(`overflowing: ${PL[ov].id} · ${plainText(whyCrowded(ov).note)}`); }
+    { const ov = overflowing(); if (ov >= 0) L.push(`overflowing: ${PL[ov].id} ${placeName(ov)} · ${plainText(whyCrowded(ov).note)}`); }
     L.push(`note: ${S.hint ? S.hint.id : 'none'} · selected ${sel ? sel.type + ' ' + sel.id : 'nothing'} · awards ${Object.keys(readAch()).filter(k => ACH.some(a => a.id === k)).length}/${ACH.length} · board rows ${readBoard().length}`);
     L.push('recent log:'); for (const e of S.log.slice(-15)) L.push(`  ${qShort(e.t)} ${plainText(e.text)}`);
   }
