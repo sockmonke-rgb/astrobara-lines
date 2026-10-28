@@ -1,5 +1,8 @@
 # Changelog
 
+## 5.45
+- Fixed: on a crowding or overflow note that suggests a ◆ fuel stop, Show went to that ◆ (e.g. Quarry Well) instead of the place in trouble. It goes to the crowded place again; the ◆ to add is still named in the note.
+
 ## 5.44
 - A ship you've just added is picked straight away, so a +pod right after goes to it rather than to the line's emptiest ship.
 

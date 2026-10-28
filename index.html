@@ -514,7 +514,7 @@ button.link{height:auto;min-height:0;padding:2px 0;border:none;background:none;c
       <svg class="lines" id="splashLines" aria-hidden="true"></svg>
       <div class="big" aria-hidden="true"><svg viewBox="0 0 64 64"><use href="#capy"/></svg></div>
       <div class="txt">
-        <div class="eyebrow" id="splashEyebrow">Prototype 5.44</div>
+        <div class="eyebrow" id="splashEyebrow">Prototype 5.45</div>
         <h1>Astrobara Lines</h1>
         <p>Capybaras run the Lagrange Alliance’s freight. <b>Drag through places</b> to draw a shipping line. Freight shape = where it’s going. Too much waiting fills a red ring; a full ring ends the run.</p>
         <div class="scen" role="radiogroup" aria-label="Start in">
@@ -592,7 +592,7 @@ const $ = id => document.getElementById(id);
 const app = $('app'), cv = $('cv'), ctx = cv.getContext('2d');
 
 /* ================= Tuning ================= */
-const VERSION = '5.44';
+const VERSION = '5.45';
 const YEAR = 80, QTR = YEAR / 4, HORIZON = 10, Y0 = 2027, STEP = 1 / 30;
 const SOON = 30;   // seconds before a place opens that it, its countdown and the note all appear
 const SPEED = 80;                 // ship speed in map units per second
@@ -3366,7 +3366,7 @@ function whyCrowded(i) {
   const lf = S.leftFull && S.leftFull[i] && S.t - S.leftFull[i].t < 20 ? S.lines.find(L => L.id === S.leftFull[i].L) : null;
   if (lf) return { note: `ships leave full on ${lf.name}${lf.dry ? ` · no ${shp('diamond')} fuel` : ''} · ${fixFor(lf)}`, story: `Ships were leaving it full on the ${lf.name.toLowerCase()} line${lf.dry ? `, which had no ${shp('diamond')} fuel stop and ran ${Math.round((1 - FUEL_SLOW) * 100)}% slow` : ''}.` };
   const dry = mine.find(L => L.dry);
-  if (dry) return { go: fuelNear(dry) >= 0 ? { label: 'Show', place: fuelNear(dry) } : null, note: `${dry.name} has no ${shp('diamond')} fuel, runs slow${fuelNear(dry) >= 0 ? ` · add ${shp('diamond')} ${esc(placeName(fuelNear(dry)))} to it` : ''}`, story: `The ${dry.name.toLowerCase()} line had no ${shp('diamond')} fuel stop, so its ships ran ${Math.round((1 - FUEL_SLOW) * 100)}% slow.` };
+  if (dry) return { note: `${dry.name} has no ${shp('diamond')} fuel, runs slow${fuelNear(dry) >= 0 ? ` · add ${shp('diamond')} ${esc(placeName(fuelNear(dry)))} to it` : ''}`, story: `The ${dry.name.toLowerCase()} line had no ${shp('diamond')} fuel stop, so its ships ran ${Math.round((1 - FUEL_SLOW) * 100)}% slow.` };
   const broken = mine.find(L => L.ships.some(x => x.fix));
   if (broken) return { note: `${broken.name} ship broken down`, story: `A ship on the ${broken.name.toLowerCase()} line was broken down.`, go: { label: `Repair ${fmt(repairCost())}`, line: broken.id } };
   return { note: crowdFix(i), story: 'It made more freight than its lines could carry away.' };
