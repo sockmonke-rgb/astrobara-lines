@@ -118,7 +118,7 @@ button.ghost{background:transparent}
 button.off{opacity:.42}
 button.danger{border-color:var(--alarm);color:#ffc4c4}
 button.undo{border-color:var(--capy);color:#ffd2a8}
-#app.selecting #ctrls [data-a=log]{display:none}
+/* 5.47: the ≡ menu stays while a bar is open (it used to hide to make room) */
 /* while a bar is open, Undo and Fit shrink to their icons to leave room for it */
 #app.selecting #bFit span,#app.selecting #bUndo span{display:none}
 #app.selecting #bFit,#app.selecting #bUndo{min-width:44px;padding:0 10px}
@@ -514,7 +514,7 @@ button.link{height:auto;min-height:0;padding:2px 0;border:none;background:none;c
       <svg class="lines" id="splashLines" aria-hidden="true"></svg>
       <div class="big" aria-hidden="true"><svg viewBox="0 0 64 64"><use href="#capy"/></svg></div>
       <div class="txt">
-        <div class="eyebrow" id="splashEyebrow">Prototype 5.46</div>
+        <div class="eyebrow" id="splashEyebrow">Prototype 5.47</div>
         <h1>Astrobara Lines</h1>
         <p>Capybaras run the Lagrange Alliance’s freight. <b>Drag through places</b> to draw a shipping line. Freight shape = where it’s going. Too much waiting fills a red ring; a full ring ends the run.</p>
         <div class="scen" role="radiogroup" aria-label="Start in">
@@ -592,7 +592,7 @@ const $ = id => document.getElementById(id);
 const app = $('app'), cv = $('cv'), ctx = cv.getContext('2d');
 
 /* ================= Tuning ================= */
-const VERSION = '5.46';
+const VERSION = '5.47';
 const YEAR = 80, QTR = YEAR / 4, HORIZON = 10, Y0 = 2027, STEP = 1 / 30;
 const SOON = 30;   // seconds before a place opens that it, its countdown and the note all appear
 const SPEED = 80;                 // ship speed in map units per second
