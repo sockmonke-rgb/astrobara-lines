@@ -512,7 +512,7 @@ button.link{height:auto;min-height:0;padding:2px 0;border:none;background:none;c
       <svg class="lines" id="splashLines" aria-hidden="true"></svg>
       <div class="big" aria-hidden="true"><svg viewBox="0 0 64 64"><use href="#capy"/></svg></div>
       <div class="txt">
-        <div class="eyebrow" id="splashEyebrow">Prototype 5.29</div>
+        <div class="eyebrow" id="splashEyebrow">Prototype 5.30</div>
         <h1>Astrobara Lines</h1>
         <p>Capybaras run the Lagrange Alliance’s freight. <b>Drag through places</b> to draw a shipping line. Freight shape = where it’s going. Too much waiting fills a red ring; a full ring ends the run.</p>
         <div class="scen" role="radiogroup" aria-label="Start in">
@@ -590,7 +590,7 @@ const $ = id => document.getElementById(id);
 const app = $('app'), cv = $('cv'), ctx = cv.getContext('2d');
 
 /* ================= Tuning ================= */
-const VERSION = '5.29';
+const VERSION = '5.30';
 const YEAR = 80, QTR = YEAR / 4, HORIZON = 10, Y0 = 2027, STEP = 1 / 30;
 const SOON = 30;   // seconds before a place opens that it, its countdown and the note all appear
 const SPEED = 80;                 // ship speed in map units per second
@@ -4492,7 +4492,7 @@ const splashGo = f => {
   if (matchMedia('(prefers-reduced-motion: reduce)').matches) { f(); return; }
   splashBusy = true; setTimeout(() => { splashBusy = false; if (!$('splash').hidden) f(); }, 380);
 };
-onTap($('splash'), (a, el) => {
+const splashAct = (a, el) => {
   if (splashBusy) return;
   if (a === 'update') { reloadNew(); return; }
   if (a === 'scen') { rememberScen(el.dataset.k); splashUI(); return; }
@@ -4501,7 +4501,10 @@ onTap($('splash'), (a, el) => {
   if (a === 'board') { openBoard(pickScen); return; }
   if (a === 'start' || a === 'startTut') splashGo(() => { begin(undefined, pickScen, a === 'startTut', false); if (S.scen === 'rand') toast(runToast(), 4000); });
   else if (a === 'relaxed') splashGo(() => begin(undefined, pickScen, pickScen === 'sol' && !tutDone(), true));
-});
+};
+onTap($('splash'), splashAct);
+// 5.30: with a mouse, a click on the map around the start card does what its main button does
+bgClose($('splash'), () => { const id = bestSave() ? 'bCont' : pickScen === 'sol' && !tutDone() ? 'bTut' : 'bNow', b = $(id); splashAct(b.dataset.a, b); });
 $('codeIn').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); startCode(); } });
 // On a desktop: Space plays or pauses, 1 2 3 5 set the speed, Esc closes the bar that's open.
 document.addEventListener('keydown', e => {

@@ -1,5 +1,8 @@
 # Changelog
 
+## 5.30
+- On a computer, clicking the map around the start screen does what its main button does: Continue your saved run, the walkthrough the first time on Earth–Moon, or Play. Clicks on the card itself, and taps on phones and tablets, are unchanged.
+
 ## 5.29
 - On a computer, clicking the map around a panel closes it, the same as its Close or Not now: the ≡ menu (Timeline, Log, Help, Diag), talks, the 5× question and the leaderboard. The Alliance Shop and the end-of-run card wait for a choice. Phones and tablets are unchanged, so a stray tap can't close anything.
 
