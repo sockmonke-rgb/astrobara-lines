@@ -1,5 +1,10 @@
 # Changelog
 
+## 5.48
+- **Normal and Hard.** Pick on the start screen; it's remembered. **Hard** is the tuning you've been playing: upkeep up to 60% of earnings, long lines without a ◆ fuel stop run 30% slower, breakdowns late in a run, and the late red ring closes in 20s. **Normal** is gentler: upkeep capped at 35% with a smaller share per ship, no fuel slowdown, breakdowns about 2.5× rarer, and the red ring stays at 30s. Everything else is the same.
+- New players start on Normal. Runs saved before 5.48 continue on Hard, since that's how they were played. Same code again and playing a code from the leaderboard keep that run's difficulty. The leaderboard marks hard runs, and the date line says "· hard" during one.
+- Uncharted's button now says "random · busier" so it doesn't read like the Hard setting.
+
 ## 5.47
 - The ≡ menu (Timeline, Log, Help, Diag, Start screen) no longer disappears while a line or place is selected. It used to hide to make room for the bar. The bar still scrolls sideways if it's too long for the screen.
 

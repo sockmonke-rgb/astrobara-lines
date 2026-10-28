@@ -514,15 +514,16 @@ button.link{height:auto;min-height:0;padding:2px 0;border:none;background:none;c
       <svg class="lines" id="splashLines" aria-hidden="true"></svg>
       <div class="big" aria-hidden="true"><svg viewBox="0 0 64 64"><use href="#capy"/></svg></div>
       <div class="txt">
-        <div class="eyebrow" id="splashEyebrow">Prototype 5.47</div>
+        <div class="eyebrow" id="splashEyebrow">Prototype 5.48</div>
         <h1>Astrobara Lines</h1>
         <p>Capybaras run the Lagrange Alliance’s freight. <b>Drag through places</b> to draw a shipping line. Freight shape = where it’s going. Too much waiting fills a red ring; a full ring ends the run.</p>
         <div class="scen" role="radiogroup" aria-label="Start in">
           <button data-a="scen" data-k="sol" class="on" role="radio" aria-checked="true">Earth–Moon<small>2027 · real plans</small></button>
           <button data-a="scen" data-k="prox" role="radio" aria-checked="false">Proxima<small>2100 · fiction</small></button>
-          <button data-a="scen" data-k="rand" role="radio" aria-checked="false">Uncharted<small>random · hard</small></button>
+          <button data-a="scen" data-k="rand" role="radio" aria-checked="false">Uncharted<small>random · busier</small></button>
           <span class="credit" id="splashFar"></span>
         </div>
+        <div class="scen mode" role="radiogroup" aria-label="Difficulty"><button data-a="mode" data-k="0" role="radio" aria-checked="true" class="on">Normal<small>gentler</small></button><button data-a="mode" data-k="1" role="radio" aria-checked="false">Hard<small>tight money · fuel · breakdowns</small></button></div>
         <div class="row"><button class="primary" data-a="update" id="bUpdate" hidden>Update</button><button class="primary" data-a="cont" id="bCont" hidden>Continue</button><button data-a="start" id="bNow">Play</button><button data-a="startTut" id="bTut">Walkthrough</button><button data-a="relaxed" id="bRelax">Relaxed</button></div>
         <div class="row code"><input id="codeIn" type="text" placeholder="Run code" autocapitalize="characters" autocomplete="off" autocorrect="off" spellcheck="false" aria-label="Run code" enterkeyhint="go"><button data-a="code">Go</button><button data-a="board" id="bBoard">Leaderboard</button><span class="credit">© 2026 Mark Florentino LLC · MIT License</span></div>
       </div>
@@ -592,7 +593,7 @@ const $ = id => document.getElementById(id);
 const app = $('app'), cv = $('cv'), ctx = cv.getContext('2d');
 
 /* ================= Tuning ================= */
-const VERSION = '5.47';
+const VERSION = '5.48';
 const YEAR = 80, QTR = YEAR / 4, HORIZON = 10, Y0 = 2027, STEP = 1 / 30;
 const SOON = 30;   // seconds before a place opens that it, its countdown and the note all appear
 const SPEED = 80;                 // ship speed in map units per second
@@ -605,6 +606,7 @@ const OVERFLOW_LATE = 20;         // ...late in a run the ring fills faster, and
 // as `pod` of a ship), growing with the fleet (×(1 + n/fleet)), eased in over the first `ease` visits, at most `cap`.
 // So it follows each system's pay and the decades by itself, and can never take more than the network brought in.
 const UPKEEP = { ship: .035, pod: .4, fleet: 12, ease: 2, cap: .6 };
+const UPKEEP_NORMAL = { ship: .02, cap: .35 };   // 5.48: Normal's gentler share (Hard uses UPKEEP as it is)
 const FUEL_RANGE = 900, FUEL_SLOW = .7;   // a line longer than this with no ◆ fuel stop runs this much slower
 // 5.36: the nearest open ◆ fuel depot in a line's system that it doesn't already stop at (-1: none open there yet).
 // With none open in its system a long line isn't slowed, since there'd be nothing to do about it.
@@ -614,7 +616,7 @@ function fuelNear(L) {
   for (let i = 0; i < NP; i++) if (S.open[i] && S.shape[i] === 'diamond' && sysOf(i) === sy && !L.stops.includes(i)) { const d = Math.min(...L.stops.map(p => Math.hypot(PL[p].x - PL[i].x, PL[p].y - PL[i].y))); if (d < bd) { bd = d; best = i; } }
   return best;
 }
-const dryOf = L => L.len > FUEL_RANGE && !L.stops.some(i => S.shape[i] === 'diamond') && fuelNear(L) >= 0;
+const dryOf = L => !!S.hard && L.len > FUEL_RANGE && !L.stops.some(i => S.shape[i] === 'diamond') && fuelNear(L) >= 0;
 const BERTHS = 3;                 // ships a place loads at once (a fast dock adds 2, a wormhole has 2 more)
 const BRK_WARN = 8, BRK_DUR = 20; // late in a run a ship now and then breaks down: warning, then time stopped
 const SWING = .3;                 // late in a run, the share of events that are swings in demand (rushes, strikes)
@@ -1001,7 +1003,7 @@ function newRun(seed, scen) {
     irl[IDX.RW] = { y: RIFT_YEAR, st: 'fic', note: `The far end of the Rift, in ${GEN.name}. Everything here is made up.` };
   }
   S = {
-    seed, scen, rs: 0, t: 0, speed: 1, paused: true, started: false, over: false, sandbox: false, decadeDone: false, centuryDone: false,
+    seed, scen, rs: 0, t: 0, speed: 1, paused: true, started: false, over: false, sandbox: false, hard: pickHard, decadeDone: false, centuryDone: false,
     shape, irl, at: at.map(y => y * YEAR), open: PL.map((p, i) => at[i] === 0), openedAt: Array(NP).fill(0), clock: 0, tut: null,
     Q: PL.map(() => []), of: Array(NP).fill(0), depot: Array(NP).fill(false), shield: Array(NP).fill(false), surgeAt: -1, seen: {},
     lines: [], nextId: 1, inv: { ...START_INV },
@@ -1570,7 +1572,7 @@ const LATE = { sol: 2070, prox: 6, rand: 6 };
 const lateGame = () => !!S && !S.tut && S.t >= (S.scen === 'sol' ? perOf(LATE.sol) : LATE[S.scen]) * YEAR;
 const unrestOn = lateGame;
 // 5.21: late in a run the red ring fills in 20s, not 30, and places count as crowding 5 short of full, not 3
-const ovT = () => (lateGame() ? OVERFLOW_LATE : OVERFLOW);
+const ovT = () => (lateGame() && S.hard ? OVERFLOW_LATE : OVERFLOW);   // 5.48: Normal keeps the 30s ring
 const warnRoom = () => (lateGame() ? 5 : 3);
 // 5.37: a place counts as crowding within warnRoom() of full, but never below three quarters full (10/14 isn't crowding)
 const crowdAt = i => Math.max(room(i) - warnRoom() + 1, Math.ceil(room(i) * .75));
@@ -1776,7 +1778,7 @@ function events() {
 }
 // 5.21: late in a run a ship now and then breaks down: a warning, then it stops where it is for a while.
 // Busier lines' ships are likelier to go. Spare ships, or a second ship on the line, carry you through.
-const BRK_GAP = () => YEAR * (.3 + .3 * S.rnd());
+const BRK_GAP = () => YEAR * (.3 + .3 * S.rnd()) * (S.hard ? 1 : 2.5);   // 5.48: rarer in Normal
 function breakdowns() {
   for (const L of S.lines) L.ships.forEach((sh, k) => {
     if (sh.brk && S.t >= sh.brk && sh.state === 'move' && !sh.fix) { sh.brk = 0; sh.fix = S.t + BRK_DUR; log(`${L.name} ship ${k + 1} broke down. It’s stopped for ${BRK_DUR}s.`, 'bad'); }
@@ -2130,7 +2132,8 @@ function fundFx(delta) { if (S && !S.auto && delta) { floatFx($('hFundBox'), del
 // zero; then nothing can be bought until deliveries bring it back. 5.31: see UPKEEP.
 function upkeepShare() {
   let n = 0; for (const L of S.lines) for (const x of L.ships) n += 1 + UPKEEP.pod * x.pods;
-  return Math.min(UPKEEP.cap, UPKEEP.ship * n * (1 + n / UPKEEP.fleet)) * Math.min(1, S.t / YEAR / UPKEEP.ease);
+  const u = S.hard ? UPKEEP : { ...UPKEEP, ...UPKEEP_NORMAL };
+  return Math.min(u.cap, u.ship * n * (1 + n / u.fleet)) * Math.min(1, S.t / YEAR / u.ease);
 }
 function upkeepDue() { return Math.round(upkeepShare() * Math.max(0, S.earned - (S.earnedMeet || 0))); }
 function meeting(y) {
@@ -2417,14 +2420,14 @@ const BOARD_KEY = 'lagrange-board', BOARD_PER = 25;
 const better = (a, b) => (a.year - b.year) || (a.earned - b.earned);
 function readBoard() { try { const a = JSON.parse(localStorage.getItem(BOARD_KEY) || '[]'); return Array.isArray(a) ? a.filter(r => r && r.code && SCEN[r.scen]) : []; } catch (_) { return []; } }
 function mergeRuns(list, e) {
-  const k = list.findIndex(r => r.code === e.code);
+  const k = list.findIndex(r => r.code === e.code && !!r.hard === !!e.hard);
   if (k >= 0) { if (better(e, list[k]) < 0 || (better(e, list[k]) === 0 && list[k].over === e.over)) return list; list = list.slice(); list[k] = e; }
   else list = list.concat([e]);
   const n = {}; return list.sort((a, b) => better(b, a)).filter(r => (n[r.scen] = (n[r.scen] || 0) + 1) <= BOARD_PER);
 }
 function runEntry() {
   const ships = S.lines.reduce((a, L) => a + L.ships.length, 0) + S.inv.ships;
-  return { code: runCode(), scen: S.scen, year: Math.floor(cal(S.t)), earned: Math.round(S.earned), del: S.delivered, places: S.open.filter(Boolean).length, ships, over: !!S.over, when: Date.now(), v: VERSION };
+  return { code: runCode(), scen: S.scen, year: Math.floor(cal(S.t)), earned: Math.round(S.earned), del: S.delivered, places: S.open.filter(Boolean).length, ships, over: !!S.over, when: Date.now(), v: VERSION, hard: !!S.hard };
 }
 function recordRun() {
   if (!S || S.auto || S.tut || S.sandbox || S.relaxed || !S.started) return null;
@@ -2468,8 +2471,8 @@ async function renderBoard() {
   const body = rows.map((r, k) => {
     const pr = all ? names[r.uid] : null, mine = !all || (pr && pr.isMe) || (cuid && r.uid === cuid);
     const who = all ? (mine ? 'You' : (pr && pr.name) || 'Someone') : dayText(r.when);
-    return `<div class="lbrow${r.code === cur ? ' cur' : ''}${all && mine ? ' me' : ''}"><span class="rk">${k + 1}</span><span class="who">${esc(who)}${all && r.ach ? `<span class="ac">🏅${r.ach}</span>` : ''}${r.over ? '' : '<i>running</i>'}</span>`
-      + `<button class="code${boardArm === r.code ? ' armed' : ''}" data-a="bPlay" data-c="${esc(r.code)}">${boardArm === r.code ? 'Play ▶' : esc(r.code)}</button>`
+    return `<div class="lbrow${r.code === cur ? ' cur' : ''}${all && mine ? ' me' : ''}"><span class="rk">${k + 1}</span><span class="who">${esc(who)}${all && r.ach ? `<span class="ac">🏅${r.ach}</span>` : ''}${r.over ? '' : '<i>running</i>'}${r.hard ? '<i>hard</i>' : ''}</span>`
+      + `<button class="code${boardArm === r.code ? ' armed' : ''}" data-a="bPlay" data-c="${esc(r.code)}" data-h="${r.hard ? 1 : 0}">${boardArm === r.code ? 'Play ▶' : esc(r.code)}</button>`
       + `<span>${r.year}</span><span>${fmt(r.earned)}</span><span>${r.del}</span></div>`;
   }).join('');
   const empty = `<p class="empty">No ${SCEN[boardTab].name} runs yet. Runs are kept when a review comes round and when a run ends; relaxed and no-fail play don’t count.</p>`;
@@ -2495,7 +2498,7 @@ onTap($('board'), (a, el) => {
     const c = el.dataset.c; if (boardArm !== c) { boardArm = c; renderBoard(); return; }
     const pc = parseCode(c); if (!pc) return;
     $('board').hidden = true; boardArm = null; if (S && S.started && !S.over) saveAll();
-    M.hidden = true; modalKind = null; modalNext = null; begin(pc.seed, pc.scen, false, false); toast(`Run code <b>${runCode()}</b>`, 4000);
+    M.hidden = true; modalKind = null; modalNext = null; begin(pc.seed, pc.scen, false, false, el.dataset.h === '1'); toast(`Run code <b>${runCode()}</b>${S.hard ? ' · hard' : ''}`, 4000);
   }
 });
 
@@ -2517,7 +2520,7 @@ function diagText() {
   L.push(`screen: ${innerWidth}×${innerHeight} @${devicePixelRatio}x · ${rot ? 'turned (held upright)' : 'landscape'} · touch points ${navigator.maxTouchPoints || 0} · reduced motion ${reducedMotion()} · in Claude ${!!(window.claude && window.claude.use)} · cloud save ${!!cloud} · board ${!!boardRef}`);
   L.push(`perf: ${perfLine()}`);
   if (S) {
-    L.push(`run: ${runCode()} · ${S.scen}${S.scen === 'rand' ? ' ' + GEN.name : ''} · ${qLabel(S.t)} · t ${S.t.toFixed(1)} (period ${(S.t / YEAR).toFixed(2)}) · speed ${S.speed}× · ${S.paused ? 'paused' : 'running'}${S.over ? ' · OVER' : ''}${S.sandbox ? ' · no-fail' : ''}${S.relaxed ? ' · relaxed' : ''}${S.tut ? ' · walkthrough step ' + S.tut.step : ''} · view ${S.view} · auto-pause ${autoPause}`);
+    L.push(`run: ${runCode()} · ${S.scen}${S.scen === 'rand' ? ' ' + GEN.name : ''} · ${qLabel(S.t)} · t ${S.t.toFixed(1)} (period ${(S.t / YEAR).toFixed(2)}) · speed ${S.speed}× · ${S.paused ? 'paused' : 'running'}${S.over ? ' · OVER' : ''}${S.sandbox ? ' · no-fail' : ''}${S.relaxed ? ' · relaxed' : ''} · ${S.hard ? 'HARD' : 'normal'}${S.tut ? ' · walkthrough step ' + S.tut.step : ''} · view ${S.view} · auto-pause ${autoPause}`);
     L.push(`money: budget ${fmt(S.fund)} · earned ${fmt(S.earned)} · delivered ${S.delivered}`);
     L.push(`spares: ${JSON.stringify(S.inv)} · upgrades ${JSON.stringify(S.up)} · bought ${JSON.stringify(S.bought || {})}`);
     L.push(`lines ${S.lines.length}/${S.inv.lines}:`);
@@ -3172,7 +3175,7 @@ function hud() {
   txt('hDate', qLabel(S.t));
   if (S.tut) { txt('hYear', 'walkthrough'); txt('hMeet', ''); }
   else {
-    txt('hYear', (S.t >= HORIZON * YEAR || S.scen !== 'sol' ? eraNow() : `year ${Math.floor(S.t / YEAR) + 1} of ${HORIZON}`) + (S.sandbox ? ' · relaxed' : ''));
+    txt('hYear', (S.t >= HORIZON * YEAR || S.scen !== 'sol' ? eraNow() : `year ${Math.floor(S.t / YEAR) + 1} of ${HORIZON}`) + (S.sandbox ? ' · relaxed' : '') + (S.hard ? ' · hard' : ''));
     { const up = upkeepDue(); txt('hMeet', `Alliance Shop ${Math.ceil((S.lastMeet + 1) * YEAR - S.t)}s${up ? ` · upkeep ${fmt(up)}` : ''}`); }
   }
   txt('hBoom', S.boom ? `★ ${SHAPES[S.boom.shape].short} deliveries pay 2×` : '');
@@ -3623,7 +3626,7 @@ const modalAct = (a, el) => {
     if (a === 'go5') { if (fiveDont) try { localStorage.setItem('lagrange-5x', '1'); } catch (_) {} S.speed = 5; toast('5× · ▶ when you’re ready'); }
     M.hidden = true; modalKind = null; if (!wasPaused) { S.paused = false; lastPlay = null; } hud();
   }
-  else if (a === 'again') { const pc = parseCode(runCode()); M.hidden = true; modalKind = null; modalNext = null; begin(pc.seed, pc.scen, false, !!S.relaxed); toast(`Run code <b>${runCode()}</b> again`, 4000); }
+  else if (a === 'again') { const pc = parseCode(runCode()); M.hidden = true; modalKind = null; modalNext = null; begin(pc.seed, pc.scen, false, !!S.relaxed, !!S.hard); toast(`Run code <b>${runCode()}</b> again${S.hard ? ' · hard' : ''}`, 4000); }
   else if (a === 'home') { saveAll(); M.hidden = true; modalKind = null; modalNext = null; backTo = null; S.paused = true; lastPlay = null; closePop(); $('splash').hidden = false; splashUI(); }
   else if (a === 'newIn') { M.hidden = true; modalKind = null; const k = el.dataset.k; begin(undefined, k, k === 'sol' && !tutDone(), false); toast(runToast(), 4000); }
   else if (a === 'new') { M.hidden = true; modalKind = null; const k = S.scen, rx = !!S.relaxed; begin(undefined, k, false, rx); toast(runToast(), 4000); }
@@ -3687,6 +3690,7 @@ function showLog(back, tab) {
 }
 function helpBody() {
   return `<ul>
+    <li><b>Normal and Hard.</b> Pick on the start screen; it's remembered. Hard is the tight version: upkeep takes up to ${Math.round(UPKEEP.cap * 100)}% of what the network earns, long lines without a ${shp('diamond')} fuel stop run ${Math.round((1 - FUEL_SLOW) * 100)}% slower, ships break down more often late in a run, and late red rings close in ${OVERFLOW_LATE}s. Normal keeps upkeep under ${Math.round(UPKEEP_NORMAL.cap * 100)}%, has no fuel slowdown, breaks down less, and keeps the ${OVERFLOW}s ring. The leaderboard marks hard runs.</li>
     <li><b>Map key.</b> What the little marks mean (with a mouse, rest on anything for a note):
       <br>· a <b>place's shape</b> is what it is; <b>freight's shape</b> beside it is where that freight is going
       <br>· <b>red ring closing</b> round a place: it's over full, and the run ends if the ring closes
@@ -3699,9 +3703,9 @@ function helpBody() {
       <br>· <b>dashed amber circle</b>: a storm on its way · <b>shaded orange circle</b>: a storm now · <b>NEW</b>: just opened · <b>arrows at the screen edge</b>: places off screen (red: crowding)</li>
     <li><b>Lines.</b> Drag from a place through others to draw a line. Drag the round knob at either end to extend it (dragging from a place starts a new line, unless a line is selected and ends there: then it extends that line; a selected line’s knobs can be grabbed from a little further away too), or drag the knob back along the line to cut stops off (as many as you like, down to two), or drop it on the line’s first stop to make a loop. While drawing, go back over the stops one by one to take them off (going straight back to the first stop makes a loop instead); with a mouse, Esc or the right button cancels the whole drag. Undo appears for a few seconds after every change. Changing a line you already have costs a little (never more than you have, and Undo gives it back); drawing a new one is free. Tap a line to add ships or pods, or to remove it.</li>
     <li><b>Ships.</b> On a line, ships shuttle back and forth between the ends. On a loop they go round, split between the two ways: if they bunch up going one way, one turns round at its next stop. On a loop with one ship, freight rides the long way round. The pointed end shows which way a ship is heading.</li>
-    <li><b>Berths and fuel.</b> A place loads ${BERTHS} ships at once (a wormhole ${BERTHS + 2}); the rest queue just outside. A fast dock adds 2 berths. A long line (more than about Earth to the Moon and on to L2) with no ${shp('diamond')} fuel depot among its stops runs ${Math.round((1 - FUEL_SLOW) * 100)}% slower: the line’s bar says so, and names the nearest ${shp('diamond')} to add. That’s a ${shp('diamond')} place on the map, not the Storage you buy. Until a ${shp('diamond')} opens in a system, its long lines aren’t slowed.</li>
+    <li><b>Berths and fuel.</b> A place loads ${BERTHS} ships at once (a wormhole ${BERTHS + 2}); the rest queue just outside. A fast dock adds 2 berths. On Hard, a long line (more than about Earth to the Moon and on to L2) with no ${shp('diamond')} fuel depot among its stops runs ${Math.round((1 - FUEL_SLOW) * 100)}% slower: the line’s bar says so, and names the nearest ${shp('diamond')} to add. That’s a ${shp('diamond')} place on the map, not the Storage you buy. Until a ${shp('diamond')} opens in a system, its long lines aren’t slowed.</li>
     <li><b>Freight.</b> Each load shows the kind of place it wants, not one particular place: ■ freight is happy at any station, Low Orbit or GEO. It boards any ship whose next stop brings it closer to one, changing lines where they meet.</li>
-    <li><b>Upkeep.</b> Every ship and pod at work costs upkeep, taken at each Alliance Shop visit as a share of what the network earned since the last one: a few percent for each ship, more per ship as the fleet grows, up to 60%. The top right shows the bill so far. It eases in over the first two visits, and never takes more than the network brought in.</li>
+    <li><b>Upkeep.</b> Every ship and pod at work costs upkeep, taken at each Alliance Shop visit as a share of what the network earned since the last one: a few percent for each ship, more per ship as the fleet grows, up to 60% on Hard (35% on Normal). The top right shows the bill so far. It eases in over the first two visits, and never takes more than the network brought in.</li>
     <li><b>Budget.</b> Deliveries earn budget. Spend it in the Alliance Shop to buy more of anything (prices rise each time), on storm sensors, and on repairs: a storm damages the place it’s named after unless it’s protected, and a damaged place holds 4 less until you repair it. Storms also knock sensors out for a minute.</li>
     <li><b>Upgrades.</b> Each Alliance Shop visit offers two free ones, or skip them to bank ${Math.round(BANK_RATE * 100)}% interest on your budget (never more than half what the cheaper upgrade would cost). Some you place: lines, ships and pods on lines; storage (more room), fast docks (twice-as-fast loading) and shields on places. Others improve the whole network at once and stack a few levels: faster ships, bigger holds, bigger stops. Each card shows how many you already have.</li>
     <li><b>Crowding.</b> A place holds ${ROOM} loads; storage raises that to ${ROOM + DEPOT_ROOM}. Past the limit a red ring starts to close. If it closes, the run ends. It takes ${OVERFLOW} seconds, and ${OVERFLOW_LATE} late in a run (from 2070 in Earth–Moon runs, six periods in elsewhere).</li>
@@ -4516,10 +4520,14 @@ function startRun(seed, withTut, scen) {
 // Start screen: pick where to start (or type a run code), continue a saved run, or start fresh.
 let pickScen = (() => { try { const k = localStorage.getItem('lagrange-scen'); return SCEN[k] ? k : 'sol'; } catch (_) { return 'sol'; } })();
 function rememberScen(k) { pickScen = k; try { localStorage.setItem('lagrange-scen', k); } catch (_) {} }
+// 5.48: Normal or Hard, remembered (new players start on Normal)
+let pickHard = (() => { try { return localStorage.getItem('lagrange-hard') === '1'; } catch (_) { return false; } })();
+function rememberHard(v) { pickHard = !!v; try { localStorage.setItem('lagrange-hard', pickHard ? '1' : '0'); } catch (_) {} }
 const tutDone = () => { try { return localStorage.getItem('lagrange-tut') === '1'; } catch (_) { return false; } };
 function splashUI() {
   const sv = bestSave(), sol = pickScen === 'sol';
   document.querySelectorAll('#splash [data-a=scen]').forEach(b => { const on = b.dataset.k === pickScen; b.classList.toggle('on', on); b.setAttribute('aria-checked', String(on)); });
+  document.querySelectorAll('#splash [data-a=mode]').forEach(b => { const on = (b.dataset.k === '1') === pickHard; b.classList.toggle('on', on); b.setAttribute('aria-checked', String(on)); });
   $('bCont').hidden = !sv; if (sv) $('bCont').textContent = `Continue · ${sv.label || 'saved run'}`;
   $('bTut').hidden = !sol;
   const first = sv ? 'bCont' : sol && !tutDone() ? 'bTut' : 'bNow';
@@ -4597,8 +4605,9 @@ function splashLines() {
   if (window.ResizeObserver) { const ro = new ResizeObserver(() => splashLines()); const c = document.querySelector('#splash .card.splash'); ro.observe(c); ro.observe(c.querySelector('.txt')); }
 })();
 const runToast = () => (S.scen === 'rand' ? `${GEN.name} · ${GEN.star.type} · ${runCode()}` : `New ${SCEN[S.scen].name} run · ${runCode()}`);
-function begin(seed, scen, tut, relaxed) {
+function begin(seed, scen, tut, relaxed, hard) {
   $('splash').hidden = true; startRun(seed, tut, scen); rememberScen(S.scen);
+  if (hard != null) S.hard = !!hard;   // 5.48: replaying a run keeps its difficulty
   if (relaxed) { S.sandbox = true; S.relaxed = true; log('Relaxed run: freight can pile up without ending the run.', ''); }
   hud();
 }
@@ -4618,6 +4627,7 @@ const splashAct = (a, el) => {
   if (splashBusy) return;
   if (a === 'update') { reloadNew(); return; }
   if (a === 'scen') { rememberScen(el.dataset.k); splashUI(); return; }
+  if (a === 'mode') { rememberHard(el.dataset.k === '1'); splashUI(); return; }
   if (a === 'cont') { splashGo(() => { const sv = bestSave(); if (sv && resumeRun(sv)) $('splash').hidden = true; else splashUI(); }); return; }
   if (a === 'code') { if (parseCode($('codeIn').value, pickScen)) splashGo(startCode); else startCode(); return; }
   if (a === 'board') { openBoard(pickScen); return; }
@@ -4696,6 +4706,7 @@ function resumeRun(sv) {
     const map = (sv.ids || PL.map(p => p.id)).map(id => (id in IDX ? IDX[id] : -1));
     const re = (arr, def) => { const out = def.slice(); (arr || []).forEach((v, k) => { if (map[k] >= 0) out[map[k]] = v; }); return out; };
     S = Object.assign({}, D, o);
+    if (o.hard == null) S.hard = true;   // 5.48: runs saved before Normal existed were played on Hard's rules
     for (const k of ['shape', 'at', 'open', 'openedAt', 'Q', 'of', 'depot', 'shield', 'flash', 'dmg', 'unrest', 'rebel', 'fastDock', 'toll', 'calm', 'keepShield', 'demand']) S[k] = re(o[k], D[k]);
     S.irl = D.irl;
     // places a newer version adds to this kind of run (a wormhole, say) arrive shortly after you continue
@@ -4761,7 +4772,7 @@ requestAnimationFrame(frame);
 // Hooks for headless balancing and input tests.
 window.LC = {
   get S() { return S; }, get GEN() { return GEN; }, plx: () => PLX.map(L => ({ ux: L.ux, uy: L.uy, k: L.k, ls: Math.pow(sc / sc0, L.d) })), IDX, PL, YEAR, startRun, step, tutGo, tutEnd, createLine, setStops, removeLine, addShip, removeShip, addPod, shieldPlace, buildDepot, select, room, setLine, openLoop, undo,
-  snapCam, cal, calOf, perOf, lineYear, showLog, buySensor, SENSORS, setSys, setAutoPause, inScen, trayUI, recordRun, readBoard, openBoard, showLost, endLost, showWin, award, readAch, needList, lookAt, ACH, ask5, qmTip, diagText, saveText, loadSaveText, perf, get capyImg() { return capyImg; }, get won() { return won; }, get lost() { return lost; }, get boardAll() { return boardAll; }, scrap, scrapVal, repairCost, negotiateCost, voteDemand, sysNeeds, get fxs() { return fxs; }, negotiate, startRebel, tunnelEnds, saveAll, readLocal, resumeRun, bestSave, parseCode, runCode, codeOf, splashUI, SCEN, repairPlace, repairSensor, buyOffer, price, sysOf, tunnelOpen, hud, get sc() { return sc; }, UPKEEP, upkeepShare, openPlace, fuelNear, crowdAt, warnRoom, shipSpots: () => shipSpots, get wclock() { return wclock; }, pins: () => pins.map(q => ({ x: rot ? window.innerWidth - q.y : q.x, y: rot ? q.x : q.y, i: q.i })),
+  snapCam, cal, calOf, perOf, lineYear, showLog, buySensor, SENSORS, setSys, setAutoPause, inScen, trayUI, recordRun, readBoard, openBoard, showLost, endLost, showWin, award, readAch, needList, lookAt, ACH, ask5, qmTip, diagText, saveText, loadSaveText, perf, get capyImg() { return capyImg; }, get won() { return won; }, get lost() { return lost; }, get boardAll() { return boardAll; }, scrap, scrapVal, repairCost, negotiateCost, voteDemand, sysNeeds, get fxs() { return fxs; }, negotiate, startRebel, tunnelEnds, saveAll, readLocal, resumeRun, bestSave, parseCode, runCode, codeOf, splashUI, SCEN, repairPlace, repairSensor, buyOffer, price, sysOf, tunnelOpen, hud, get sc() { return sc; }, UPKEEP, upkeepShare, ovT, BRK_GAP, openPlace, fuelNear, crowdAt, warnRoom, shipSpots: () => shipSpots, get wclock() { return wclock; }, pins: () => pins.map(q => ({ x: rot ? window.innerWidth - q.y : q.x, y: rot ? q.x : q.y, i: q.i })),
   redrawFee, chargeRedraw, fixShips, whyCrowded, worstTrouble, selLine, checkUpdate, verNum, get newer() { return newer; }, upkeepDue, berths, docked, queueAt, stuckAt, stuckNote, startSwing, breakdowns, lateGame, ovT, crowdFix,
   fast(sec) { const n = Math.round(sec / STEP); for (let i = 0; i < n && !S.over; i++) step(STEP); },
   screen(id) { const n = PL[IDX[id]], x = X(n.x), y = Y(n.y); return rot ? { x: window.innerWidth - y, y: x } : { x, y }; },
