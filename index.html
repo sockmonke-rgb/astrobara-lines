@@ -512,7 +512,7 @@ button.link{height:auto;min-height:0;padding:2px 0;border:none;background:none;c
       <svg class="lines" id="splashLines" aria-hidden="true"></svg>
       <div class="big" aria-hidden="true"><svg viewBox="0 0 64 64"><use href="#capy"/></svg></div>
       <div class="txt">
-        <div class="eyebrow" id="splashEyebrow">Prototype 5.31</div>
+        <div class="eyebrow" id="splashEyebrow">Prototype 5.32</div>
         <h1>Astrobara Lines</h1>
         <p>Capybaras run the Lagrange Alliance’s freight. <b>Drag through places</b> to draw a shipping line. Freight shape = where it’s going. Too much waiting fills a red ring; a full ring ends the run.</p>
         <div class="scen" role="radiogroup" aria-label="Start in">
@@ -590,7 +590,7 @@ const $ = id => document.getElementById(id);
 const app = $('app'), cv = $('cv'), ctx = cv.getContext('2d');
 
 /* ================= Tuning ================= */
-const VERSION = '5.31';
+const VERSION = '5.32';
 const YEAR = 80, QTR = YEAR / 4, HORIZON = 10, Y0 = 2027, STEP = 1 / 30;
 const SOON = 30;   // seconds before a place opens that it, its countdown and the note all appear
 const SPEED = 80;                 // ship speed in map units per second
@@ -1216,11 +1216,14 @@ function undo() {
   trayUI();
 }
 // Every action returns null on success or a sentence saying why it can't happen.
-function addShip(L) {
+const busiestStop = L => { let k = 0, most = -1; L.stops.forEach((p, i) => { if (S.Q[p].length > most) { most = S.Q[p].length; k = i; } }); return k; };
+function addShip(L, at) {
   if (S.inv.ships < 1) return `No spare ${gi('iShip')}`;
-  let k = 0, most = -1; L.stops.forEach((p, i) => { if (S.Q[p].length > most) { most = S.Q[p].length; k = i; } });
-  // on a loop, every second ship goes the other way round
-  const fw = L.ships.filter(s => s.dir > 0).length, dir = L.loop ? (fw > L.ships.length - fw ? -1 : 1) : k === L.stops.length - 1 ? -1 : 1;
+  // 5.32: it starts where you chose, or else at the busiest stop
+  const k = at != null && at >= 0 && at < L.stops.length ? at : busiestStop(L), m = L.stops.length, p = L.stops[k];
+  // on a loop, every second ship goes the other way round; mid-line (5.32), the way most of the freight there is going
+  const fw = L.ships.filter(s => s.dir > 0).length, ways = d => S.Q[p].filter(c => helps(c, p, L.stops[k + d])).length;
+  const dir = L.loop ? (fw > L.ships.length - fw ? -1 : 1) : k === m - 1 ? -1 : k === 0 ? 1 : ways(-1) > ways(1) ? -1 : 1;
   S.inv.ships--; L.ships.push({ k, dir, d: 0, state: 'stop', dwell: 0.2, cargo: [], pods: 0, wait: 0 });
   trayUI(); return null;
 }
@@ -2787,6 +2790,8 @@ const touches = new Map();
 cv.addEventListener('pointerdown', e => {
   if (!S || (S.over && !S.sandbox) || !$('modal').hidden || !$('splash').hidden) return;
   toggleSpeedMenu(false);
+  // 5.32: with a mouse, a click on the map clears a tip the way its × does (only a tip that's showing and has one)
+  if (e.pointerType === 'mouse' && S.hint && !$('banner').hidden && !$('bX').hidden) { S.hint = null; bannerSig = ''; hud(); }
   // the first finger of a new gesture starts clean, so a touch whose release we never heard
   // can't turn the next one-finger drag into a pinch
   if (e.isPrimary) { touches.clear(); pinch = null; }
@@ -2902,6 +2907,10 @@ cv.addEventListener('wheel', e => {
 const P = $('sel');
 let sel = null, popSig = '', confirmRm = false;
 function select(type, id) {
+  if (type === 'place' && sel && sel.pickShip && sel.type === 'line') {   // 5.32: tapping a stop while choosing where a ship starts
+    const L = S.lines.find(x => x.id === sel.id), k = L ? L.stops.indexOf(id) : -1;
+    if (k >= 0) { sel.pickShip = false; placeShip(L, k, null); refreshPop(true); return; }
+  }
   sel = { type, id }; popSig = ''; confirmRm = false; refreshPop(true);
   if (type === 'line') { const L = S.lines.find(x => x.id === id); if (L && !L.loop && L.stops.length >= 3) hint('trim'); }
   if (type === 'place' && !S.seen[id]) {
@@ -2912,6 +2921,14 @@ function select(type, id) {
 }
 function closePop() { sel = null; confirmRm = false; P.hidden = true; $('tray').hidden = false; app.classList.remove('selecting'); }
 function why(text) { if (text) toast(text); }
+// a ship onto a line, at stop k (or the busiest), with its little arrival
+function placeShip(L, k, el) {
+  const r = addShip(L, k);
+  if (r) { why(r); noFx(el); return r; }
+  const sh = L.ships[L.ships.length - 1], p = shipAt(L, sh); bornAt.set(sh, performance.now()); burst(p.x, p.y, sysOf(L.stops[0]), `+ship ${L.ships.length}`, L.color);
+  deployFx(el, `+1 ${gi('iShip')} ${esc(L.name)} · from ${esc(placeName(L.stops[sh.k]))} · ${L.ships.length} ship${L.ships.length > 1 ? 's' : ''}`);
+  return null;
+}
 function scrapBar(force) {
   const c = repairCost(), opts = SCRAP.filter(([k]) => canScrap(k)).slice(0, 3);
   const sig = 'X' + sel.type + sel.id + opts.map(o => o[0] + spare(o[0])).join('') + (scrapLine() ? scrapLine().id : '');
@@ -2932,6 +2949,18 @@ function refreshPop(force) {
   if (sel.scrap) return scrapBar(force);
   if (sel.type === 'line') {
     const L = S.lines.find(x => x.id === sel.id); if (!L) return closePop();
+    if (sel.pickShip) {   // 5.32: which stop the new ship starts from
+      if (S.inv.ships < 1) sel.pickShip = false;
+      else {
+        const sig = 'LP' + L.id + L.stops.join('.');
+        if (force || sig !== popSig) {
+          popSig = sig; const best = busiestStop(L), seen = new Set();
+          P.innerHTML = `<span class="ask">+${gi('iShip')} ${esc(L.name)} from</span>` + L.stops.map((p, k) => seen.has(p) ? '' : (seen.add(p), `<button data-a="shipAt" data-k="${k}" class="${k === best ? 'primary' : ''}" aria-label="Start it at ${esc(placeName(p))}">${shp(S.shape[p])}${esc(placeName(p))}<small>${S.Q[p].length}</small></button>`)).join('') + `<button class="x" data-a="cancelPick" aria-label="Cancel">×</button>`;
+        }
+        if (P.hidden) { P.hidden = false; $('tray').hidden = true; app.classList.add('selecting'); }
+        edgeFade(P); return;
+      }
+    }
     const sig = 'L' + L.id + confirmRm + L.loop + (shipTrouble(L).length > 0);
     if (force || sig !== popSig) {
       popSig = sig;
@@ -3047,11 +3076,12 @@ onTap(P, (a, el) => {
   if (sel.type === 'line') {
     const L = S.lines.find(x => x.id === sel.id); if (!L) return;
     if (a === 'addShip') {
-      const r = addShip(L);
-      if (r) { why(r); noFx(el); }
-      else { const sh = L.ships[L.ships.length - 1], p = shipAt(L, sh); bornAt.set(sh, performance.now()); burst(p.x, p.y, sysOf(L.stops[0]), `+ship ${L.ships.length}`, L.color);
-        deployFx(el, `+1 ${gi('iShip')} ${esc(L.name)} · ${L.ships.length} ship${L.ships.length > 1 ? 's' : ''}`); }
+      // 5.32: with somewhere to choose, ask which stop it starts from (the walkthrough keeps the one tap)
+      if (S.inv.ships >= 1 && !S.tut && new Set(L.stops).size > 1) { sel.pickShip = true; refreshPop(true); return; }
+      placeShip(L, null, el);
     }
+    else if (a === 'shipAt') { sel.pickShip = false; placeShip(L, +el.dataset.k, el); refreshPop(true); return; }
+    else if (a === 'cancelPick') { sel.pickShip = false; refreshPop(true); return; }
     else if (a === 'fixShip') { const r = fixShips(L); if (r) { why(r); noFx(el); } else { const sh = L.ships[0], p = sh ? shipAt(L, sh) : PL[L.stops[0]]; burst(p.x, p.y, sysOf(L.stops[0]), 'repaired', L.color); deployFx(el, `🔧 ${esc(L.name)} running`); refreshPop(true); return; } }
     else if (a === 'rmShip') { const r = removeShip(L); if (r) { why(r); noFx(el); } else deployFx(el, `${gi('iShip')} back to spare · ${S.inv.ships}`, true); }
     else if (a === 'addPod') {
@@ -3979,6 +4009,7 @@ function draw(rdt) {
   drawLook();
   drawLost();
   drawTut();
+  drawPick();
   drawPins();
   if (fingerTag) drawFingerTag(); fingerTag = null;
   // version watermark, just above the bottom bar
@@ -4023,6 +4054,14 @@ function drawUncharted(labels) {
 }
 // When you've zoomed in, arrows at the edge point to open places off screen; red if they're crowding.
 let onLine = new Set();   // places on a line, worked out each frame
+// 5.32: while you choose where a new ship starts, the line's stops pulse in its colour
+function drawPick() {
+  if (!sel || !sel.pickShip || sel.type !== 'line') return;
+  const L = S.lines.find(x => x.id === sel.id); if (!L || !lineView(L)) return;
+  ctx.save(); ctx.strokeStyle = L.color; ctx.lineWidth = 3; ctx.setLineDash([5, 5]); ctx.lineDashOffset = -clock * 14;
+  for (const i of new Set(L.stops)) { ctx.globalAlpha = .6 + .35 * Math.sin(clock * 5); ctx.beginPath(); ctx.arc(X(PL[i].x), Y(PL[i].y), 24 * uk + 3 * Math.sin(clock * 5), 0, Math.PI * 2); ctx.stroke(); }
+  ctx.restore();
+}
 function drawPins() {
   pins = [];
   if (!camManual) return;
