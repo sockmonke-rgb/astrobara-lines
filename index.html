@@ -511,7 +511,7 @@ button.link{height:auto;min-height:0;padding:2px 0;border:none;background:none;c
       <svg class="lines" id="splashLines" aria-hidden="true"></svg>
       <div class="big" aria-hidden="true"><svg viewBox="0 0 64 64"><use href="#capy"/></svg></div>
       <div class="txt">
-        <div class="eyebrow" id="splashEyebrow">Prototype 5.19</div>
+        <div class="eyebrow" id="splashEyebrow">Prototype 5.20</div>
         <h1>Astrobara Lines</h1>
         <p>Capybaras run the Lagrange Alliance’s freight. <b>Drag through places</b> to draw a shipping line. Freight shape = where it’s going. Too much waiting fills a red ring; a full ring ends the run.</p>
         <div class="scen" role="radiogroup" aria-label="Start in">
@@ -589,7 +589,7 @@ const $ = id => document.getElementById(id);
 const app = $('app'), cv = $('cv'), ctx = cv.getContext('2d');
 
 /* ================= Tuning ================= */
-const VERSION = '5.19';
+const VERSION = '5.20';
 const YEAR = 80, QTR = YEAR / 4, HORIZON = 10, Y0 = 2027, STEP = 1 / 30;
 const SOON = 30;   // seconds before a place opens that it, its countdown and the note all appear
 const SPEED = 80;                 // ship speed in map units per second
@@ -1175,7 +1175,7 @@ function openLoop(L) {
   for (const sh of L.ships) if (sh.state === 'move' && ((sh.k === n - 1 && sh.dir > 0) || (sh.k === 0 && sh.dir < 0))) { sh.state = 'stop'; sh.d = 0; sh.dwell = 0.3; }
   L.loop = false; netChanged();
 }
-function dumpCargo(sh, place) { for (const c of sh.cargo) S.Q[place].push(c); sh.cargo = []; }
+function dumpCargo(sh, place) { for (const c of sh.cargo) { delete c.lap; S.Q[place].push(c); } sh.cargo = []; }
 function removeLine(L) {
   for (const sh of L.ships) { dumpCargo(sh, L.stops[sh.k]); S.inv.ships++; S.inv.pods += sh.pods; }
   S.lines = S.lines.filter(x => x !== L);
@@ -1388,22 +1388,45 @@ function moveShip(L, sh, dt) {
   sh.d += SPEED * (1 + 0.12 * S.up.fast) * slow * dt;
   if (sh.d >= sg.len) {
     sh.k = stepK(L, sh.k, sh.dir); sh.d = 0; sh.state = 'stop';
+    if (L.loop) turnRound(L, sh);
     sh.dwell = (0.3 + 0.1 * exchange(L, sh)) * dockK(L.stops[sh.k]);
   }
 }
+// 5.20: a loop's ships stay split between the two ways round. A ship on the busier side turns round where it
+// docks, so a lopsided loop (two ships closed into a loop while both were heading the same way, a ship taken
+// off, an old save) evens out within a stop or two.
+function turnRound(L, sh) {
+  const same = L.ships.filter(s => s.dir === sh.dir).length;
+  if (same - (L.ships.length - same) >= 2) sh.dir = -sh.dir;
+}
+// A loop with every ship going the same way round (one ship, or a lopsided loop before it evens out).
+const oneWay = L => L.loop && L.ships.length > 0 && L.ships.every(s => s.dir === L.ships[0].dir);
+// Whether any stop ahead of this ship, within one lap, is closer to where the load is headed than here.
+function ahead(L, k, dir, c, p) {
+  const n = L.stops.length, here = S.DS[p][c.want];
+  for (let j = 1; j < n; j++) if (S.DS[L.stops[((k + j * dir) % n + n) % n]][c.want] < here - 1e-6) return true;
+  return false;
+}
 // Drop off what this stop is for (or what needs to change lines here), then load what this ship's next stop helps.
+// 5.20: on a loop no ship runs the short way round, a load rides the long way instead of waiting for good,
+// and stays aboard (marked lap) until the best stop on the loop for it.
 function exchange(L, sh) {
   const p = L.stops[sh.k], dir = nextDir(L, sh), q = L.stops[stepK(L, sh.k, dir)], sg = segOf(L, sh.k, dir), open = sg && !sg.closed;
+  const lap = open && oneWay(L);
   let n = 0; const keep = [];
   for (const c of sh.cargo) {
-    if (S.shape[p] === c.want) { deliver(c, L, p); n++; }
-    else if (!open || !helps(c, p, q)) { S.Q[p].push(c); n++; }
+    if (S.shape[p] === c.want) { delete c.lap; deliver(c, L, p); n++; }
+    else if (!open || !(helps(c, p, q) || (c.lap && L.loop && ahead(L, sh.k, dir, c, p)))) { delete c.lap; S.Q[p].push(c); n++; }
     else keep.push(c);
   }
   sh.cargo = keep;
   if (open) {
     const cap = shipCap(sh), rest = [];
-    for (const c of S.Q[p]) { if (sh.cargo.length < cap && helps(c, p, q)) { sh.cargo.push(c); n++; } else rest.push(c); }
+    for (const c of S.Q[p]) {
+      if (sh.cargo.length < cap && helps(c, p, q)) { sh.cargo.push(c); n++; }
+      else if (sh.cargo.length < cap && lap && ahead(L, sh.k, dir, c, p)) { c.lap = true; sh.cargo.push(c); n++; }
+      else rest.push(c);
+    }
     S.Q[p] = rest;
   }
   return n;
@@ -3028,7 +3051,7 @@ function banner() {
   // 5.19: a place overflowing is how a run ends, so it outranks every other note: red, with the time left and Show
   const ov = S.started && !S.tut && !S.over ? overflowing() : -1;
   if (ov >= 0) {
-    cls = 'live'; html = `${shp(S.shape[ov])} <b>${esc(placeName(ov))}</b> overflowing ${S.Q[ov].length}/${room(ov)} · add ships, pods or a depot${S.paused && S.autoPaused === ov ? ' · paused' : ''}${via(ov)}`;
+    cls = 'live'; html = `${shp(S.shape[ov])} <b>${esc(placeName(ov))}</b> overflowing ${S.Q[ov].length}/${room(ov)} · ${crowdFix(ov)}${S.paused && S.autoPaused === ov ? ' · paused' : ''}${via(ov)}`;
     cd = Math.max(0, Math.ceil((1 - S.of[ov]) * OVERFLOW)) + 's'; go = { label: 'Show', place: ov };
   }
   // a storm or debris you're already protected from needs no banner
@@ -3051,6 +3074,18 @@ function overflowing() { let w = -1; for (let i = 0; i < NP; i++) if (S.open[i] 
 // What to do right now, in order of urgency; otherwise what's coming and when.
 function nextOpening() { let best = -1; for (let i = 0; i < NP; i++) if (!S.open[i] && (best < 0 || S.at[i] < S.at[best])) best = i; return best; }
 const via = i => (sysOf(i) !== S.view ? ` · ${sysLabel(sysOf(i))}` : '');
+// 5.20: what you can actually do for a crowded place right now, in a few words. It used to say "add ships, pods
+// or a depot" even with none spare, or with a depot already built there.
+function crowdFix(i) {
+  const mine = S.lines.filter(L => L.stops.includes(i)), a = [];
+  if (S.inv.ships && mine.length) a.push(`+${gi('iShip')}`);
+  if (S.inv.pods && mine.some(L => L.ships.some(sh => sh.pods < MAX_PODS))) a.push(`+${gi('iPod')}`);
+  if (S.inv.depots && !S.depot[i]) a.push(`${gi('iDepot')} depot`);
+  if (a.length) return `add ${a.join(' ')}`;
+  if (S.lines.length < S.inv.lines) return `draw a line to it`;
+  if (mine.length && S.lines.some(L => !L.stops.includes(i) && L.ships.length > 1)) return `move a ${gi('iShip')} here from another line`;
+  return mine.length ? `extend a line to it` : `draw a line to it`;
+}
 function coach() {
   if (!S.started || S.tut || S.over) return null;
   const on = new Set(); S.lines.forEach(L => L.stops.forEach(i => on.add(i)));
@@ -3059,7 +3094,7 @@ function coach() {
   if (idle) return { act: true, html: `<b>${idle.name}</b> line has no ${gi('iShip')}` };
   let worst = -1, margin = Infinity;
   for (let i = 0; i < NP; i++) if (S.open[i] && room(i) - S.Q[i].length < margin) { margin = room(i) - S.Q[i].length; worst = i; }
-  if (worst >= 0 && margin <= 3) return { act: true, html: `${shp(S.shape[worst])} <b>${esc(placeName(worst))}</b> ${S.Q[worst].length}/${room(worst)} · add ${gi('iShip')}${via(worst)}` };
+  if (worst >= 0 && margin <= 3) return { act: true, html: `${shp(S.shape[worst])} <b>${esc(placeName(worst))}</b> ${S.Q[worst].length}/${room(worst)} · ${crowdFix(worst)}${via(worst)}` };
   const dm = S.dmg.findIndex((v, i) => v && S.open[i]);
   if (dm >= 0) return { act: true, html: `🔧 <b>${esc(placeName(dm))}</b> damaged · ${S.fund >= repairCost() ? fmt(repairCost()) : `short ${fmt(repairCost() - S.fund)}, scrap spares`}${via(dm)}`, go: { label: 'Repair', place: dm, icon: '🔧' } };
   let ur = -1; for (let i = 0; i < NP; i++) if (S.open[i] && S.unrest && (rebelNow(i) || S.unrest[i] >= .6) && (ur < 0 || S.unrest[i] > S.unrest[ur])) ur = i;

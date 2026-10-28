@@ -1,5 +1,10 @@
 # Changelog
 
+## 5.20
+- Loops no longer strand freight. Freight only boards a ship whose next stop gets it closer, so on a loop where every ship went the same way round, a stop could pile up loads that no ship would ever take. Now a load rides the long way round when no ship comes the short way.
+- A loop's ships stay split between the two ways round. If they bunch up going one way (closing a line into a loop while its ships head the same way, or taking a ship off), one turns round at its next stop.
+- The overflow note suggests only what you can do: add a spare ship, pod or depot, draw a line, move a ship over from another line, or extend a line. It no longer suggests a depot where one is already built.
+
 ## 5.19
 - A place overflowing is now the top note, ahead of storms and hints. It's red, counts down the seconds before the run ends, and has Show to take you there.
 - When an overflow starts somewhere you could miss it (in another system, or anywhere at 3× and up), the game pauses, as it does for new places. Turn it off in the speed menu.
