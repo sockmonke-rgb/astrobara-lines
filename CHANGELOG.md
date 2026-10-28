@@ -1,5 +1,16 @@
 # Changelog
 
+## 5.21
+More friction, with a way through every time.
+- **Upkeep.** Ships and pods at work cost upkeep at each Alliance Shop visit, at that time's prices. It eases in over the first ten periods, and the top right shows the next bill. The budget can go below zero; then nothing can be bought until deliveries bring it back.
+- **Fuel.** A long line with no ◆ fuel depot among its stops runs 30% slower. Its bar says so.
+- **Berths.** A place loads three ships at once (a wormhole five). The rest queue just outside. A fast dock adds two berths. When ships are queueing, the overflow note suggests a fast dock or pods instead of more ships.
+- **Breakdowns.** Late in a run a ship now and then breaks down: a warning, then it stops for 20 seconds. Ships on busy lines are likelier to go.
+- **Rushes and strikes.** Late in a run some events are swings in demand. In a rush, nearly all of one place's freight heads for the kind of place farthest from it. In a strike, a place takes no deliveries for 30 seconds and freight for it goes to another place of its kind that your lines already reach.
+- **Faster rings.** Late in a run the red ring fills in 20 seconds instead of 30, and places count as crowding 5 short of full instead of 3.
+- **Redraws.** Changing a line you already have costs a little, never more than you have. Undo gives it back. Drawing a new line is free.
+- **Stuck freight.** When loads at a place can't board anything, because no line reaches their kind of place or no ship goes their way, a note says where and why, with Show.
+
 ## 5.20
 - Loops no longer strand freight. Freight only boards a ship whose next stop gets it closer, so on a loop where every ship went the same way round, a stop could pile up loads that no ship would ever take. Now a load rides the long way round when no ship comes the short way.
 - A loop's ships stay split between the two ways round. If they bunch up going one way (closing a line into a loop while its ships head the same way, or taking a ship off), one turns round at its next stop.
