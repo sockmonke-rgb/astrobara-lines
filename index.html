@@ -512,7 +512,7 @@ button.link{height:auto;min-height:0;padding:2px 0;border:none;background:none;c
       <svg class="lines" id="splashLines" aria-hidden="true"></svg>
       <div class="big" aria-hidden="true"><svg viewBox="0 0 64 64"><use href="#capy"/></svg></div>
       <div class="txt">
-        <div class="eyebrow" id="splashEyebrow">Prototype 5.22</div>
+        <div class="eyebrow" id="splashEyebrow">Prototype 5.23</div>
         <h1>Astrobara Lines</h1>
         <p>Capybaras run the Lagrange Alliance’s freight. <b>Drag through places</b> to draw a shipping line. Freight shape = where it’s going. Too much waiting fills a red ring; a full ring ends the run.</p>
         <div class="scen" role="radiogroup" aria-label="Start in">
@@ -521,7 +521,7 @@ button.link{height:auto;min-height:0;padding:2px 0;border:none;background:none;c
           <button data-a="scen" data-k="rand" role="radio" aria-checked="false">Uncharted<small>random · hard</small></button>
           <span class="credit" id="splashFar"></span>
         </div>
-        <div class="row"><button class="primary" data-a="cont" id="bCont" hidden>Continue</button><button data-a="start" id="bNow">Play</button><button data-a="startTut" id="bTut">Walkthrough</button><button data-a="relaxed" id="bRelax">Relaxed</button></div>
+        <div class="row"><button class="primary" data-a="update" id="bUpdate" hidden>Update</button><button class="primary" data-a="cont" id="bCont" hidden>Continue</button><button data-a="start" id="bNow">Play</button><button data-a="startTut" id="bTut">Walkthrough</button><button data-a="relaxed" id="bRelax">Relaxed</button></div>
         <div class="row code"><input id="codeIn" type="text" placeholder="Run code" autocapitalize="characters" autocomplete="off" autocorrect="off" spellcheck="false" aria-label="Run code" enterkeyhint="go"><button data-a="code">Go</button><button data-a="board" id="bBoard">Leaderboard</button><span class="credit">© 2026 Mark Florentino LLC · MIT License</span></div>
       </div>
     </div>
@@ -590,7 +590,7 @@ const $ = id => document.getElementById(id);
 const app = $('app'), cv = $('cv'), ctx = cv.getContext('2d');
 
 /* ================= Tuning ================= */
-const VERSION = '5.22';
+const VERSION = '5.23';
 const YEAR = 80, QTR = YEAR / 4, HORIZON = 10, Y0 = 2027, STEP = 1 / 30;
 const SOON = 30;   // seconds before a place opens that it, its countdown and the note all appear
 const SPEED = 80;                 // ship speed in map units per second
@@ -1772,6 +1772,8 @@ function breakdowns() {
   log(`${L.name} ship ${k + 1} is due a breakdown: in ${BRK_WARN}s it stops for ${BRK_DUR}s.`, 'warn');
   if (!S.auto) toast(`🔧 <b>${L.name} ship ${k + 1}</b> breaks down in ${BRK_WARN}s · tap its line, Repair${sysOf(L.stops[0]) !== S.view ? ' · ' + esc(sysLabel(sysOf(L.stops[0]))) : ''}`, 4500);
 }
+// How a line's ships run, in a couple of words.
+function lineHow(L) { const fw = L.ships.filter(s => s.dir > 0).length; return !L.ships.length ? 'no ships' : !L.loop ? 'back & forth' : fw && fw < L.ships.length ? 'both ways' : 'one way'; }
 // 5.22: a ship that's due a breakdown, or broken down, can be repaired from its line's bar (or the note's Repair)
 // at the same price as a storm-damaged place. Repairing during the warning heads it off. Or just wait it out.
 function shipTrouble(L) { return L.ships.filter(x => x.brk || x.fix); }
@@ -2748,6 +2750,11 @@ function endAt(i, p) {
   for (const h of handles()) { const at = h.end === 'tail' ? h.L.stops[h.L.stops.length - 1] : h.L.stops[0]; if (at !== i) continue; const d = Math.hypot(h.x - p.x, h.y - p.y); if (d < bd) { bd = d; best = h; } }
   return best;
 }
+// 5.23: the line of a broken-down (or about to break down) ship near p, wrench included
+function troubleAt(p) {
+  for (const L of S.lines) if (lineView(L)) for (const x of shipTrouble(L)) { const q = shipAt(L, x); if (Math.hypot(X(q.x) - p.x, Y(q.y) - 12 * uk - p.y) < 34) return L; }
+  return null;
+}
 function lineAt(p) {
   let best = null, bd = 15;
   for (const L of S.lines) if (lineView(L)) for (const sg of L.segs) for (let i = 1; i < sg.pts.length; i++) {
@@ -2866,7 +2873,7 @@ cv.addEventListener('pointerup', e => {
     if (sk >= 0 && d.startPlace < 0 && !(d.handle && d.mode === 'extend')) { select('sensor', sk); return; }
     if (d.handle && d.mode === 'extend' && !d.viaPlace) select('line', d.handle.L.id);
     else if (d.startPlace >= 0) select('place', d.startPlace);
-    else { const L = lineAt(d.p); if (L) select('line', L.id); else closePop(); }
+    else { const L = troubleAt(d.p) || lineAt(d.p); if (L) select('line', L.id); else closePop(); }
   }
 });
 cv.addEventListener('pointercancel', e => { touches.delete(e.pointerId); if (touches.size < 2) pinch = null; drag = null; });
@@ -2921,7 +2928,7 @@ function refreshPop(force) {
     }
     if (!confirmRm) {
       const pods = L.ships.reduce((a, s) => a + s.pods, 0), cap = L.ships.reduce((a, s) => a + shipCap(s), 0);
-      const fw = L.ships.filter(s => s.dir > 0).length, how = !L.ships.length ? 'no ships' : !L.loop ? 'back & forth' : fw && fw < L.ships.length ? 'both ways' : 'one way';
+      const how = lineHow(L);
       // one little hull per ship, numbered like the badges on the map
       const nowMs = performance.now(), hulls = L.ships.map((sh, k) => `<span class="hull${bornAt.has(sh) && nowMs - bornAt.get(sh) < 700 ? ' new' : ''}" style="--c:${L.color}">${k + 1}${sh.pods ? '<i></i>'.repeat(sh.pods) : ''}${sh.fix || sh.brk ? '🔧' : ''}</span>`).join('');
       const html = `${hulls}<span>${how} · holds ${cap}${L.dry ? ` · no ${shp('diamond')} fuel, slow` : ''}</span>`;
@@ -3012,7 +3019,8 @@ onTap(P, (a, el) => {
     const name = nm ? [...nm.childNodes].filter(n => !(n.classList && n.classList.contains('yr'))).map(n => n.textContent).join('').trim() : '';
     const yr = nm && nm.querySelector('.yr') ? nm.querySelector('.yr').textContent : '';
     let what = st ? st.innerHTML : '';
-    if (sel.type === 'line') { const L = S.lines.find(x => x.id === sel.id); if (L) what = `${L.ships.length} ${gi('iShip')} · ${st ? st.textContent.replace(/^[\d\s]+/, '') : ''}${L.stops.length >= 3 && !L.loop ? ' · ✂ drag an end knob back along the line to cut stops' : ''}`; }
+    if (sel.type === 'line') { const L = S.lines.find(x => x.id === sel.id); if (L) { const tr = shipTrouble(L)[0], cap = L.ships.reduce((a, x) => a + shipCap(x), 0);
+      what = `${L.ships.length} ${gi('iShip')}${tr ? ` · 🔧 ship ${L.ships.indexOf(tr) + 1} ${tr.fix ? 'stopped' : 'about to break down'}: Repair` : ''} · ${lineHow(L)} · holds ${cap}${L.dry ? ` · no ${shp('diamond')} fuel, slow` : ''}${L.stops.length >= 3 && !L.loop ? ' · ✂ drag an end knob back along the line to cut stops' : ''}`; } }
     toast(`<b>${esc(name)}</b>${yr ? ` · ${esc(yr)}` : ''} · ${what}`, 4500); return;
   }
   if (a === 'scrap') {
@@ -3091,6 +3099,7 @@ function hud() {
   if ($('bFit').hidden === camManual) $('bFit').hidden = !camManual;
   sysBtn();
   banner();
+  if (newer && !toldNewer) updateUI();   // 5.23: found on the start screen, mentioned once the run is under way
   if (toastT && performance.now() > toastT) { $('toast').classList.add('out'); toastT = 0; }
 }
 // Message boxes go see-through when a place or a line end sits under them, and nearly vanish while you draw.
@@ -4339,7 +4348,7 @@ function splashUI() {
   $('bCont').hidden = !sv; if (sv) $('bCont').textContent = `Continue · ${sv.label || 'saved run'}`;
   $('bTut').hidden = !sol;
   const first = sv ? 'bCont' : sol && !tutDone() ? 'bTut' : 'bNow';
-  for (const id of ['bCont', 'bNow', 'bTut']) $(id).classList.toggle('primary', id === first);
+  for (const id of ['bCont', 'bNow', 'bTut']) $(id).classList.toggle('primary', id === first && !newer);
   $('bNow').textContent = sv ? 'New run' : 'Play';
   const far = readFar(pickScen); $('splashFar').textContent = far > SCEN[pickScen].year ? `Furthest: ${far}` : '';
   $('bNow').textContent = sv ? 'New run' : pickScen === 'rand' ? 'New system' : 'Play';
@@ -4432,6 +4441,7 @@ const splashGo = f => {
 };
 onTap($('splash'), (a, el) => {
   if (splashBusy) return;
+  if (a === 'update') { reloadNew(); return; }
   if (a === 'scen') { rememberScen(el.dataset.k); splashUI(); return; }
   if (a === 'cont') { splashGo(() => { const sv = bestSave(); if (sv && resumeRun(sv)) $('splash').hidden = true; else splashUI(); }); return; }
   if (a === 'code') { if (parseCode($('codeIn').value, pickScen)) splashGo(startCode); else startCode(); return; }
@@ -4545,14 +4555,36 @@ window.addEventListener('pagehide', () => saveAll());
 window.addEventListener('resize', layout);
 window.addEventListener('resize', () => { edgeFade($('tray')); edgeFade(P); });
 window.addEventListener('orientationchange', () => setTimeout(layout, 120));
-layout(); newRun(); hud(); trayUI(); splashUI(); cloudInit();
+// 5.23: on the web, look now and then for a newer version (version.json next to the page) and offer it: an Update
+// button on the start screen, and one note during a run. Phones can keep an old copy for a while otherwise.
+// (The in-app copy has no version.json, so it never asks.)
+let newer = null, lastCheck = 0, toldNewer = false;
+const verNum = v => String(v).split('.').map(Number).reduce((a, n, k) => a + (n || 0) / Math.pow(1000, k), 0);
+async function checkUpdate() {
+  if (!/^https?:$/.test(location.protocol) || (lastCheck && performance.now() - lastCheck < 120000)) return;
+  lastCheck = performance.now();
+  try {
+    const r = await fetch('version.json?t=' + Date.now(), { cache: 'no-store' }); if (!r.ok) return;
+    const v = String((await r.json()).version || '');
+    if (v && verNum(v) > verNum(VERSION)) { newer = v; updateUI(); }
+  } catch (_) {}
+}
+function updateUI() {
+  const b = $('bUpdate'); b.hidden = !newer; if (newer) b.textContent = `Update to ${newer}`;
+  if (newer) for (const id of ['bCont', 'bNow', 'bTut']) $(id).classList.remove('primary');
+  if (newer && !toldNewer && S && S.started && !S.over && $('splash').hidden) { toldNewer = true; toast(`⬆ <b>${esc(newer)}</b> is out · ≡ → Start screen → Update`, 6000); }
+}
+function reloadNew() { try { if (S && S.started && !S.over) saveAll(); } catch (_) {} location.replace(location.pathname + '?v=' + encodeURIComponent(newer || String(Date.now()))); }
+document.addEventListener('visibilitychange', () => { if (!document.hidden) checkUpdate(); });
+setInterval(checkUpdate, 600000);
+layout(); newRun(); hud(); trayUI(); splashUI(); cloudInit(); checkUpdate();
 requestAnimationFrame(frame);
 
 // Hooks for headless balancing and input tests.
 window.LC = {
   get S() { return S; }, get GEN() { return GEN; }, plx: () => PLX.map(L => ({ ux: L.ux, uy: L.uy, k: L.k, ls: Math.pow(sc / sc0, L.d) })), IDX, PL, YEAR, startRun, step, tutGo, tutEnd, createLine, setStops, removeLine, addShip, removeShip, addPod, shieldPlace, buildDepot, select, room, setLine, openLoop, undo,
   snapCam, cal, calOf, perOf, lineYear, showLog, buySensor, SENSORS, setSys, setAutoPause, inScen, trayUI, recordRun, readBoard, openBoard, showLost, endLost, showWin, award, readAch, needList, lookAt, ACH, ask5, qmTip, diagText, saveText, loadSaveText, perf, get capyImg() { return capyImg; }, get won() { return won; }, get lost() { return lost; }, get boardAll() { return boardAll; }, scrap, scrapVal, repairCost, negotiateCost, voteDemand, sysNeeds, get fxs() { return fxs; }, negotiate, startRebel, tunnelEnds, saveAll, readLocal, resumeRun, bestSave, parseCode, runCode, codeOf, splashUI, SCEN, repairPlace, repairSensor, buyOffer, price, sysOf, tunnelOpen, hud, get sc() { return sc; }, pins: () => pins.map(q => ({ x: rot ? window.innerWidth - q.y : q.x, y: rot ? q.x : q.y, i: q.i })),
-  redrawFee, chargeRedraw, fixShips, worstTrouble, selLine, upkeepDue, berths, docked, queueAt, stuckAt, stuckNote, startSwing, breakdowns, lateGame, ovT, crowdFix,
+  redrawFee, chargeRedraw, fixShips, worstTrouble, selLine, checkUpdate, verNum, get newer() { return newer; }, upkeepDue, berths, docked, queueAt, stuckAt, stuckNote, startSwing, breakdowns, lateGame, ovT, crowdFix,
   fast(sec) { const n = Math.round(sec / STEP); for (let i = 0; i < n && !S.over; i++) step(STEP); },
   screen(id) { const n = PL[IDX[id]], x = X(n.x), y = Y(n.y); return rot ? { x: window.innerWidth - y, y: x } : { x, y }; },
   linePoint(i) { const p = S.lines[i].segs[0].pts[12], x = X(p.x), y = Y(p.y); return rot ? { x: window.innerWidth - y, y: x } : { x, y }; },

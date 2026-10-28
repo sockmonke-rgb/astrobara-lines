@@ -1,5 +1,10 @@
 # Changelog
 
+## 5.23
+- The game notices when a newer version is out: the start screen shows Update to …, and a running game gets one note saying where to find it. Your run is saved before it reloads. (Phones can keep an old copy for a while otherwise.)
+- Tapping a broken-down ship, or its wrench, opens its line, with Repair first in the bar.
+- A line's info note reads properly again ("3 ships · 🔧 ship 2 stopped: Repair · both ways · holds 30").
+
 ## 5.22
 - A breakdown can be fixed: tap the ship's line and Repair, or Repair on the note, at a storm repair's price. Repairing during the warning heads it off. Or wait it out.
 - A selected line's ends are easier to grab: anywhere near either knob (about twice the usual reach), or by dragging from the place the line ends at. A soft ring shows the reach. A tap on that place still opens the place, and with no line selected nothing changes.
