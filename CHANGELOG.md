@@ -1,5 +1,8 @@
 # Changelog
 
+## 5.42
+- The backing behind waiting freight is lighter and rounder: a half-transparent shadow that follows the shapes instead of a solid box, so the line underneath still shows. The shapes' dark edges are a touch thinner.
+
 ## 5.41
 - The freight waiting at a place now sits on a small dark plate, and each shape has a thin dark edge, so you can tell the shapes apart where a line runs underneath.
 

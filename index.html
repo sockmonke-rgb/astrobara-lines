@@ -513,7 +513,7 @@ button.link{height:auto;min-height:0;padding:2px 0;border:none;background:none;c
       <svg class="lines" id="splashLines" aria-hidden="true"></svg>
       <div class="big" aria-hidden="true"><svg viewBox="0 0 64 64"><use href="#capy"/></svg></div>
       <div class="txt">
-        <div class="eyebrow" id="splashEyebrow">Prototype 5.41</div>
+        <div class="eyebrow" id="splashEyebrow">Prototype 5.42</div>
         <h1>Astrobara Lines</h1>
         <p>Capybaras run the Lagrange Alliance’s freight. <b>Drag through places</b> to draw a shipping line. Freight shape = where it’s going. Too much waiting fills a red ring; a full ring ends the run.</p>
         <div class="scen" role="radiogroup" aria-label="Start in">
@@ -591,7 +591,7 @@ const $ = id => document.getElementById(id);
 const app = $('app'), cv = $('cv'), ctx = cv.getContext('2d');
 
 /* ================= Tuning ================= */
-const VERSION = '5.41';
+const VERSION = '5.42';
 const YEAR = 80, QTR = YEAR / 4, HORIZON = 10, Y0 = 2027, STEP = 1 / 30;
 const SOON = 30;   // seconds before a place opens that it, its countdown and the note all appear
 const SPEED = 80;                 // ship speed in map units per second
@@ -4263,9 +4263,10 @@ function drawPlace(i) {
     spots.push([fx, fy]);
     qb.x0 = Math.min(qb.x0, fx); qb.x1 = Math.max(qb.x1, fx); qb.y0 = Math.min(qb.y0, fy); qb.y1 = Math.max(qb.y1, fy);
   }
-  // 5.41: a dark plate behind the waiting freight, and a dark edge on each shape, so they read over a line
-  if (shown) { const pad = 5.5 * uk; ctx.fillStyle = 'rgba(4,6,11,.72)'; ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(qb.x0 - pad, qb.y0 - pad, qb.x1 - qb.x0 + 2 * pad, qb.y1 - qb.y0 + 2 * pad, 5 * uk); else ctx.rect(qb.x0 - pad, qb.y0 - pad, qb.x1 - qb.x0 + 2 * pad, qb.y1 - qb.y0 + 2 * pad); ctx.fill(); }
-  ctx.strokeStyle = 'rgba(4,6,11,.95)'; ctx.lineWidth = 1.6 * uk; ctx.lineJoin = 'round';
+  // 5.41/5.42: a soft see-through backing that follows the shapes (one fill, so overlaps don't darken), and a thin
+  // dark edge on each shape, so they read over a line without hiding it
+  if (shown) { ctx.fillStyle = 'rgba(4,6,11,.5)'; ctx.beginPath(); for (const [fx, fy] of spots) { ctx.moveTo(fx + 6.2 * uk, fy); ctx.arc(fx, fy, 6.2 * uk, 0, Math.PI * 2); } ctx.fill(); }
+  ctx.strokeStyle = 'rgba(4,6,11,.8)'; ctx.lineWidth = 1.3 * uk; ctx.lineJoin = 'round';
   for (let k = 0; k < shown; k++) {
     const [fx, fy] = spots[k];
     ctx.fillStyle = k >= rm ? '#ff6b6b' : TINT[q[k].want] || '#d8dee9';
