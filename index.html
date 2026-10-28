@@ -512,7 +512,7 @@ button.link{height:auto;min-height:0;padding:2px 0;border:none;background:none;c
       <svg class="lines" id="splashLines" aria-hidden="true"></svg>
       <div class="big" aria-hidden="true"><svg viewBox="0 0 64 64"><use href="#capy"/></svg></div>
       <div class="txt">
-        <div class="eyebrow" id="splashEyebrow">Prototype 5.24</div>
+        <div class="eyebrow" id="splashEyebrow">Prototype 5.25</div>
         <h1>Astrobara Lines</h1>
         <p>Capybaras run the Lagrange Alliance’s freight. <b>Drag through places</b> to draw a shipping line. Freight shape = where it’s going. Too much waiting fills a red ring; a full ring ends the run.</p>
         <div class="scen" role="radiogroup" aria-label="Start in">
@@ -590,7 +590,7 @@ const $ = id => document.getElementById(id);
 const app = $('app'), cv = $('cv'), ctx = cv.getContext('2d');
 
 /* ================= Tuning ================= */
-const VERSION = '5.24';
+const VERSION = '5.25';
 const YEAR = 80, QTR = YEAR / 4, HORIZON = 10, Y0 = 2027, STEP = 1 / 30;
 const SOON = 30;   // seconds before a place opens that it, its countdown and the note all appear
 const SPEED = 80;                 // ship speed in map units per second
@@ -1397,6 +1397,7 @@ function moveShip(L, sh, dt) {
     if (sg.closed) { sh.wait -= dt; if (sh.wait <= 0) { sh.wait = 1; exchange(L, sh); } return; }
     const n = exchange(L, sh);     // pick up anything that arrived while docked
     if (n > 0) { sh.dwell = 0.1 * n * dockK(L.stops[sh.k]); return; }
+    if (sh.cargo.length >= shipCap(sh)) { const p = L.stops[sh.k], q = L.stops[stepK(L, sh.k, dir)]; if (q != null && S.Q[p].some(c => helps(c, p, q))) (S.leftFull || (S.leftFull = {}))[p] = { t: S.t, L: L.id }; }   // 5.25
     sh.dir = dir; sh.state = 'move'; sh.d = 0; sh.wait = 0;
     return;
   }
@@ -2231,7 +2232,8 @@ const clamp01 = v => Math.max(0, Math.min(1, v));
 function lostBeat(i, entry) {
   if (sysOf(i) !== S.view) setSys(sysOf(i));
   const { side, top, rw, rh } = mapBox();
-  lost = { i, entry, t0: performance.now(), card: false, waiting: S.Q[i].length, room: room(i), g: { s0: sc, a: worldAt({ x: side + rw / 2, y: top + rh / 2 }), b: { x: PL[i].x, y: PL[i].y } } };
+  const by = {}; for (const c of S.Q[i]) by[c.want] = (by[c.want] || 0) + 1; const most = Object.keys(by).sort((a, b) => by[b] - by[a])[0];
+  lost = { i, entry, t0: performance.now(), card: false, waiting: S.Q[i].length, room: room(i), why: whyCrowded(i).story, top: most, topN: most ? by[most] : 0, g: { s0: sc, a: worldAt({ x: side + rw / 2, y: top + rh / 2 }), b: { x: PL[i].x, y: PL[i].y } } };
   jump = null; app.classList.add('lost'); $('lostVeil').hidden = false;
   clearTimeout(lostTimer); lostTimer = setTimeout(showLost, reducedMotion() ? 0 : LOST_MAP);
 }
@@ -2275,7 +2277,7 @@ function lostHTML() {
   return `<div class="endc lostc">
     <div class="eyebrow"><span class="tapnote">tap to speed up</span>Run over · ${qLabel(S.t)} · ${eraNow()}</div>
     <div class="vrow"><div class="verdict" id="lVerdict">Network lost</div><svg class="capyw" viewBox="0 0 64 64" aria-hidden="true"><use href="#capySad"/></svg></div>
-    <p class="fadein" id="lObit">${esc(placeName(i))} kept ${lost.waiting} loads waiting too long, and the Alliance halted shipping${yrs > 0 ? `, ${yrs} year${yrs > 1 ? 's' : ''} after your first line` : ''}.</p>
+    <p class="fadein" id="lObit">${esc(placeName(i))} kept ${lost.waiting} loads waiting too long, and the Alliance halted shipping${yrs > 0 ? `, ${yrs} year${yrs > 1 ? 's' : ''} after your first line` : ''}.${lost.why ? `<br>${lost.top ? `The most were ${shp(lost.top)} (${lost.topN}). ` : ''}${lost.why}` : ''}</p>
     <div class="runstats">${col(L)}${col(R)}</div>
     <div class="fadein" id="lChart">${chart(S.hist)}</div>
     ${awardsRow()}
@@ -2497,6 +2499,7 @@ function diagText() {
     for (const ln of S.lines) { const cl = (ln.segs || []).filter(x => x.closed).length; L.push(`  ${ln.name}${ln.loop ? ' (loop)' : ''}: ${ln.stops.map(i => PL[i].id).join('-')} · ships ${ln.ships.length} · pods ${ln.ships.reduce((a, x) => a + x.pods, 0)} · carried ${ln.carried || 0}${cl ? ' · closed stretches ' + cl : ''}`); }
     L.push(`places: ` + PL.map((pl, i) => (S.open[i] ? `${pl.id} ${S.Q[i].length}/${room(i)}${S.of[i] > 0 ? ' ring ' + Math.round(S.of[i] * 100) + '%' : ''}${S.dmg[i] ? ' damaged' : ''}${S.shield[i] ? ' shield' : ''}${S.depot[i] ? ' depot' : ''}${S.fastDock && S.fastDock[i] ? ' dock' : ''}${S.unrest && S.unrest[i] >= .3 ? ' unrest ' + Math.round(S.unrest[i] * 100) + '%' : ''}${rebelNow(i) ? ' INDEPENDENT' : ''}` : '')).filter(Boolean).join(', '));
     L.push(`hazard: ${S.haz ? `${S.haz.type} ${S.haz.phase} "${plainText(S.haz.title)}" at ${S.haz.at.toFixed(1)}` : 'none'} · next at ${S.nextHaz != null ? S.nextHaz.toFixed(0) : '-'} · boom ${S.boom ? S.boom.shape : 'none'} · opening act ${JSON.stringify(S.script || [])}`);
+    { const ov = overflowing(); if (ov >= 0) L.push(`overflowing: ${PL[ov].id} · ${plainText(whyCrowded(ov).note)}`); }
     L.push(`note: ${S.hint ? S.hint.id : 'none'} · selected ${sel ? sel.type + ' ' + sel.id : 'nothing'} · awards ${Object.keys(readAch()).filter(k => ACH.some(a => a.id === k)).length}/${ACH.length} · board rows ${readBoard().length}`);
     L.push('recent log:'); for (const e of S.log.slice(-15)) L.push(`  ${qShort(e.t)} ${plainText(e.text)}`);
   }
@@ -3221,8 +3224,9 @@ function banner() {
   // 5.19: a place overflowing is how a run ends, so it outranks every other note: red, with the time left and Show
   const ov = S.started && !S.tut && !S.over ? overflowing() : -1;
   if (ov >= 0) {
-    cls = 'live'; html = `${shp(S.shape[ov])} <b>${esc(placeName(ov))}</b> overflowing ${S.Q[ov].length}/${room(ov)} · ${crowdFix(ov)}${S.paused && S.autoPaused === ov ? ' · paused' : ''}${via(ov)}`;
-    cd = Math.max(0, Math.ceil((1 - S.of[ov]) * ovT())) + 's'; go = { label: 'Show', place: ov };
+    const why = whyCrowded(ov);
+    cls = 'live'; html = `${shp(S.shape[ov])} <b>${esc(placeName(ov))}</b> overflowing ${S.Q[ov].length}/${room(ov)} · ${why.note}${S.paused && S.autoPaused === ov ? ' · paused' : ''}${via(ov)}`;
+    cd = Math.max(0, Math.ceil((1 - S.of[ov]) * ovT())) + 's'; go = why.go || { label: 'Show', place: ov };
   }
   // a storm or debris you're already protected from needs no banner
   else if (h && !held && !quietHaz(h)) {
@@ -3254,6 +3258,26 @@ function nextOpening() { let best = -1; for (let i = 0; i < NP; i++) if (!S.open
 const via = i => (sysOf(i) !== S.view ? ` · ${sysLabel(sysOf(i))}` : '');
 // 5.20: what you can actually do for a crowded place right now, in a few words. It used to say "add ships, pods
 // or a depot" even with none spare, or with a depot already built there.
+// 5.25: why a place is crowding, the most direct cause first, with what helps: `note` for the banner (short),
+// `story` for the Network Lost card (a sentence), `go` for a button when there's one thing to tap.
+const fixFor = L => (S.inv.ships ? `+${gi('iShip')}` : S.inv.pods && L.ships.some(x => x.pods < MAX_PODS) ? `+${gi('iPod')}` : `move a ${gi('iShip')} to it`);
+function whyCrowded(i) {
+  const mine = S.lines.filter(L => L.stops.includes(i)), nbs = new Set();
+  for (const L of mine) { const k = L.stops.indexOf(i), n = L.stops.length; for (const j of [k - 1, k + 1]) { const y = L.stops[L.loop ? (j + n) % n : j]; if (y != null && y !== i) nbs.add(y); } }
+  const reb = [...nbs].find(j => rebelNow(j));
+  if (reb != null) return { note: `${esc(placeName(reb))} is independent · lines closed`, story: `${esc(placeName(reb))} had declared independence, closing the lines through it.`, go: { label: 'Negotiate', talk: reb } };
+  if (mine.some(L => L.segs.some(sg => sg.closed && (sg.a === i || sg.b === i)))) { const c = S.haz && S.haz.type === 'drifter'; return { note: `${c ? 'a craft' : 'the storm'} has closed its lines`, story: `A ${c ? 'drifting craft' : 'storm'} had closed its lines.` }; }
+  const st = stuckAt(i);
+  if (st && st.n >= Math.max(3, S.Q[i].length / 3)) { const w = Object.keys(st.by).sort((a, b) => st.by[b] - st.by[a])[0]; return { note: `${st.n} stuck · ${st.noRoute >= st.n / 2 ? `no line reaches ${shp(w)}` : 'no ship goes their way'}`, story: `${st.n} of them had no way to their kind of place.` }; }
+  if (queueAt(i) >= 2) return { note: crowdFix(i), story: 'Ships were queueing for its berths.' };
+  const lf = S.leftFull && S.leftFull[i] && S.t - S.leftFull[i].t < 20 ? S.lines.find(L => L.id === S.leftFull[i].L) : null;
+  if (lf) return { note: `ships leave full on ${lf.name}${lf.dry ? ` · no ${shp('diamond')} fuel` : ''} · ${fixFor(lf)}`, story: `Ships were leaving it full on the ${lf.name.toLowerCase()} line${lf.dry ? `, which had no ${shp('diamond')} fuel stop and ran ${Math.round((1 - FUEL_SLOW) * 100)}% slow` : ''}.` };
+  const dry = mine.find(L => L.dry);
+  if (dry) return { note: `${dry.name} has no ${shp('diamond')} fuel stop · its ships run slow`, story: `The ${dry.name.toLowerCase()} line had no ${shp('diamond')} fuel stop, so its ships ran ${Math.round((1 - FUEL_SLOW) * 100)}% slow.` };
+  const broken = mine.find(L => L.ships.some(x => x.fix));
+  if (broken) return { note: `${broken.name} ship broken down`, story: `A ship on the ${broken.name.toLowerCase()} line was broken down.`, go: { label: `Repair ${fmt(repairCost())}`, line: broken.id } };
+  return { note: crowdFix(i), story: 'It made more freight than its lines could carry away.' };
+}
 function crowdFix(i) {
   const mine = S.lines.filter(L => L.stops.includes(i)), a = [];
   // 5.21: ships already queueing for its berths: more ships make it worse
@@ -3279,7 +3303,7 @@ function coach() {
   if (idle) return { act: true, html: `<b>${idle.name}</b> line has no ${gi('iShip')}` };
   let worst = -1, margin = Infinity;
   for (let i = 0; i < NP; i++) if (S.open[i] && room(i) - S.Q[i].length < margin) { margin = room(i) - S.Q[i].length; worst = i; }
-  if (worst >= 0 && margin <= warnRoom()) return { act: true, html: `${shp(S.shape[worst])} <b>${esc(placeName(worst))}</b> ${S.Q[worst].length}/${room(worst)} · ${crowdFix(worst)}${via(worst)}` };
+  if (worst >= 0 && margin <= warnRoom()) { const why = whyCrowded(worst); return { act: true, html: `${shp(S.shape[worst])} <b>${esc(placeName(worst))}</b> ${S.Q[worst].length}/${room(worst)} · ${why.note}${via(worst)}`, go: why.go || null }; }
   const dm = S.dmg.findIndex((v, i) => v && S.open[i]);
   if (dm >= 0) return { act: true, html: `🔧 <b>${esc(placeName(dm))}</b> damaged · ${S.fund >= repairCost() ? fmt(repairCost()) : `short ${fmt(repairCost() - S.fund)}, scrap spares`}${via(dm)}`, go: { label: 'Repair', place: dm, icon: '🔧' } };
   let ur = -1; for (let i = 0; i < NP; i++) if (S.open[i] && S.unrest && (rebelNow(i) || S.unrest[i] >= .6) && (ur < 0 || S.unrest[i] > S.unrest[ur])) ur = i;
@@ -3843,6 +3867,13 @@ function draw(rdt) {
       polyline(sg.pts); ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha = 1;
       if (chosen) { ctx.strokeStyle = '#ffffff'; ctx.globalAlpha = .75; ctx.lineWidth = 2; ctx.setLineDash([3, 13]); ctx.lineDashOffset = -clock * 30; polyline(sg.pts); ctx.stroke(); ctx.setLineDash([]); ctx.lineDashOffset = 0; ctx.globalAlpha = 1; }
     }
+  }
+  // 5.25: a long line with no ◆ fuel stop wears a small crossed-out diamond halfway along
+  for (const L of shown) if (L.dry && L.segs.length) {
+    const sg = L.segs[Math.floor(L.segs.length / 2)], m = sg.pts[12], x = X(m.x), y = Y(m.y), r = 7 * uk;
+    ctx.save(); ctx.globalAlpha = selId != null && L.id !== selId ? .3 : 1;
+    ctx.beginPath(); ctx.moveTo(x, y - r); ctx.lineTo(x + r, y); ctx.lineTo(x, y + r); ctx.lineTo(x - r, y); ctx.closePath(); ctx.fillStyle = '#04060b'; ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = L.color; ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x - r * .8, y + r * .8); ctx.lineTo(x + r * .8, y - r * .8); ctx.strokeStyle = '#ff8a7a'; ctx.lineWidth = 2; ctx.stroke(); ctx.restore();
   }
   // during a storm or debris warning, show which stretches of line are protected and which will stop or slow
   const hz = S.haz;
@@ -4587,7 +4618,7 @@ requestAnimationFrame(frame);
 window.LC = {
   get S() { return S; }, get GEN() { return GEN; }, plx: () => PLX.map(L => ({ ux: L.ux, uy: L.uy, k: L.k, ls: Math.pow(sc / sc0, L.d) })), IDX, PL, YEAR, startRun, step, tutGo, tutEnd, createLine, setStops, removeLine, addShip, removeShip, addPod, shieldPlace, buildDepot, select, room, setLine, openLoop, undo,
   snapCam, cal, calOf, perOf, lineYear, showLog, buySensor, SENSORS, setSys, setAutoPause, inScen, trayUI, recordRun, readBoard, openBoard, showLost, endLost, showWin, award, readAch, needList, lookAt, ACH, ask5, qmTip, diagText, saveText, loadSaveText, perf, get capyImg() { return capyImg; }, get won() { return won; }, get lost() { return lost; }, get boardAll() { return boardAll; }, scrap, scrapVal, repairCost, negotiateCost, voteDemand, sysNeeds, get fxs() { return fxs; }, negotiate, startRebel, tunnelEnds, saveAll, readLocal, resumeRun, bestSave, parseCode, runCode, codeOf, splashUI, SCEN, repairPlace, repairSensor, buyOffer, price, sysOf, tunnelOpen, hud, get sc() { return sc; }, pins: () => pins.map(q => ({ x: rot ? window.innerWidth - q.y : q.x, y: rot ? q.x : q.y, i: q.i })),
-  redrawFee, chargeRedraw, fixShips, worstTrouble, selLine, checkUpdate, verNum, get newer() { return newer; }, upkeepDue, berths, docked, queueAt, stuckAt, stuckNote, startSwing, breakdowns, lateGame, ovT, crowdFix,
+  redrawFee, chargeRedraw, fixShips, whyCrowded, worstTrouble, selLine, checkUpdate, verNum, get newer() { return newer; }, upkeepDue, berths, docked, queueAt, stuckAt, stuckNote, startSwing, breakdowns, lateGame, ovT, crowdFix,
   fast(sec) { const n = Math.round(sec / STEP); for (let i = 0; i < n && !S.over; i++) step(STEP); },
   screen(id) { const n = PL[IDX[id]], x = X(n.x), y = Y(n.y); return rot ? { x: window.innerWidth - y, y: x } : { x, y }; },
   linePoint(i) { const p = S.lines[i].segs[0].pts[12], x = X(p.x), y = Y(p.y); return rot ? { x: window.innerWidth - y, y: x } : { x, y }; },

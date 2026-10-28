@@ -1,5 +1,10 @@
 # Changelog
 
+## 5.25
+- A crowding or overflowing place says why, the most direct cause first, with what helps: a neighbour that declared independence (with Negotiate), a storm closing its lines, stuck freight, ships queueing for berths, ships leaving it full on a named line (and whether that line has no ◆ fuel stop), a line with no fuel, or a broken-down ship (with Repair).
+- The Network Lost card says what the waiting loads mostly were and why the place filled up.
+- A long line with no ◆ fuel stop wears a small crossed-out diamond halfway along it, so you can see it without selecting the line.
+
 ## 5.24
 - A place that has cleared but whose red ring is still draining no longer counts as overflowing: the labels when you arrive in a system say "clearing" (or "crowding · ring 40%" if it's close to full again), the ⇄ button and edge arrows stay calm, and the draining ring is drawn fainter than a filling one.
 
