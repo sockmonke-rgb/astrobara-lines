@@ -492,7 +492,7 @@ button.link{height:auto;min-height:0;padding:2px 0;border:none;background:none;c
       <div class="chip" data-a="lines" role="button" tabindex="0" aria-label="Lines"><span class="dots" id="tLines"></span></div>
       <div class="chip" data-a="ships" role="button" tabindex="0" aria-label="Spare ships"><svg viewBox="0 0 24 24"><use href="#iShip"/></svg><span id="tShips">3</span></div>
       <div class="chip" data-a="pods" role="button" tabindex="0" aria-label="Cargo pods"><svg viewBox="0 0 24 24"><use href="#iPod"/></svg><span id="tPods">0</span></div>
-      <div class="chip" data-a="depots" role="button" tabindex="0" aria-label="Depots"><svg viewBox="0 0 24 24"><use href="#iDepot"/></svg><span id="tDepots">0</span></div>
+      <div class="chip" data-a="depots" role="button" tabindex="0" aria-label="Storage"><svg viewBox="0 0 24 24"><use href="#iDepot"/></svg><span id="tDepots">0</span></div>
       <div class="chip" data-a="docks" role="button" tabindex="0" aria-label="Fast docks" id="cDocks" hidden><svg viewBox="0 0 24 24"><use href="#iDock"/></svg><span id="tDocks">0</span></div>
       <div class="chip" data-a="shields" role="button" tabindex="0" aria-label="Shields"><svg viewBox="0 0 24 24"><use href="#iShield"/></svg><span id="tShields">0</span></div>
     </div>
@@ -512,7 +512,7 @@ button.link{height:auto;min-height:0;padding:2px 0;border:none;background:none;c
       <svg class="lines" id="splashLines" aria-hidden="true"></svg>
       <div class="big" aria-hidden="true"><svg viewBox="0 0 64 64"><use href="#capy"/></svg></div>
       <div class="txt">
-        <div class="eyebrow" id="splashEyebrow">Prototype 5.35</div>
+        <div class="eyebrow" id="splashEyebrow">Prototype 5.36</div>
         <h1>Astrobara Lines</h1>
         <p>Capybaras run the Lagrange Alliance’s freight. <b>Drag through places</b> to draw a shipping line. Freight shape = where it’s going. Too much waiting fills a red ring; a full ring ends the run.</p>
         <div class="scen" role="radiogroup" aria-label="Start in">
@@ -590,7 +590,7 @@ const $ = id => document.getElementById(id);
 const app = $('app'), cv = $('cv'), ctx = cv.getContext('2d');
 
 /* ================= Tuning ================= */
-const VERSION = '5.35';
+const VERSION = '5.36';
 const YEAR = 80, QTR = YEAR / 4, HORIZON = 10, Y0 = 2027, STEP = 1 / 30;
 const SOON = 30;   // seconds before a place opens that it, its countdown and the note all appear
 const SPEED = 80;                 // ship speed in map units per second
@@ -604,6 +604,15 @@ const OVERFLOW_LATE = 20;         // ...late in a run the ring fills faster, and
 // So it follows each system's pay and the decades by itself, and can never take more than the network brought in.
 const UPKEEP = { ship: .035, pod: .4, fleet: 12, ease: 2, cap: .6 };
 const FUEL_RANGE = 900, FUEL_SLOW = .7;   // a line longer than this with no ◆ fuel stop runs this much slower
+// 5.36: the nearest open ◆ fuel depot in a line's system that it doesn't already stop at (-1: none open there yet).
+// With none open in its system a long line isn't slowed, since there'd be nothing to do about it.
+function fuelNear(L) {
+  if (!L.stops.length) return -1;
+  const sy = sysOf(L.stops[0]); let best = -1, bd = Infinity;
+  for (let i = 0; i < NP; i++) if (S.open[i] && S.shape[i] === 'diamond' && sysOf(i) === sy && !L.stops.includes(i)) { const d = Math.min(...L.stops.map(p => Math.hypot(PL[p].x - PL[i].x, PL[p].y - PL[i].y))); if (d < bd) { bd = d; best = i; } }
+  return best;
+}
+const dryOf = L => L.len > FUEL_RANGE && !L.stops.some(i => S.shape[i] === 'diamond') && fuelNear(L) >= 0;
 const BERTHS = 3;                 // ships a place loads at once (a fast dock adds 2, a wormhole has 2 more)
 const BRK_WARN = 8, BRK_DUR = 20; // late in a run a ship now and then breaks down: warning, then time stopped
 const SWING = .3;                 // late in a run, the share of events that are swings in demand (rushes, strikes)
@@ -1076,7 +1085,7 @@ function buildTracks() {
     for (const sh of L.ships) { const sg = segOf(L, sh.k, sh.dir); if (sg && sh.d > sg.len) sh.d = sg.len; }
     // 5.21: a long line with no ◆ fuel stop runs slower
     L.len = L.segs.reduce((a, sg) => a + sg.len, 0);
-    L.dry = L.len > FUEL_RANGE && !L.stops.some(i => S.shape[i] === 'diamond');
+    L.dry = dryOf(L);
   }
   markClosures();
 }
@@ -1304,9 +1313,9 @@ function buildDock(i) {
   return null;
 }
 function buildDepot(i) {
-  if (S.depot[i]) return 'Already has a depot';
+  if (S.depot[i]) return 'Already has storage';
   if (S.inv.depots < 1) return `No spare ${gi('iDepot')}`;
-  S.inv.depots--; S.depot[i] = true; trayUI(); log(`You built a depot at ${placeName(i)}. It now holds ${room(i)} loads before crowding.`, '');
+  S.inv.depots--; S.depot[i] = true; trayUI(); log(`You added storage at ${placeName(i)}. It now holds ${room(i)} loads before crowding.`, '');
   return null;
 }
 
@@ -1503,6 +1512,7 @@ function openPlace(i) {
   S.open[i] = true; S.openedAt[i] = S.clock; S.flash[i] = 1;
   const fresh = !S.present.has(S.shape[i]);
   S.present = presentShapes(); reroute();
+  if (S.shape[i] === 'diamond') for (const L of S.lines) L.dry = dryOf(L);   // 5.36: fuel to be had now
   if (farMouth(i)) return;
   const tn = tunnels().find(([a]) => a === i), hm = tn ? tn[0] : -1, fm = tn ? tn[1] : -1;
   if (i === IDX.RX) {
@@ -1608,7 +1618,7 @@ function terms(i) {
     { k: 'line', icon: 'iLine', name: `Line to ${placeName(h)}`, desc: `A direct line from here to ${placeName(h)}, with a ship if you have one spare.`,
       no: h === i ? 'This is home' : !S.open[h] ? 'Not open yet' : linked(i, h) ? 'Already linked' : S.lines.length >= S.inv.lines ? 'No free line' : '' },
     { k: 'shield', icon: 'iShield', name: 'Shield, for keeps', desc: 'A shield that stays here for good.', no: S.keepShield[i] ? 'Already theirs' : S.inv.shields < 1 && !S.shield[i] ? `No spare ${gi('iShield')}` : '' },
-    { k: 'depot', icon: 'iDepot', name: 'Depot', desc: `Room for ${DEPOT_ROOM} more here.`, no: S.depot[i] ? 'Already has one' : S.inv.depots < 1 ? `No spare ${gi('iDepot')}` : '' },
+    { k: 'depot', icon: 'iDepot', name: 'Storage', desc: `Room for ${DEPOT_ROOM} more here.`, no: S.depot[i] ? 'Already has one' : S.inv.depots < 1 ? `No spare ${gi('iDepot')}` : '' },
     { k: 'dock', icon: 'iDock', name: 'Fast dock', desc: 'Ships load and unload here twice as fast.', no: S.fastDock[i] ? 'Already has one' : !(S.inv.docks > 0) ? `No spare ${gi('iDock')}` : '' },
     { k: 'pod', icon: 'iPod', name: 'Cargo pod', desc: `A ship that serves them carries ${POD} more.`, no: S.inv.pods < 1 ? `No spare ${gi('iPod')}` : !servingShip(i) ? 'No ship serves them' : '' },
   ];
@@ -1674,7 +1684,7 @@ function negotiate(i, k = 'pay') {
   else if (k === 'toll') { S.toll[i] = S.t + 2 * YEAR; what = `a ${Math.round(TOLL * 100)}% toll for two periods`; }
   else if (k === 'line') { const h = homeFor(i), L = createLine([i, h]); if (!L) return 'No free line'; what = `a direct line to ${placeName(h)}`; }
   else if (k === 'shield') { if (!S.shield[i]) { S.inv.shields--; S.shield[i] = true; } S.keepShield[i] = true; markClosures(); reroute(); what = 'a shield of their own'; }
-  else if (k === 'depot') { S.inv.depots--; S.depot[i] = true; what = 'a depot'; }
+  else if (k === 'depot') { S.inv.depots--; S.depot[i] = true; what = 'storage'; }
   else if (k === 'dock') { S.inv.docks--; S.fastDock[i] = true; what = 'a fast dock'; }
   else if (k === 'pod') { S.inv.pods--; servingShip(i).pods++; what = 'a cargo pod'; }
   settle(i, what, k === 'capy' ? CALM / 2 : CALM);
@@ -1959,7 +1969,7 @@ const OFFERS = {
   line:   { icon: 'iLine',   name: 'New line',      desc: () => 'One more line to draw.', have: () => `${Math.max(0, S.inv.lines - S.lines.length)} free of ${S.inv.lines}` },
   ship:   { icon: 'iShip',   name: 'Extra ship',    desc: () => 'A second ship on top of the free one.', have: () => `${S.inv.ships} spare` },
   pod:    { icon: 'iPod',    name: 'Cargo pod',     desc: () => `One ship carries ${POD} more.`, have: () => `${S.inv.pods} spare` },
-  depot:  { icon: 'iDepot',  name: 'Depot',         desc: () => `One place holds ${DEPOT_ROOM} more.`, have: () => `${S.inv.depots} spare` },
+  depot:  { icon: 'iDepot',  name: 'Storage',       desc: () => `One place holds ${DEPOT_ROOM} more.`, have: () => `${S.inv.depots} spare` },
   shield: { icon: 'iShield', name: 'Shield',        desc: () => 'Protects one place from storms and debris.', have: () => `${S.inv.shields} spare` },
   fast:   { icon: 'iFast',   name: 'Faster ships',  desc: () => 'Every ship 12% faster.', up: 'fast', max: 3 },
   hold:   { icon: 'iHold',   name: 'Bigger holds',  desc: () => 'Every ship carries 2 more.', up: 'hold', max: 2 },
@@ -2010,7 +2020,7 @@ const offersHTML = () => S.meet.pair.map(o => `<button class="offer" data-a="off
 function qmTip() {
   let w = -1, m = 1e9; for (let i = 0; i < NP; i++) if (S.open[i] && PL[i].rate !== 0) { const r = room(i) - S.Q[i].length; if (r < m) { m = r; w = i; } }
   const n = nextOpening(), soon = n >= 0 && S.at[n] < NEVER && S.at[n] - S.t < YEAR && !farMouth(n);
-  if (w >= 0 && m <= 4) return `${placeName(w)} is filling up. A ship or a depot there would help.`;
+  if (w >= 0 && m <= 4) return `${placeName(w)} is filling up. A ship or storage there would help.`;
   if (!S.inv.shields && !S.shield.some(Boolean)) return 'No shields. Storms don’t wait for capybaras.';
   if (soon && S.lines.length >= S.inv.lines) return `${placeName(n)} opens soon and every line is in use.`;
   if (soon) return `${placeName(n)} opens this year. Keep a ship spare.`;
@@ -2565,7 +2575,7 @@ const HINTS = {
   storm: () => `${gi('iSun')} storm ahead · ${gi('iShield')} keeps lines running`,
   shape: i => `New ${shp(S.shape[i])} <b>${esc(placeName(i))}</b> · ${S.irl[i].st === 'fic' ? '' : 'IRL '}${S.irl[i].y}`,
   trim: () => `✂ To cut stops off a line, drag its end knob back along the line`,
-  fuel: L => `<b>${L.name}</b> line is long with no ${shp('diamond')} fuel stop · its ships run slower`,
+  fuel: L => `<b>${L.name}</b> line is long with no ${shp('diamond')} fuel stop · its ships run slower${fuelNear(L) >= 0 ? ` · add ${shp('diamond')} ${esc(placeName(fuelNear(L)))}` : ''}`,
   berth: i => `${gi('iShip')} Ships queue at <b>${esc(placeName(i))}</b> · it loads ${berths(i)} at once · a fast dock adds 2`,
   same: i => `${shp(S.shape[i])} <b>${esc(placeName(i))}</b> is another ${SHAPES[S.shape[i]].role.toLowerCase()}: ${shp(S.shape[i])} freight can go to either.`,
 };
@@ -3021,7 +3031,7 @@ function refreshPop(force) {
     if (force || sig !== popSig) {
       popSig = sig;
       P.innerHTML = `<div class="si" data-a="info"><span class="nm">${shp(S.shape[i])}${esc(placeName(i))}${S.irl[i] ? `<span class="yr">${yrTag([i])}</span>` : ''}</span><span class="st" data-f="wait"></span></div>
-        ${S.unrest && (rebelNow(i) || S.unrest[i] >= .3) ? `<button class="primary" data-a="negotiate" aria-label="Negotiate">${gi('iFlag')}Negotiate</button>` : ''}${S.dmg[i] ? `<button class="primary" data-a="repair" aria-label="Repair">🔧 Repair <small data-f="rCost"></small></button>` : ''}${S.depot[i] ? '' : `<button data-a="depot" aria-label="Build a depot">${gi('iDepot')}Depot<small data-f="nDepots"></small></button>`}${!S.fastDock[i] && S.inv.docks > 0 ? `<button data-a="dock" aria-label="Build a fast dock">${gi('iDock')}Dock<small>${S.inv.docks}</small></button>` : ''}${S.shield[i] && S.keepShield[i] ? `<button class="on" aria-disabled="true" aria-label="Protected for good">${gi('iShield')}Protected<small>theirs</small></button>` : S.shield[i] ? `<button class="on" data-a="lift" aria-label="Protected. Tap to lift the shield">${gi('iShield')}Protected<small>lift</small></button>` : canMove ? `<button data-a="move" aria-label="Move a shield here">Move ${gi('iShield')}</button>` : `<button data-a="shield" aria-label="Protect">${gi('iShield')}Protect<small data-f="nShields"></small></button>`}<button class="x" data-a="close" aria-label="Close">×</button>`;
+        ${S.unrest && (rebelNow(i) || S.unrest[i] >= .3) ? `<button class="primary" data-a="negotiate" aria-label="Negotiate">${gi('iFlag')}Negotiate</button>` : ''}${S.dmg[i] ? `<button class="primary" data-a="repair" aria-label="Repair">🔧 Repair <small data-f="rCost"></small></button>` : ''}${S.depot[i] ? '' : `<button data-a="depot" aria-label="Add storage">${gi('iDepot')}Storage<small data-f="nDepots"></small></button>`}${!S.fastDock[i] && S.inv.docks > 0 ? `<button data-a="dock" aria-label="Build a fast dock">${gi('iDock')}Dock<small>${S.inv.docks}</small></button>` : ''}${S.shield[i] && S.keepShield[i] ? `<button class="on" aria-disabled="true" aria-label="Protected for good">${gi('iShield')}Protected<small>theirs</small></button>` : S.shield[i] ? `<button class="on" data-a="lift" aria-label="Protected. Tap to lift the shield">${gi('iShield')}Protected<small>lift</small></button>` : canMove ? `<button data-a="move" aria-label="Move a shield here">Move ${gi('iShield')}</button>` : `<button data-a="shield" aria-label="Protect">${gi('iShield')}Protect<small data-f="nShields"></small></button>`}<button class="x" data-a="close" aria-label="Close">×</button>`;
     }
     setF('nDepots', String(S.inv.depots), true); setF('nShields', String(S.inv.shields), true); setF('rCost', fmt(repairCost()));
     offBtn('repair', S.fund < repairCost() && !SCRAP.some(([k]) => canScrap(k)));
@@ -3078,7 +3088,7 @@ onTap(P, (a, el) => {
     const yr = nm && nm.querySelector('.yr') ? nm.querySelector('.yr').textContent : '';
     let what = st ? st.innerHTML : '';
     if (sel.type === 'line') { const L = S.lines.find(x => x.id === sel.id); if (L) { const tr = shipTrouble(L)[0], cap = L.ships.reduce((a, x) => a + shipCap(x), 0);
-      what = `${L.ships.length} ${gi('iShip')}${tr ? ` · 🔧 ship ${L.ships.indexOf(tr) + 1} ${tr.fix ? 'stopped' : 'about to break down'}: Repair` : ''} · ${lineHow(L)} · holds ${cap}${L.dry ? ` · no ${shp('diamond')} fuel, slow` : ''}${L.stops.length >= 3 && !L.loop ? ' · ✂ drag an end knob back along the line to cut stops' : ''}`; } }
+      what = `${L.ships.length} ${gi('iShip')}${tr ? ` · 🔧 ship ${L.ships.indexOf(tr) + 1} ${tr.fix ? 'stopped' : 'about to break down'}: Repair` : ''} · ${lineHow(L)} · holds ${cap}${L.dry ? ` · no ${shp('diamond')} fuel, slow${fuelNear(L) >= 0 ? `: add ${shp('diamond')} ${esc(placeName(fuelNear(L)))}` : ''}` : ''}${L.stops.length >= 3 && !L.loop ? ' · ✂ drag an end knob back along the line to cut stops' : ''}`; } }
     toast(`<b>${esc(name)}</b>${yr ? ` · ${esc(yr)}` : ''} · ${what}`, 4500); return;
   }
   if (a === 'scrap') {
@@ -3121,7 +3131,7 @@ onTap(P, (a, el) => {
     if (a === 'buy') { const r = buySensor(sel.id); if (r) { why(r); noFx(el); } else { burst(z.x, z.y, sensorSys(z), `on · +${warnBonus(sensorSys(z))}s warning`); deployFx(el, `${gi('iSensor')} ${z.short} on · ${gi('iSun')} +${warnBonus(sensorSys(z))}s`); } }
   } else if (a === 'negotiate') { openTalks(sel.id); return; }
   else if (a === 'repair') { const i = sel.id, r = repairPlace(i); if (r) { why(r); noFx(el); } else { sel.scrap = null; burstAt(i, 'repaired'); deployFx(el, `🔧 ${esc(placeName(i))} repaired`); refreshPop(true); trayUI(); return; } }
-  else if (a === 'depot') { const i = sel.id, r = buildDepot(i); if (r) { why(r); noFx(el); } else { burstAt(i, `depot · holds ${room(i)}`); deployFx(el, `+${gi('iDepot')} ${esc(placeName(i))} holds ${room(i)}`); } }
+  else if (a === 'depot') { const i = sel.id, r = buildDepot(i); if (r) { why(r); noFx(el); } else { burstAt(i, `storage · holds ${room(i)}`); deployFx(el, `+${gi('iDepot')} ${esc(placeName(i))} holds ${room(i)}`); } }
   else if (a === 'dock') { const i = sel.id, r = buildDock(i); if (r) { why(r); noFx(el); } else { burstAt(i, 'fast dock · 2×'); deployFx(el, `+${gi('iDock')} ${esc(placeName(i))} docks 2× faster`); } refreshPop(true); }
   else if (a === 'shield') { const i = sel.id, r = shieldPlace(i); if (r) { why(r); noFx(el); } else { burstAt(i, 'protected', '#7fd3ff'); deployFx(el, `+${gi('iShield')} ${esc(placeName(i))} protected`); } }
   else if (a === 'move') { sel.moving = true; refreshPop(true); return; }
@@ -3329,7 +3339,7 @@ function whyCrowded(i) {
   const lf = S.leftFull && S.leftFull[i] && S.t - S.leftFull[i].t < 20 ? S.lines.find(L => L.id === S.leftFull[i].L) : null;
   if (lf) return { note: `ships leave full on ${lf.name}${lf.dry ? ` · no ${shp('diamond')} fuel` : ''} · ${fixFor(lf)}`, story: `Ships were leaving it full on the ${lf.name.toLowerCase()} line${lf.dry ? `, which had no ${shp('diamond')} fuel stop and ran ${Math.round((1 - FUEL_SLOW) * 100)}% slow` : ''}.` };
   const dry = mine.find(L => L.dry);
-  if (dry) return { note: `${dry.name} has no ${shp('diamond')} fuel stop · its ships run slow`, story: `The ${dry.name.toLowerCase()} line had no ${shp('diamond')} fuel stop, so its ships ran ${Math.round((1 - FUEL_SLOW) * 100)}% slow.` };
+  if (dry) return { go: fuelNear(dry) >= 0 ? { label: 'Show', place: fuelNear(dry) } : null, note: `${dry.name} has no ${shp('diamond')} fuel, runs slow${fuelNear(dry) >= 0 ? ` · add ${shp('diamond')} ${esc(placeName(fuelNear(dry)))} to it` : ''}`, story: `The ${dry.name.toLowerCase()} line had no ${shp('diamond')} fuel stop, so its ships ran ${Math.round((1 - FUEL_SLOW) * 100)}% slow.` };
   const broken = mine.find(L => L.ships.some(x => x.fix));
   if (broken) return { note: `${broken.name} ship broken down`, story: `A ship on the ${broken.name.toLowerCase()} line was broken down.`, go: { label: `Repair ${fmt(repairCost())}`, line: broken.id } };
   return { note: crowdFix(i), story: 'It made more freight than its lines could carry away.' };
@@ -3344,9 +3354,9 @@ function crowdFix(i) {
   }
   if (S.inv.ships && mine.length) a.push(`+${gi('iShip')}`);
   if (S.inv.pods && mine.some(L => L.ships.some(sh => sh.pods < MAX_PODS))) a.push(`+${gi('iPod')}`);
-  if (S.inv.depots && !S.depot[i]) a.push(`${gi('iDepot')} depot`);
+  if (S.inv.depots && !S.depot[i]) a.push(`${gi('iDepot')} storage`);
   if (a.length) return `add ${a.join(' ')}`;
-  const dry = mine.find(L => L.dry); if (dry) return `give ${dry.name} a ${shp('diamond')} fuel stop`;
+  const dry = mine.find(L => L.dry); if (dry) return fuelNear(dry) >= 0 ? `add ${shp('diamond')} ${esc(placeName(fuelNear(dry)))} to ${dry.name}` : `give ${dry.name} a ${shp('diamond')} fuel stop`;
   if (S.lines.length < S.inv.lines) return `draw a line to it`;
   if (mine.length && S.lines.some(L => !L.stops.includes(i) && L.ships.length > 1)) return `move a ${gi('iShip')} here from another line`;
   return mine.length ? `extend a line to it` : `draw a line to it`;
@@ -3365,7 +3375,7 @@ function coach() {
   let ur = -1; for (let i = 0; i < NP; i++) if (S.open[i] && S.unrest && (rebelNow(i) || S.unrest[i] >= .6) && (ur < 0 || S.unrest[i] > S.unrest[ur])) ur = i;
   if (ur >= 0) return { act: true, html: `${gi('iFlag')} <b>${esc(placeName(ur))}</b> ${rebelNow(ur) ? `independent · ${Math.ceil(S.rebel[ur] - S.t)}s` : 'restless'}${S.demand && demandOK(ur, S.demand[ur]) ? ` · wants ${esc(demandShort(S.demand[ur]))}` : ''}${via(ur)}`, go: { label: 'Negotiate', talk: ur } };
   if (S.inv.pods && S.lines.length) return { act: true, html: `${gi('iPod')} spare pod · tap a line` };
-  if (S.inv.depots) return { act: true, html: `${gi('iDepot')} spare depot · tap a place` };
+  if (S.inv.depots) return { act: true, html: `${gi('iDepot')} spare storage · tap a place` };
   const sk = SENSORS.findIndex((z, k) => sensorPlay(k) && !S.sensor[k] && cal(S.t) >= sensorFrom(k) && S.fund >= z.cost + 50);
   if (sk >= 0 && S.log.some(e => e.kind === 'warn' && /Storm|Flare|Pulse|signal/.test(e.text))) return { act: false, html: `${gi('iSensor')} ${SENSORS[sk].short} for sale · ${fmt(SENSORS[sk].cost)}${via(sensorSys(SENSORS[sk]) === 'far' ? IDX.WORMF : sensorSys(SENSORS[sk]) === 'rnd' ? IDX.RW : IDX.EARTH)}` };
   const n = nextOpening();
@@ -3435,9 +3445,9 @@ function tipPlace(i) {
   else if (S.unrest && S.unrest[i] >= .3) bits.push('restless');
   if (S.dmg[i]) bits.push('damaged · tap to repair');
   if (S.shield[i]) bits.push('protected');
-  if (S.depot[i]) bits.push('depot');
+  if (S.depot[i]) bits.push('storage');
   if (S.fastDock && S.fastDock[i]) bits.push('fast dock');
-  return `${shp(s)} <b>${esc(placeName(i))}</b> · ${sh.role}<br>${bits.join(' · ')}<br>${onLines(i) ? 'tap for a depot, shield or repair · drag to draw a line' : 'not on a line yet · drag from it to start one'}`;
+  return `${shp(s)} <b>${esc(placeName(i))}</b> · ${sh.role}<br>${bits.join(' · ')}<br>${onLines(i) ? 'tap for storage, a shield or repair · drag to draw a line' : 'not on a line yet · drag from it to start one'}`;
 }
 function mapTip(p) {
   const pin = camManual ? pins.find(q => Math.hypot(q.x - p.x, q.y - p.y) < 22) : null;
@@ -3647,12 +3657,12 @@ function helpBody() {
   return `<ul>
     <li><b>Lines.</b> Drag from a place through others to draw a line. Drag the round knob at either end to extend it (dragging from a place starts a new line, unless a line is selected and ends there: then it extends that line; a selected line’s knobs can be grabbed from a little further away too), or drag the knob back along the line to cut stops off (as many as you like, down to two), or drop it on the line’s first stop to make a loop. While drawing, go back over the stops one by one to take them off (going straight back to the first stop makes a loop instead); with a mouse, Esc or the right button cancels the whole drag. Undo appears for a few seconds after every change. Changing a line you already have costs a little (never more than you have, and Undo gives it back); drawing a new one is free. Tap a line to add ships or pods, or to remove it.</li>
     <li><b>Ships.</b> On a line, ships shuttle back and forth between the ends. On a loop they go round, split between the two ways: if they bunch up going one way, one turns round at its next stop. On a loop with one ship, freight rides the long way round. The pointed end shows which way a ship is heading.</li>
-    <li><b>Berths and fuel.</b> A place loads ${BERTHS} ships at once (a wormhole ${BERTHS + 2}); the rest queue just outside. A fast dock adds 2 berths. A long line (more than about Earth to the Moon and on to L2) with no ${shp('diamond')} fuel depot among its stops runs ${Math.round((1 - FUEL_SLOW) * 100)}% slower: the line’s bar says so.</li>
+    <li><b>Berths and fuel.</b> A place loads ${BERTHS} ships at once (a wormhole ${BERTHS + 2}); the rest queue just outside. A fast dock adds 2 berths. A long line (more than about Earth to the Moon and on to L2) with no ${shp('diamond')} fuel depot among its stops runs ${Math.round((1 - FUEL_SLOW) * 100)}% slower: the line’s bar says so, and names the nearest ${shp('diamond')} to add. That’s a ${shp('diamond')} place on the map, not the Storage you buy. Until a ${shp('diamond')} opens in a system, its long lines aren’t slowed.</li>
     <li><b>Freight.</b> Each load shows the kind of place it wants, not one particular place: ■ freight is happy at any station, Low Orbit or GEO. It boards any ship whose next stop brings it closer to one, changing lines where they meet.</li>
     <li><b>Upkeep.</b> Every ship and pod at work costs upkeep, taken at each Alliance Shop visit as a share of what the network earned since the last one: a few percent for each ship, more per ship as the fleet grows, up to 60%. The top right shows the bill so far. It eases in over the first two visits, and never takes more than the network brought in.</li>
     <li><b>Budget.</b> Deliveries earn budget. Spend it in the Alliance Shop to buy more of anything (prices rise each time), on storm sensors, and on repairs: a storm damages the place it’s named after unless it’s protected, and a damaged place holds 4 less until you repair it. Storms also knock sensors out for a minute.</li>
-    <li><b>Upgrades.</b> Each Alliance Shop visit offers two free ones, or skip them to bank ${Math.round(BANK_RATE * 100)}% interest on your budget (never more than half what the cheaper upgrade would cost). Some you place: lines, ships and pods on lines; depots (more room), fast docks (twice-as-fast loading) and shields on places. Others improve the whole network at once and stack a few levels: faster ships, bigger holds, bigger stops. Each card shows how many you already have.</li>
-    <li><b>Crowding.</b> A place holds ${ROOM} loads; a depot raises that to ${ROOM + DEPOT_ROOM}. Past the limit a red ring starts to close. If it closes, the run ends. It takes ${OVERFLOW} seconds, and ${OVERFLOW_LATE} late in a run (from 2070 in Earth–Moon runs, six periods in elsewhere).</li>
+    <li><b>Upgrades.</b> Each Alliance Shop visit offers two free ones, or skip them to bank ${Math.round(BANK_RATE * 100)}% interest on your budget (never more than half what the cheaper upgrade would cost). Some you place: lines, ships and pods on lines; storage (more room), fast docks (twice-as-fast loading) and shields on places. Others improve the whole network at once and stack a few levels: faster ships, bigger holds, bigger stops. Each card shows how many you already have.</li>
+    <li><b>Crowding.</b> A place holds ${ROOM} loads; storage raises that to ${ROOM + DEPOT_ROOM}. Past the limit a red ring starts to close. If it closes, the run ends. It takes ${OVERFLOW} seconds, and ${OVERFLOW_LATE} late in a run (from 2070 in Earth–Moon runs, six periods in elsewhere).</li>
     <li><b>Stuck freight.</b> If loads at a place can’t board anything (no line reaches their kind of place, or no ship goes their way), a note says where and why, with Show.</li>
     <li><b>Storms, debris and shields.</b> A stretch of line between two places keeps running if <i>either</i> end is protected; during a warning, protected stretches show a small shield and the ones that will stop flash amber. Solar storms stop lines inside their zone for a while; a debris cascade slows ships at Low Orbit. A shielded place keeps its lines running through storms, and a shield at Low Orbit keeps ships at full speed through debris. You start with one shield; when a warning comes, tap the place it points at, then Shield (or Move shield to pull yours over).</li>
     <li><b>Storm sensors.</b> The two little satellites at the bottom left sit at the Sun–Earth Lagrange points. They carry no freight, so they need no line: tap one and buy it from the budget. Sun–Earth L1 (now) makes solar storm warnings come 15 seconds earlier; Sun–Earth L5 (from 2031) adds 20 more.</li>
@@ -3662,7 +3672,7 @@ function helpBody() {
     <li><b>Where to start.</b> On the start screen pick Earth–Moon (2027, real-world plans) or Proxima (2100, science fiction: Proxima b and the Alpha Centauri stars, with frequent flares instead of solar storms). Every run has a code, shown in the Timeline: type it on the start screen to play the same map again, or share it.</li>
     <li><b>Uncharted.</b> A random system made up from the run’s code: its star might be a red dwarf, a binary pair or a pulsar, and its places and their names are new each time. It’s harder: busier places and more storms. And you’re not alone there. An “unknown signal” might be a craft that stops any line it drifts over (shields don’t help), a derelict worth salvaging, or visitors who make one place very busy. Somewhere a gate nobody built will open, and whoever runs it trades.</li>
     <li><b>Late in a run.</b> Ships now and then break down: a warning, then the ship stops where it is for ${BRK_DUR} seconds (a wrench marks it). Tap its line and Repair (or Repair on the note) to fix it at once, even during the warning, or wait it out. And some events are swings in demand: a rush, when one place’s freight nearly all heads for the kind of place farthest from it on your lines, or a strike, when a place takes no deliveries for a while and freight for it goes to another of its kind your lines already reach.</li>
-    <li><b>Unrest.</b> Keep a place waiting (its freight above about 60% of its room for a long stretch, or storm damage left unrepaired) and it grows restless: a flag appears and grows. If it fills, the place declares independence for ${REBEL_DUR} seconds: its lines close, it makes and takes no freight, and ships there are held. Once it’s restless enough the workers vote on what they want, usually that your nearest line be extended to them. Serve it to calm it, or tap it and Negotiate: give them what they voted for (they never refuse that, and stay calm for two periods), or offer something else, which they may refuse, and every refusal makes them angrier. Other offers: pay them off, let them keep a 25% toll on deliveries there for two periods, or give them a direct line home (or to the wormhole), a shield for keeps, a depot, a fast dock or a cargo pod. Any deal keeps them calm for a period. Late game only: from 2070 in Earth–Moon runs, six periods into Proxima and uncharted runs.</li>
+    <li><b>Unrest.</b> Keep a place waiting (its freight above about 60% of its room for a long stretch, or storm damage left unrepaired) and it grows restless: a flag appears and grows. If it fills, the place declares independence for ${REBEL_DUR} seconds: its lines close, it makes and takes no freight, and ships there are held. Once it’s restless enough the workers vote on what they want, usually that your nearest line be extended to them. Serve it to calm it, or tap it and Negotiate: give them what they voted for (they never refuse that, and stay calm for two periods), or offer something else, which they may refuse, and every refusal makes them angrier. Other offers: pay them off, let them keep a 25% toll on deliveries there for two periods, or give them a direct line home (or to the wormhole), a shield for keeps, storage, a fast dock or a cargo pod. Any deal keeps them calm for a period. Late game only: from 2070 in Earth–Moon runs, six periods into Proxima and uncharted runs.</li>
     <li><b>Sensors elsewhere.</b> Uncharted systems have two to buy: a star watch (earlier storm warnings) and a signal array, which hears unknown signals sooner and tells you what they are. Proxima has a flare watch.</li>
     <li><b>Saving.</b> Your run saves itself as you play, and when you close the page. Continue on the start screen picks it up where you left off. A run that ends is not kept.</li>
     <li><b>Other system’s storms.</b> When a storm or flare is coming on the map you’re not looking at and a shield there would help, a message says so and the ⇄ button turns amber.</li>
@@ -4697,7 +4707,7 @@ requestAnimationFrame(frame);
 // Hooks for headless balancing and input tests.
 window.LC = {
   get S() { return S; }, get GEN() { return GEN; }, plx: () => PLX.map(L => ({ ux: L.ux, uy: L.uy, k: L.k, ls: Math.pow(sc / sc0, L.d) })), IDX, PL, YEAR, startRun, step, tutGo, tutEnd, createLine, setStops, removeLine, addShip, removeShip, addPod, shieldPlace, buildDepot, select, room, setLine, openLoop, undo,
-  snapCam, cal, calOf, perOf, lineYear, showLog, buySensor, SENSORS, setSys, setAutoPause, inScen, trayUI, recordRun, readBoard, openBoard, showLost, endLost, showWin, award, readAch, needList, lookAt, ACH, ask5, qmTip, diagText, saveText, loadSaveText, perf, get capyImg() { return capyImg; }, get won() { return won; }, get lost() { return lost; }, get boardAll() { return boardAll; }, scrap, scrapVal, repairCost, negotiateCost, voteDemand, sysNeeds, get fxs() { return fxs; }, negotiate, startRebel, tunnelEnds, saveAll, readLocal, resumeRun, bestSave, parseCode, runCode, codeOf, splashUI, SCEN, repairPlace, repairSensor, buyOffer, price, sysOf, tunnelOpen, hud, get sc() { return sc; }, UPKEEP, upkeepShare, get wclock() { return wclock; }, pins: () => pins.map(q => ({ x: rot ? window.innerWidth - q.y : q.x, y: rot ? q.x : q.y, i: q.i })),
+  snapCam, cal, calOf, perOf, lineYear, showLog, buySensor, SENSORS, setSys, setAutoPause, inScen, trayUI, recordRun, readBoard, openBoard, showLost, endLost, showWin, award, readAch, needList, lookAt, ACH, ask5, qmTip, diagText, saveText, loadSaveText, perf, get capyImg() { return capyImg; }, get won() { return won; }, get lost() { return lost; }, get boardAll() { return boardAll; }, scrap, scrapVal, repairCost, negotiateCost, voteDemand, sysNeeds, get fxs() { return fxs; }, negotiate, startRebel, tunnelEnds, saveAll, readLocal, resumeRun, bestSave, parseCode, runCode, codeOf, splashUI, SCEN, repairPlace, repairSensor, buyOffer, price, sysOf, tunnelOpen, hud, get sc() { return sc; }, UPKEEP, upkeepShare, openPlace, fuelNear, get wclock() { return wclock; }, pins: () => pins.map(q => ({ x: rot ? window.innerWidth - q.y : q.x, y: rot ? q.x : q.y, i: q.i })),
   redrawFee, chargeRedraw, fixShips, whyCrowded, worstTrouble, selLine, checkUpdate, verNum, get newer() { return newer; }, upkeepDue, berths, docked, queueAt, stuckAt, stuckNote, startSwing, breakdowns, lateGame, ovT, crowdFix,
   fast(sec) { const n = Math.round(sec / STEP); for (let i = 0; i < n && !S.over; i++) step(STEP); },
   screen(id) { const n = PL[IDX[id]], x = X(n.x), y = Y(n.y); return rot ? { x: window.innerWidth - y, y: x } : { x, y }; },

@@ -1,5 +1,10 @@
 # Changelog
 
+## 5.36
+- The spare that gives a place more room is now called **Storage**, not Depot, so it can't be confused with ◆ Fuel depots. Those are places on the map that a long line needs as a stop. Buying Storage never fuelled a line.
+- Fuel advice names the nearest open ◆ to add, e.g. "Orange has no ◆ fuel, runs slow · add ◆ Wick Well to it", with Show. So do the crowding note, the fix suggestion, the tip and the line's info.
+- In a system where no ◆ has opened yet, long lines aren't slowed, since there's nothing you could do about it. Once one opens, they are.
+
 ## 5.35
 - The **right mouse button** pans the map too: hold it and drag from anywhere. Pressed while you're drawing with the left button, it still cancels the line.
 
