@@ -1,5 +1,8 @@
 # Changelog
 
+## 5.41
+- The freight waiting at a place now sits on a small dark plate, and each shape has a thin dark edge, so you can tell the shapes apart where a line runs underneath.
+
 ## 5.40
 - When you arrive in a system, a place with more than one problem gets a single label with them joined, e.g. "overflowing 14/10 · needs a line", in the colour of the most urgent. Before, the labels were drawn on top of each other. Labels for places close together stack instead of overlapping. The note at the top reads the same, and "+N more" counts other places.
 

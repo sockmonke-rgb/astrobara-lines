@@ -513,7 +513,7 @@ button.link{height:auto;min-height:0;padding:2px 0;border:none;background:none;c
       <svg class="lines" id="splashLines" aria-hidden="true"></svg>
       <div class="big" aria-hidden="true"><svg viewBox="0 0 64 64"><use href="#capy"/></svg></div>
       <div class="txt">
-        <div class="eyebrow" id="splashEyebrow">Prototype 5.40</div>
+        <div class="eyebrow" id="splashEyebrow">Prototype 5.41</div>
         <h1>Astrobara Lines</h1>
         <p>Capybaras run the Lagrange Alliance’s freight. <b>Drag through places</b> to draw a shipping line. Freight shape = where it’s going. Too much waiting fills a red ring; a full ring ends the run.</p>
         <div class="scen" role="radiogroup" aria-label="Start in">
@@ -591,7 +591,7 @@ const $ = id => document.getElementById(id);
 const app = $('app'), cv = $('cv'), ctx = cv.getContext('2d');
 
 /* ================= Tuning ================= */
-const VERSION = '5.40';
+const VERSION = '5.41';
 const YEAR = 80, QTR = YEAR / 4, HORIZON = 10, Y0 = 2027, STEP = 1 / 30;
 const SOON = 30;   // seconds before a place opens that it, its countdown and the note all appear
 const SPEED = 80;                 // ship speed in map units per second
@@ -4253,15 +4253,23 @@ function drawPlace(i) {
   // waiting freight, five to a row; anything past the place's room is drawn red
   // ('down' stacks below the place's name)
   const cols = 5, gp = 9.5 * uk, rm = room(i), shown = Math.min(q.length, rm), a = 10 * uk, b = 11 * uk, qb = { x0: Infinity, y0: Infinity, x1: -Infinity, y1: -Infinity };
+  const spots = [];
   for (let k = 0; k < shown; k++) {
     const col = k % cols, row = Math.floor(k / cols); let fx, fy;
     if (p.q === 'left') { fx = x - r - a - col * gp; fy = y - r + 3 + row * gp; }
     else if (p.q === 'up') { fx = x + (col - 2) * gp; fy = y - r - b - row * gp; }
     else if (p.q === 'down') { fx = x + (col - 2) * gp; fy = y + r + (S.depot[i] ? 39 : 26) + row * gp; }
     else { fx = x + r + a + col * gp; fy = y - r + 3 + row * gp; }
-    ctx.fillStyle = k >= rm ? '#ff6b6b' : TINT[q[k].want] || '#d8dee9';
-    shapePath(q[k].want, fx, fy, 3.5 * uk); ctx.fill();
+    spots.push([fx, fy]);
     qb.x0 = Math.min(qb.x0, fx); qb.x1 = Math.max(qb.x1, fx); qb.y0 = Math.min(qb.y0, fy); qb.y1 = Math.max(qb.y1, fy);
+  }
+  // 5.41: a dark plate behind the waiting freight, and a dark edge on each shape, so they read over a line
+  if (shown) { const pad = 5.5 * uk; ctx.fillStyle = 'rgba(4,6,11,.72)'; ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(qb.x0 - pad, qb.y0 - pad, qb.x1 - qb.x0 + 2 * pad, qb.y1 - qb.y0 + 2 * pad, 5 * uk); else ctx.rect(qb.x0 - pad, qb.y0 - pad, qb.x1 - qb.x0 + 2 * pad, qb.y1 - qb.y0 + 2 * pad); ctx.fill(); }
+  ctx.strokeStyle = 'rgba(4,6,11,.95)'; ctx.lineWidth = 1.6 * uk; ctx.lineJoin = 'round';
+  for (let k = 0; k < shown; k++) {
+    const [fx, fy] = spots[k];
+    ctx.fillStyle = k >= rm ? '#ff6b6b' : TINT[q[k].want] || '#d8dee9';
+    shapePath(q[k].want, fx, fy, 3.5 * uk); ctx.stroke(); ctx.fill();
   }
   if (S.tut && S.tut.step === 2 && shown) {
     // the walkthrough points at the freight itself
