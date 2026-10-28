@@ -1,5 +1,8 @@
 # Changelog
 
+## 5.24
+- A place that has cleared but whose red ring is still draining no longer counts as overflowing: the labels when you arrive in a system say "clearing" (or "crowding · ring 40%" if it's close to full again), the ⇄ button and edge arrows stay calm, and the draining ring is drawn fainter than a filling one.
+
 ## 5.23
 - The game notices when a newer version is out: the start screen shows Update to …, and a running game gets one note saying where to find it. Your run is saved before it reloads. (Phones can keep an old copy for a while otherwise.)
 - Tapping a broken-down ship, or its wrench, opens its line, with Repair first in the bar.

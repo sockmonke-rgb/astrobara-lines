@@ -512,7 +512,7 @@ button.link{height:auto;min-height:0;padding:2px 0;border:none;background:none;c
       <svg class="lines" id="splashLines" aria-hidden="true"></svg>
       <div class="big" aria-hidden="true"><svg viewBox="0 0 64 64"><use href="#capy"/></svg></div>
       <div class="txt">
-        <div class="eyebrow" id="splashEyebrow">Prototype 5.23</div>
+        <div class="eyebrow" id="splashEyebrow">Prototype 5.24</div>
         <h1>Astrobara Lines</h1>
         <p>Capybaras run the Lagrange Alliance’s freight. <b>Drag through places</b> to draw a shipping line. Freight shape = where it’s going. Too much waiting fills a red ring; a full ring ends the run.</p>
         <div class="scen" role="radiogroup" aria-label="Start in">
@@ -590,7 +590,7 @@ const $ = id => document.getElementById(id);
 const app = $('app'), cv = $('cv'), ctx = cv.getContext('2d');
 
 /* ================= Tuning ================= */
-const VERSION = '5.23';
+const VERSION = '5.24';
 const YEAR = 80, QTR = YEAR / 4, HORIZON = 10, Y0 = 2027, STEP = 1 / 30;
 const SOON = 30;   // seconds before a place opens that it, its countdown and the note all appear
 const SPEED = 80;                 // ship speed in map units per second
@@ -3133,7 +3133,10 @@ function needList(sys) {
     if (!S.open[i] || sysOf(i) !== sys) continue;
     const q = S.Q[i].length, rm = room(i);
     if (S.unrest && rebelNow(i)) out.push({ lvl: 'hot', i, icon: gi('iFlag'), why: 'independent · Negotiate' });
-    else if (q > rm || S.of[i] > 0) out.push({ lvl: 'hot', i, icon: shp(S.shape[i]), why: `overflowing ${q}/${rm}` });
+    // 5.24: only a place over its room is overflowing; one whose ring is still draining after it cleared just says so
+    else if (q > rm) out.push({ lvl: 'hot', i, icon: shp(S.shape[i]), why: `overflowing ${q}/${rm}` });
+    else if (S.of[i] > .05 && q > rm - warnRoom()) out.push({ lvl: 'warn', i, icon: shp(S.shape[i]), why: `crowding ${q}/${rm} · ring ${Math.round(S.of[i] * 100)}%` });
+    else if (S.of[i] > .05) out.push({ lvl: 'warn', i, icon: shp(S.shape[i]), why: `clearing ${q}/${rm}` });
     else if (q > rm - warnRoom() && PL[i].rate !== 0) out.push({ lvl: 'warn', i, icon: shp(S.shape[i]), why: `crowding ${q}/${rm}` });
     if (S.unrest && !rebelNow(i) && S.demand && S.demand[i] && demandOK(i, S.demand[i])) out.push({ lvl: 'warn', i, icon: gi('iFlag'), why: 'wants to talk' });
     if (S.dmg[i]) out.push({ lvl: 'warn', i, icon: '🔧', why: 'damaged · Repair' });
@@ -3975,7 +3978,7 @@ function drawPins() {
     const x = X(PL[i].x), y = Y(PL[i].y);
     if (x > side - 4 && x < side + rw + 4 && y > top - 4 && y < top + rh + 4) continue;
     const dx = x - cx, dy = y - cy, k = Math.min((rw / 2 - 18) / Math.abs(dx || 1e-6), (rh / 2 - 18) / Math.abs(dy || 1e-6));
-    const px = cx + dx * k, py = cy + dy * k, a = Math.atan2(dy, dx), hot = S.Q[i].length > room(i) - warnRoom() || S.of[i] > 0, fresh = !onLine.has(i);
+    const px = cx + dx * k, py = cy + dy * k, a = Math.atan2(dy, dx), hot = S.Q[i].length > room(i) - warnRoom(), fresh = !onLine.has(i);
     pins.push({ x: px, y: py, i });
     ctx.save(); ctx.translate(px, py);
     ctx.fillStyle = hot ? (Math.sin(clock * 8) > 0 ? '#ff5c5c' : '#b83a3a') : fresh ? (Math.sin(clock * 6) > 0 ? '#f2a65a' : '#9a6634') : 'rgba(12,16,27,.92)'; ctx.strokeStyle = hot ? '#ffd0d0' : fresh ? '#ffd8a8' : 'rgba(233,237,244,.7)'; ctx.lineWidth = 1.5;
@@ -4108,7 +4111,7 @@ function drawPlace(i) {
   if (S.of[i] > 0.03) {
     ctx.lineWidth = 5;
     if (over) { ctx.strokeStyle = 'rgba(255,92,92,.2)'; ctx.beginPath(); ctx.arc(x, y, r + 10, 0, Math.PI * 2); ctx.stroke(); }
-    ctx.strokeStyle = '#ff5c5c'; ctx.beginPath(); ctx.arc(x, y, r + 10, -Math.PI / 2, -Math.PI / 2 + S.of[i] * Math.PI * 2); ctx.stroke();
+    ctx.strokeStyle = over ? '#ff5c5c' : 'rgba(255,92,92,.45)'; ctx.beginPath(); ctx.arc(x, y, r + 10, -Math.PI / 2, -Math.PI / 2 + S.of[i] * Math.PI * 2); ctx.stroke();   // (5.24: fainter while it drains)
   }
   // waiting freight, five to a row; anything past the place's room is drawn red
   // ('down' stacks below the place's name)
