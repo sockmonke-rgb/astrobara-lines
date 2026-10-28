@@ -513,7 +513,7 @@ button.link{height:auto;min-height:0;padding:2px 0;border:none;background:none;c
       <svg class="lines" id="splashLines" aria-hidden="true"></svg>
       <div class="big" aria-hidden="true"><svg viewBox="0 0 64 64"><use href="#capy"/></svg></div>
       <div class="txt">
-        <div class="eyebrow" id="splashEyebrow">Prototype 5.39</div>
+        <div class="eyebrow" id="splashEyebrow">Prototype 5.40</div>
         <h1>Astrobara Lines</h1>
         <p>Capybaras run the Lagrange Alliance’s freight. <b>Drag through places</b> to draw a shipping line. Freight shape = where it’s going. Too much waiting fills a red ring; a full ring ends the run.</p>
         <div class="scen" role="radiogroup" aria-label="Start in">
@@ -591,7 +591,7 @@ const $ = id => document.getElementById(id);
 const app = $('app'), cv = $('cv'), ctx = cv.getContext('2d');
 
 /* ================= Tuning ================= */
-const VERSION = '5.39';
+const VERSION = '5.40';
 const YEAR = 80, QTR = YEAR / 4, HORIZON = 10, Y0 = 2027, STEP = 1 / 30;
 const SOON = 30;   // seconds before a place opens that it, its countdown and the note all appear
 const SPEED = 80;                 // ship speed in map units per second
@@ -3238,9 +3238,11 @@ function sysNeeds(other) {
 // Arriving in a system: brackets round whatever needs you there, and a note naming the worst of it.
 function lookAt(v) {
   if (!S || S.over) return;
-  const L = needList(v); if (!L.length) { S.look = null; return; }
-  S.look = { list: L.slice(0, 4).map(n => ({ i: n.i, lvl: n.lvl, why: n.why })), t0: performance.now() };
-  const n = L[0];
+  const all = needList(v); if (!all.length) { S.look = null; return; }
+  // 5.40: one label per place, its troubles joined, most urgent first ("overflowing 14/10 · needs a line")
+  const L = []; for (const n of all) { const g = L.find(x => x.i === n.i); if (g) { if (!g.whys.includes(n.why)) g.whys.push(n.why); } else L.push({ ...n, whys: [n.why] }); }
+  S.look = { list: L.slice(0, 4).map(n => ({ i: n.i, lvl: n.lvl, why: n.whys.join(' · ') })), t0: performance.now() };
+  const n = L[0]; n.why = n.whys.join(' · ');
   if (!S.hint || !['talks', 'new', 'gate', 'worm', 'same'].includes(S.hint.id))
     S.hint = { id: 'look', html: `${n.icon} <b>${esc(placeName(n.i))}</b> ${n.why}${L.length > 1 ? ` · +${L.length - 1} more` : ''}`, go: { label: 'Show', place: n.i }, t: S.clock };
 }
@@ -3248,7 +3250,7 @@ function drawLook() {
   const lk = S.look; if (!lk) return;
   const a = (performance.now() - lk.t0) / 1000; if (a > 9) { S.look = null; return; }
   const fade = a > 7.5 ? (9 - a) / 1.5 : Math.min(1, a / .25);
-  ctx.save(); ctx.lineCap = 'round';
+  ctx.save(); ctx.lineCap = 'round'; const placed = [];
   for (const n of lk.list) {
     if (!S.open[n.i] || !inView(n.i)) continue;
     const x = X(PL[n.i].x), y = Y(PL[n.i].y), col = n.lvl === 'hot' ? '#ff5c5c' : n.lvl === 'warn' ? '#ffc35a' : '#c2adff';
@@ -3256,7 +3258,10 @@ function drawLook() {
     ctx.globalAlpha = fade; ctx.strokeStyle = col; ctx.lineWidth = 3;
     for (const [sx, sy] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) { ctx.beginPath(); ctx.moveTo(x + sx * sz, y + sy * (sz - c)); ctx.lineTo(x + sx * sz, y + sy * sz); ctx.lineTo(x + sx * (sz - c), y + sy * sz); ctx.stroke(); }
     ctx.font = '600 12px "IBM Plex Mono", ui-monospace, monospace'; ctx.textAlign = 'center';
-    const w = ctx.measureText(n.why).width + 14, ty = y - sz - 15;
+    // 5.40: labels of places close together stack instead of overlapping
+    const w = ctx.measureText(n.why).width + 14; let ty = y - sz - 15;
+    for (let k = 0; k < 6 && placed.some(r => Math.abs(r.x - x) < (r.w + w) / 2 + 4 && Math.abs(r.y - ty) < 22); k++) ty -= 22;
+    placed.push({ x, y: ty, w });
     ctx.fillStyle = 'rgba(8,10,18,.92)'; ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(x - w / 2, ty - 12, w, 19, 9.5); else ctx.rect(x - w / 2, ty - 12, w, 19); ctx.fill();
     ctx.lineWidth = 1.3; ctx.stroke(); ctx.fillStyle = col; ctx.fillText(n.why, x, ty + 2);
   }

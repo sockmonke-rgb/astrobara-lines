@@ -1,5 +1,8 @@
 # Changelog
 
+## 5.40
+- When you arrive in a system, a place with more than one problem gets a single label with them joined, e.g. "overflowing 14/10 · needs a line", in the colour of the most urgent. Before, the labels were drawn on top of each other. Labels for places close together stack instead of overlapping. The note at the top reads the same, and "+N more" counts other places.
+
 ## 5.39
 - The Alliance Shop always lists all nine things. What you can't buy right now is greyed out and says why: "maxed", "all 9 lines", or how much more money you need. Tap it for the reason. Before, maxed things disappeared.
 - Storage is marked "was Depot" in the shop for now, since it was renamed in 5.36.
