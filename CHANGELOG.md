@@ -1,5 +1,8 @@
 # Changelog
 
+## 5.37
+- A place now counts as crowding only when it's at least three quarters full, as well as within 3 loads of full (5 late in a run). Late in a run, 10/14 or 6/10 no longer says crowding; 11/14 and 8/10 do. Bigger places keep the same margin. It's only the warning: the red ring still starts once a place is over full.
+
 ## 5.36
 - The spare that gives a place more room is now called **Storage**, not Depot, so it can't be confused with ◆ Fuel depots. Those are places on the map that a long line needs as a stop. Buying Storage never fuelled a line.
 - Fuel advice names the nearest open ◆ to add, e.g. "Orange has no ◆ fuel, runs slow · add ◆ Wick Well to it", with Show. So do the crowding note, the fix suggestion, the tip and the line's info.
