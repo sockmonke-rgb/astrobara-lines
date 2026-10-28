@@ -1,5 +1,9 @@
 # Changelog
 
+## 5.26
+- The Network Lost card has **Copy diag**: one tap copies the diagnostics to paste to Claude, and opens them so you can press and hold to copy if your phone blocks it. (The ≡ menu sits behind the card, so it wasn't reachable there.)
+- Diagnostics say more about a loss: what the crowded places were waiting to send, stuck loads and queues, where ships left full, each line's length, fuel and breakdowns, and why the run was lost.
+
 ## 5.25
 - A crowding or overflowing place says why, the most direct cause first, with what helps: a neighbour that declared independence (with Negotiate), a storm closing its lines, stuck freight, ships queueing for berths, ships leaving it full on a named line (and whether that line has no ◆ fuel stop), a line with no fuel, or a broken-down ship (with Repair).
 - The Network Lost card says what the waiting loads mostly were and why the place filled up.

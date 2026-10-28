@@ -512,7 +512,7 @@ button.link{height:auto;min-height:0;padding:2px 0;border:none;background:none;c
       <svg class="lines" id="splashLines" aria-hidden="true"></svg>
       <div class="big" aria-hidden="true"><svg viewBox="0 0 64 64"><use href="#capy"/></svg></div>
       <div class="txt">
-        <div class="eyebrow" id="splashEyebrow">Prototype 5.25</div>
+        <div class="eyebrow" id="splashEyebrow">Prototype 5.26</div>
         <h1>Astrobara Lines</h1>
         <p>Capybaras run the Lagrange Alliance’s freight. <b>Drag through places</b> to draw a shipping line. Freight shape = where it’s going. Too much waiting fills a red ring; a full ring ends the run.</p>
         <div class="scen" role="radiogroup" aria-label="Start in">
@@ -590,7 +590,7 @@ const $ = id => document.getElementById(id);
 const app = $('app'), cv = $('cv'), ctx = cv.getContext('2d');
 
 /* ================= Tuning ================= */
-const VERSION = '5.25';
+const VERSION = '5.26';
 const YEAR = 80, QTR = YEAR / 4, HORIZON = 10, Y0 = 2027, STEP = 1 / 30;
 const SOON = 30;   // seconds before a place opens that it, its countdown and the note all appear
 const SPEED = 80;                 // ship speed in map units per second
@@ -2283,7 +2283,7 @@ function lostHTML() {
     ${awardsRow()}
     <div class="fadein lrank" id="lRank">${rankLine(lost.entry)}</div>
     <p class="credit fadein" id="lCred">Run code <b style="color:#ffd8a8">${runCode()}</b> · Astrobara Lines ${VERSION} · © 2026 Mark Florentino LLC · MIT</p>
-    <div class="row go"><button class="primary" data-a="again">Same code again</button><button data-a="new">${newRunLabel()}</button><button data-a="board">Leaderboard</button><button data-a="sandbox">Keep playing without failing</button><button data-a="log">Timeline</button>${otherRuns()}</div>
+    <div class="row go"><button class="primary" data-a="again">Same code again</button><button data-a="new">${newRunLabel()}</button><button data-a="board">Leaderboard</button><button data-a="sandbox">Keep playing without failing</button><button data-a="log">Timeline</button><button data-a="lostDiag">Copy diag</button>${otherRuns()}</div>
   </div>`;
 }
 const lostCells = () => [...MC.querySelectorAll('.endc .typed')];
@@ -2496,7 +2496,13 @@ function diagText() {
     L.push(`money: budget ${fmt(S.fund)} · earned ${fmt(S.earned)} · delivered ${S.delivered}`);
     L.push(`spares: ${JSON.stringify(S.inv)} · upgrades ${JSON.stringify(S.up)} · bought ${JSON.stringify(S.bought || {})}`);
     L.push(`lines ${S.lines.length}/${S.inv.lines}:`);
-    for (const ln of S.lines) { const cl = (ln.segs || []).filter(x => x.closed).length; L.push(`  ${ln.name}${ln.loop ? ' (loop)' : ''}: ${ln.stops.map(i => PL[i].id).join('-')} · ships ${ln.ships.length} · pods ${ln.ships.reduce((a, x) => a + x.pods, 0)} · carried ${ln.carried || 0}${cl ? ' · closed stretches ' + cl : ''}`); }
+    for (const ln of S.lines) { const cl = (ln.segs || []).filter(x => x.closed).length, br = ln.ships.filter(x => x.brk || x.fix).length; L.push(`  ${ln.name}${ln.loop ? ' (loop)' : ''}: ${ln.stops.map(i => PL[i].id).join('-')} · ships ${ln.ships.length} · pods ${ln.ships.reduce((a, x) => a + x.pods, 0)} · carried ${ln.carried || 0} · length ${Math.round(ln.len || 0)}${ln.dry ? ' · NO FUEL' : ''}${br ? ' · broken ' + br : ''}${cl ? ' · closed stretches ' + cl : ''}`); }
+    // 5.26: what the crowded places hold, and where ships left full
+    const wants = i => { const by = {}; for (const c of S.Q[i]) by[c.want] = (by[c.want] || 0) + 1; return Object.keys(by).sort((a, b) => by[b] - by[a]).map(k => `${SHAPES[k].short} ${by[k]}`).join(', '); };
+    const busy = PL.map((p, i) => i).filter(i => S.open[i] && S.Q[i].length >= room(i) / 2).sort((a, b) => S.Q[b].length / room(b) - S.Q[a].length / room(a)).slice(0, 5);
+    if (busy.length) L.push(`crowded: ` + busy.map(i => `${PL[i].id} ${S.Q[i].length}/${room(i)} wants ${wants(i)}${stuckAt(i) ? ' · stuck ' + stuckAt(i).n + (stuckAt(i).noRoute ? ' (no route ' + stuckAt(i).noRoute + ')' : '') : ''}${queueAt(i) ? ' · queue ' + queueAt(i) : ''}`).join(' | '));
+    if (S.leftFull) { const lf = Object.keys(S.leftFull).filter(p => S.t - S.leftFull[p].t < 30); if (lf.length) L.push(`left full (30s): ` + lf.map(p => `${PL[p].id} by ${(S.lines.find(x => x.id === S.leftFull[p].L) || { name: '?' }).name} ${Math.round(S.t - S.leftFull[p].t)}s ago`).join(', ')); }
+    if (S.over && lost) L.push(`LOST at ${PL[lost.i].id} ${lost.waiting}/${lost.room} · wants ${wants(lost.i)} · lines ${S.lines.filter(x => x.stops.includes(lost.i)).map(x => `${x.name}:${x.ships.length}`).join(' ') || 'none'} · why: ${plainText(lost.why || '-')}`);
     L.push(`places: ` + PL.map((pl, i) => (S.open[i] ? `${pl.id} ${S.Q[i].length}/${room(i)}${S.of[i] > 0 ? ' ring ' + Math.round(S.of[i] * 100) + '%' : ''}${S.dmg[i] ? ' damaged' : ''}${S.shield[i] ? ' shield' : ''}${S.depot[i] ? ' depot' : ''}${S.fastDock && S.fastDock[i] ? ' dock' : ''}${S.unrest && S.unrest[i] >= .3 ? ' unrest ' + Math.round(S.unrest[i] * 100) + '%' : ''}${rebelNow(i) ? ' INDEPENDENT' : ''}` : '')).filter(Boolean).join(', '));
     L.push(`hazard: ${S.haz ? `${S.haz.type} ${S.haz.phase} "${plainText(S.haz.title)}" at ${S.haz.at.toFixed(1)}` : 'none'} · next at ${S.nextHaz != null ? S.nextHaz.toFixed(0) : '-'} · boom ${S.boom ? S.boom.shape : 'none'} · opening act ${JSON.stringify(S.script || [])}`);
     { const ov = overflowing(); if (ov >= 0) L.push(`overflowing: ${PL[ov].id} · ${plainText(whyCrowded(ov).note)}`); }
@@ -3532,6 +3538,7 @@ onTap(M, (a, el) => {
   else if (a === 'sandbox') { S.sandbox = true; S.over = false; saveSoon = true; S.of = S.of.map(v => Math.min(v, .99)); M.hidden = true; modalKind = null; S.paused = false; lastPlay = null; log('Sandbox: freight can pile up without ending the run.', ''); }
   else if (a === 'log') { const html = MC.innerHTML, k = modalKind, n = modalNext; showLog(() => openModal(html, k, n), 'timeline'); }
   else if (a === 'tab') showLog(null, el.dataset.t);
+  else if (a === 'lostDiag') { const html = MC.innerHTML, k = modalKind, n = modalNext; showLog(() => openModal(html, k, n), 'diag'); const t = diagText(); $('diagText').value = t; copyText(t, 'Diagnostics'); }   // 5.26: one tap from the lost card
   else if (a === 'copyDiag') { const t = diagText(); $('diagText').value = t; copyText(t, 'Diagnostics'); }
   else if (a === 'copySave') saveText().then(t => { $('diagText').value = t; copyText(t, `Save (${Math.round(t.length / 1024)} KB)`); });
   else if (a === 'close') { const b = backTo; backTo = null; M.hidden = true; modalKind = null; if (b) b(); else if (!wasPaused) { S.paused = false; lastPlay = null; } }
@@ -3599,7 +3606,7 @@ function helpBody() {
     <li><b>Saving.</b> Your run saves itself as you play, and when you close the page. Continue on the start screen picks it up where you left off. A run that ends is not kept.</li>
     <li><b>Other system’s storms.</b> When a storm or flare is coming on the map you’re not looking at and a shield there would help, a message says so and the ⇄ button turns amber.</li>
     <li><b>Alliance Shop.</b> The shop opens once a period (the countdown is at the top right). The Alliance sends a ship each time, and every third time a line too. Buy what you like from the budget, then pick one free upgrade, or skip it and bank the interest, to close the shop.</li>
-    <li><b>Diagnostics.</b> Something odd? ≡ menu → Diag → Copy diagnostics, and paste it to Claude. “Copy save too” adds the run itself, so it can be loaded exactly as it was.</li>
+    <li><b>Diagnostics.</b> Something odd? ≡ menu → Diag → Copy diagnostics (or Copy diag on the Network Lost card), and paste it to Claude. “Copy save too” adds the run itself, so it can be loaded exactly as it was.</li>
     <li><b>Keyboard.</b> On a computer: Space plays or pauses, 1, 2, 3 and 5 set the speed, Esc closes the bar along the bottom. Scroll to zoom; drag empty space to pan.</li>
     <li><b>Speed.</b> Tap the speed button for 0.1× and 0.5× slow motion or 2×, 3× and 5× (5× asks first). When a new place opens, or a restless place votes on a demand or declares independence, the game pauses so you don’t miss it: white rings spread from any place that isn’t on a line yet, amber rings from a place that wants to talk, the play button pulses, and ▶ carries on. Turn the pause off with the “❚❚ new place · talks” switch in the same menu.</li>
     <li><b>Capybaras.</b> They run the Alliance. The quartermaster at the Alliance Shop has advice, and late in a run a capybara envoy can calm a restless place for free, once a period.</li>
