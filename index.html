@@ -512,7 +512,7 @@ button.link{height:auto;min-height:0;padding:2px 0;border:none;background:none;c
       <svg class="lines" id="splashLines" aria-hidden="true"></svg>
       <div class="big" aria-hidden="true"><svg viewBox="0 0 64 64"><use href="#capy"/></svg></div>
       <div class="txt">
-        <div class="eyebrow" id="splashEyebrow">Prototype 5.34</div>
+        <div class="eyebrow" id="splashEyebrow">Prototype 5.35</div>
         <h1>Astrobara Lines</h1>
         <p>Capybaras run the Lagrange Alliance’s freight. <b>Drag through places</b> to draw a shipping line. Freight shape = where it’s going. Too much waiting fills a red ring; a full ring ends the run.</p>
         <div class="scen" role="radiogroup" aria-label="Start in">
@@ -590,7 +590,7 @@ const $ = id => document.getElementById(id);
 const app = $('app'), cv = $('cv'), ctx = cv.getContext('2d');
 
 /* ================= Tuning ================= */
-const VERSION = '5.34';
+const VERSION = '5.35';
 const YEAR = 80, QTR = YEAR / 4, HORIZON = 10, Y0 = 2027, STEP = 1 / 30;
 const SOON = 30;   // seconds before a place opens that it, its countdown and the note all appear
 const SPEED = 80;                 // ship speed in map units per second
@@ -2798,8 +2798,9 @@ cv.addEventListener('mousedown', e => { if (e.button === 1) e.preventDefault(); 
 cv.addEventListener('auxclick', e => { if (e.button === 1) e.preventDefault(); });
 cv.addEventListener('pointerdown', e => {
   if (!S || (S.over && !S.sandbox) || !$('modal').hidden || !$('splash').hidden) return;
-  // 5.34: the middle button pans from anywhere, over places and lines too; the left button draws; the right cancels
-  if (e.pointerType === 'mouse' && e.button === 1 && !drag) { e.preventDefault(); try { cv.setPointerCapture(e.pointerId); } catch (_) {} const p = lp(e); drag = { mode: 'none', mid: true, grab: worldAt(p), id: e.pointerId, p, x0: p.x, y0: p.y, moved: false, startPlace: -1 }; cv.style.cursor = 'grabbing'; return; }
+  // 5.34: the middle button pans from anywhere, over places and lines too; 5.35: so does the right button. The left
+  // button draws; the right button pressed while drawing cancels it.
+  if (e.pointerType === 'mouse' && (e.button === 1 || e.button === 2) && !drag) { e.preventDefault(); try { cv.setPointerCapture(e.pointerId); } catch (_) {} const p = lp(e); drag = { mode: 'none', mid: true, grab: worldAt(p), id: e.pointerId, p, x0: p.x, y0: p.y, moved: false, startPlace: -1 }; cv.style.cursor = 'grabbing'; return; }
   if (e.pointerType === 'mouse' && e.button !== 0) { if (e.button === 2) cancelDrag(); return; }   // only the left button draws
   toggleSpeedMenu(false);
   // 5.32: with a mouse, a click on the map clears a tip the way its × does (only a tip that's showing and has one)
@@ -2850,7 +2851,7 @@ cv.addEventListener('pointermove', e => {
     setView(pinch.s0 * Math.hypot(a.x - b.x, a.y - b.y) / pinch.d0, mid, pinch.w); return;
   }
   if (!drag || e.pointerId !== drag.id || drag.mode === 'used') return;
-  if (e.pointerType === 'mouse' && (e.buttons & 2)) { cancelDrag(); return; }   // right button pressed mid-drag
+  if (e.pointerType === 'mouse' && (e.buttons & 2) && cancelDrag()) return;   // right button pressed while drawing
   drag.p = lp(e);
   if (!drag.moved && Math.hypot(drag.p.x - drag.x0, drag.p.y - drag.y0) > (drag.mid ? 2 : 9)) drag.moved = true;
   if (!drag.moved) return;
@@ -3667,7 +3668,7 @@ function helpBody() {
     <li><b>Other system’s storms.</b> When a storm or flare is coming on the map you’re not looking at and a shield there would help, a message says so and the ⇄ button turns amber.</li>
     <li><b>Alliance Shop.</b> The shop opens once a period (the countdown is at the top right). The Alliance sends a ship each time, and every third time a line too. Buy what you like from the budget, then pick one free upgrade, or skip it and bank the interest, to close the shop.</li>
     <li><b>Diagnostics.</b> Something odd? ≡ menu → Diag → Copy diagnostics (or Copy diag on the Network Lost card), and paste it to Claude. “Copy save too” adds the run itself, so it can be loaded exactly as it was.</li>
-    <li><b>Keyboard.</b> On a computer: Space plays or pauses, 1, 2, 3 and 5 set the speed, Esc closes the bar along the bottom. While you draw or reshape a line, Esc or the right mouse button cancels it. Scroll to zoom; drag empty space, or hold the middle button anywhere, to pan.</li>
+    <li><b>Keyboard.</b> On a computer: Space plays or pauses, 1, 2, 3 and 5 set the speed, Esc closes the bar along the bottom. While you draw or reshape a line, Esc or the right mouse button cancels it. Scroll to zoom; drag empty space, or hold the middle or right button anywhere, to pan.</li>
     <li><b>Speed.</b> Tap the speed button for 0.1× and 0.5× slow motion or 2×, 3× and 5× (5× asks first). When a new place opens, or a restless place votes on a demand or declares independence, the game pauses so you don’t miss it: white rings spread from any place that isn’t on a line yet, amber rings from a place that wants to talk, the play button pulses, and ▶ carries on. Turn the pause off with the “❚❚ new place · talks” switch in the same menu.</li>
     <li><b>Capybaras.</b> They run the Alliance. The quartermaster at the Alliance Shop has advice, and late in a run a capybara envoy can calm a restless place for free, once a period.</li>
     <li><b>Awards.</b> 22 to earn, from your first delivery to lines in three star systems. New ones show a gold note; reviews and the end of a run list what the run earned; the leaderboard’s 🏅 Awards shows them all.</li>

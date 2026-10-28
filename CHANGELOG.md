@@ -1,5 +1,8 @@
 # Changelog
 
+## 5.35
+- The **right mouse button** pans the map too: hold it and drag from anywhere. Pressed while you're drawing with the left button, it still cancels the line.
+
 ## 5.34
 - On a computer, hold the **middle mouse button** and drag to pan the map from anywhere, even over a place or a line. It never draws or selects anything, and doesn't trigger the browser's autoscroll. The left button still draws, the right button cancels, and dragging empty space still pans.
 
