@@ -1,5 +1,8 @@
 # Changelog
 
+## 5.28
+- When the game is paused, the world stands still: a pulsar's beams, a binary pair's orbit, wormhole swirls, the Visitor Gate's pulse, and storm and debris drift all stop, and pick up again on ▶. Warnings and hints still blink so they catch your eye.
+
 ## 5.27
 - Diagnostics name each place and its kind ("R1 Tarn Yard (Station)"), so they match the log, and mark places with no line. Shapes in notes read as words ("no line reaches [Fuel depot]") instead of vanishing.
 - A loaded save's diagnostics still say where and why the run was lost.

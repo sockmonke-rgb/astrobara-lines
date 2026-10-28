@@ -512,7 +512,7 @@ button.link{height:auto;min-height:0;padding:2px 0;border:none;background:none;c
       <svg class="lines" id="splashLines" aria-hidden="true"></svg>
       <div class="big" aria-hidden="true"><svg viewBox="0 0 64 64"><use href="#capy"/></svg></div>
       <div class="txt">
-        <div class="eyebrow" id="splashEyebrow">Prototype 5.27</div>
+        <div class="eyebrow" id="splashEyebrow">Prototype 5.28</div>
         <h1>Astrobara Lines</h1>
         <p>Capybaras run the Lagrange Alliance’s freight. <b>Drag through places</b> to draw a shipping line. Freight shape = where it’s going. Too much waiting fills a red ring; a full ring ends the run.</p>
         <div class="scen" role="radiogroup" aria-label="Start in">
@@ -590,7 +590,7 @@ const $ = id => document.getElementById(id);
 const app = $('app'), cv = $('cv'), ctx = cv.getContext('2d');
 
 /* ================= Tuning ================= */
-const VERSION = '5.27';
+const VERSION = '5.28';
 const YEAR = 80, QTR = YEAR / 4, HORIZON = 10, Y0 = 2027, STEP = 1 / 30;
 const SOON = 30;   // seconds before a place opens that it, its countdown and the note all appear
 const SPEED = 80;                 // ship speed in map units per second
@@ -3621,7 +3621,7 @@ function helpBody() {
 function showHelp() { showLog(null, 'help'); }
 
 /* ================= Rendering ================= */
-let clock = 0;
+let clock = 0, wclock = 0;   // clock: real time, for warnings and cues; wclock (5.28): the world's own motion, still while the game is paused
 const F_LBL = '600 12.5px "Saira Condensed", "Arial Narrow", sans-serif';
 const F_NUM = '600 11.5px "IBM Plex Mono", ui-monospace, monospace';
 function shapePath(s, x, y, r) {
@@ -3769,7 +3769,7 @@ function drawBackdrop() {
   ctx.globalAlpha = 1;
 }
 function draw(rdt) {
-  clock += rdt;
+  clock += rdt; if (S && !S.paused && !S.over) wclock += rdt;
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.fillStyle = '#04060b'; ctx.fillRect(0, 0, W, H);
   drawBackdrop();
@@ -3822,7 +3822,7 @@ function draw(rdt) {
       g.addColorStop(0, 'rgba(255,195,90,.32)'); g.addColorStop(1, 'rgba(255,140,60,.08)');
       ctx.fillStyle = g; ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
       ctx.save(); ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.clip();
-      ctx.strokeStyle = 'rgba(255,195,90,.18)'; ctx.lineWidth = 1.5; const off = (clock * 14) % 12;
+      ctx.strokeStyle = 'rgba(255,195,90,.18)'; ctx.lineWidth = 1.5; const off = (wclock * 14) % 12;
       for (let k = -r * 2; k < r * 2; k += 12) { ctx.beginPath(); ctx.moveTo(cx + k + off - r, cy - r); ctx.lineTo(cx + k + off + r, cy + r); ctx.stroke(); }
       ctx.restore();
       ctx.strokeStyle = 'rgba(255,195,90,.6)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.stroke();
@@ -3832,7 +3832,7 @@ function draw(rdt) {
     const L0 = PL[IDX.LEO], cx = X(L0.x), cy = Y(L0.y);
     const safe = S.shield[IDX.LEO];
     ctx.fillStyle = '#b8c0cf'; ctx.globalAlpha = (h.phase === 'warn' ? .35 + .3 * Math.sin(clock * 6) : .75) * (safe ? .45 : 1);
-    for (let k = 0; k < 34; k++) { const a = k * 2.3 + clock * (k % 2 ? .6 : -.45), rr = 22 + (k * 7) % 22; ctx.fillRect(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr, 2, 2); }
+    for (let k = 0; k < 34; k++) { const a = k * 2.3 + wclock * (k % 2 ? .6 : -.45), rr = 22 + (k * 7) % 22; ctx.fillRect(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr, 2, 2); }
     ctx.globalAlpha = 1; label(safe ? 'debris · protected' : 'debris', cx - 46, cy - 30, safe ? '#a8e6ff' : '#cfd6e2');
   }
   if (h && h.type === 'signal' && h.sys === S.view) {
@@ -3997,11 +3997,11 @@ function drawUncharted(labels) {
     ctx.fillStyle = g; ctx.beginPath(); ctx.arc(gx, gy, R * sc, 0, Math.PI * 2); ctx.fill();
     ctx.fillStyle = `rgb(${st.col})`; ctx.beginPath(); ctx.arc(gx, gy, core * uk, 0, Math.PI * 2); ctx.fill();
   };
-  if (st.binary) { const a = clock * .25, o = 16 * sc; glow(x + Math.cos(a) * o, y + Math.sin(a) * o, st.glow, st.core); glow(x - Math.cos(a) * o, y - Math.sin(a) * o, st.glow * .8, st.core * .8); }
+  if (st.binary) { const a = wclock * .25, o = 16 * sc; glow(x + Math.cos(a) * o, y + Math.sin(a) * o, st.glow, st.core); glow(x - Math.cos(a) * o, y - Math.sin(a) * o, st.glow * .8, st.core * .8); }
   else glow(x, y, st.glow, st.core);
   if (st.pulsar) {
     // two beams sweeping round
-    ctx.save(); ctx.translate(x, y); ctx.rotate(clock * 1.6); ctx.strokeStyle = `rgba(${st.col},.22)`; ctx.lineWidth = 3 * uk;
+    ctx.save(); ctx.translate(x, y); ctx.rotate(wclock * 1.6); ctx.strokeStyle = `rgba(${st.col},.22)`; ctx.lineWidth = 3 * uk;
     ctx.beginPath(); ctx.moveTo(-140 * sc, 0); ctx.lineTo(140 * sc, 0); ctx.stroke(); ctx.restore();
   }
   labels.push([`${GEN.name.toUpperCase()} · ${st.type.toUpperCase()}`, x, y + 26]);
@@ -4137,12 +4137,12 @@ function drawPlace(i) {
   ctx.lineWidth = 3; ctx.strokeStyle = over ? (Math.sin(clock * 8) > 0 ? '#ff5c5c' : '#ffd0d0') : p.body === 'worm' || p.body === 'alien' ? '#cbb8ff' : '#e9edf4'; ctx.stroke();
   if (p.body === 'alien') {
     // a slow, uneven pulse: it isn't ours
-    const k = .5 + .5 * Math.sin(clock * 2.3) * Math.sin(clock * .7);
+    const k = .5 + .5 * Math.sin(wclock * 2.3) * Math.sin(wclock * .7);
     ctx.strokeStyle = `rgba(192,140,255,${.25 + .45 * k})`; ctx.lineWidth = 2; shapePath('alien', x, y, r + 7 + 4 * k); ctx.stroke();
   }
   if (p.body === 'worm') {
     // a slow swirl, and a ripple whenever freight goes through
-    ctx.save(); ctx.translate(x, y); ctx.rotate(clock * (sysOf(i) === 'sol' ? 1.4 : -1.4)); ctx.strokeStyle = 'rgba(200,180,255,.85)'; ctx.lineWidth = 1.6;
+    ctx.save(); ctx.translate(x, y); ctx.rotate(wclock * (sysOf(i) === 'sol' ? 1.4 : -1.4)); ctx.strokeStyle = 'rgba(200,180,255,.85)'; ctx.lineWidth = 1.6;
     for (let k = 0; k < 3; k++) { ctx.beginPath(); ctx.arc(0, 0, r * (.3 + .2 * k), k * 2.1, k * 2.1 + 2.3); ctx.stroke(); }
     ctx.restore();
     const f = S.clock - S.tunnelT; if (f < 1.2) { ctx.strokeStyle = '#cbb8ff'; ctx.globalAlpha = 1 - f / 1.2; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y, r + 4 + f * 18, 0, Math.PI * 2); ctx.stroke(); ctx.globalAlpha = 1; }
@@ -4625,7 +4625,7 @@ requestAnimationFrame(frame);
 // Hooks for headless balancing and input tests.
 window.LC = {
   get S() { return S; }, get GEN() { return GEN; }, plx: () => PLX.map(L => ({ ux: L.ux, uy: L.uy, k: L.k, ls: Math.pow(sc / sc0, L.d) })), IDX, PL, YEAR, startRun, step, tutGo, tutEnd, createLine, setStops, removeLine, addShip, removeShip, addPod, shieldPlace, buildDepot, select, room, setLine, openLoop, undo,
-  snapCam, cal, calOf, perOf, lineYear, showLog, buySensor, SENSORS, setSys, setAutoPause, inScen, trayUI, recordRun, readBoard, openBoard, showLost, endLost, showWin, award, readAch, needList, lookAt, ACH, ask5, qmTip, diagText, saveText, loadSaveText, perf, get capyImg() { return capyImg; }, get won() { return won; }, get lost() { return lost; }, get boardAll() { return boardAll; }, scrap, scrapVal, repairCost, negotiateCost, voteDemand, sysNeeds, get fxs() { return fxs; }, negotiate, startRebel, tunnelEnds, saveAll, readLocal, resumeRun, bestSave, parseCode, runCode, codeOf, splashUI, SCEN, repairPlace, repairSensor, buyOffer, price, sysOf, tunnelOpen, hud, get sc() { return sc; }, pins: () => pins.map(q => ({ x: rot ? window.innerWidth - q.y : q.x, y: rot ? q.x : q.y, i: q.i })),
+  snapCam, cal, calOf, perOf, lineYear, showLog, buySensor, SENSORS, setSys, setAutoPause, inScen, trayUI, recordRun, readBoard, openBoard, showLost, endLost, showWin, award, readAch, needList, lookAt, ACH, ask5, qmTip, diagText, saveText, loadSaveText, perf, get capyImg() { return capyImg; }, get won() { return won; }, get lost() { return lost; }, get boardAll() { return boardAll; }, scrap, scrapVal, repairCost, negotiateCost, voteDemand, sysNeeds, get fxs() { return fxs; }, negotiate, startRebel, tunnelEnds, saveAll, readLocal, resumeRun, bestSave, parseCode, runCode, codeOf, splashUI, SCEN, repairPlace, repairSensor, buyOffer, price, sysOf, tunnelOpen, hud, get sc() { return sc; }, get wclock() { return wclock; }, pins: () => pins.map(q => ({ x: rot ? window.innerWidth - q.y : q.x, y: rot ? q.x : q.y, i: q.i })),
   redrawFee, chargeRedraw, fixShips, whyCrowded, worstTrouble, selLine, checkUpdate, verNum, get newer() { return newer; }, upkeepDue, berths, docked, queueAt, stuckAt, stuckNote, startSwing, breakdowns, lateGame, ovT, crowdFix,
   fast(sec) { const n = Math.round(sec / STEP); for (let i = 0; i < n && !S.over; i++) step(STEP); },
   screen(id) { const n = PL[IDX[id]], x = X(n.x), y = Y(n.y); return rot ? { x: window.innerWidth - y, y: x } : { x, y }; },
