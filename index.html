@@ -528,7 +528,7 @@ button.link{height:auto;min-height:0;padding:2px 0;border:none;background:none;c
       <svg class="lines" id="splashLines" aria-hidden="true"></svg>
       <div class="big" aria-hidden="true"><svg viewBox="0 0 64 64"><use href="#capy"/></svg></div>
       <div class="txt">
-        <div class="eyebrow" id="splashEyebrow">Prototype 5.49</div>
+        <div class="eyebrow" id="splashEyebrow">Prototype 5.50</div>
         <h1>Astrobara Lines</h1>
         <p>Capybaras run the Lagrange Alliance’s freight. <b>Drag through places</b> to draw a shipping line. Freight shape = where it’s going. Too much waiting fills a red ring; a full ring ends the run.</p>
         <div class="scen" role="radiogroup" aria-label="Start in">
@@ -607,7 +607,7 @@ const $ = id => document.getElementById(id);
 const app = $('app'), cv = $('cv'), ctx = cv.getContext('2d');
 
 /* ================= Tuning ================= */
-const VERSION = '5.49';
+const VERSION = '5.50';
 // 5.49: where ≡ → Report sends reports: a Cloudflare Worker that files each one as an issue in a private repo
 // (report-worker/ has its code and setup). While it's empty, Report copies the report and offers a GitHub issue.
 const REPORT_URL = '';
@@ -962,12 +962,16 @@ const SHAPE_PATH = (() => {
   for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, r = i % 2 ? 3.9 : 9; star.push((r * Math.cos(a)).toFixed(2) + ' ' + (r * Math.sin(a)).toFixed(2)); }
   for (let i = 0; i < 5; i++) { const a = -Math.PI / 2 + i * 2 * Math.PI / 5; pent.push((8 * Math.cos(a)).toFixed(2) + ' ' + (8 * Math.sin(a)).toFixed(2)); }
   return {
-    earth: 'M7 0A7 7 0 1 1 -7 0A7 7 0 1 1 7 0Z', moon: 'M7 0A7 7 0 1 1 -7 0A7 7 0 1 1 7 0Z', mars: 'M7 0A7 7 0 1 1 -7 0A7 7 0 1 1 7 0Z', proxb: 'M7 0A7 7 0 1 1 -7 0A7 7 0 1 1 7 0Z', world: 'M7 0A7 7 0 1 1 -7 0A7 7 0 1 1 7 0Z', alien: 'M0 -8.5L8 6.5H-8Z', worm: 'M7 0A7 7 0 1 1 -7 0A7 7 0 1 1 7 0ZM3 0A3 3 0 1 0 -3 0A3 3 0 1 0 3 0Z', square: 'M-6.3 -6.3H6.3V6.3H-6.3Z',
+    earth: 'M7 0A7 7 0 1 1 -7 0A7 7 0 1 1 7 0Z', moon: 'M7 0A7 7 0 1 1 -7 0A7 7 0 1 1 7 0Z', mars: 'M7 0A7 7 0 1 1 -7 0A7 7 0 1 1 7 0Z', proxb: 'M5.6 0A5.6 5.6 0 1 1 -5.6 0A5.6 5.6 0 1 1 5.6 0Z', world: 'M7 0A7 7 0 1 1 -7 0A7 7 0 1 1 7 0Z', alien: 'M0 -8.5L8 6.5H-8Z', worm: 'M7 0A7 7 0 1 1 -7 0A7 7 0 1 1 7 0ZM3 0A3 3 0 1 0 -3 0A3 3 0 1 0 3 0Z', square: 'M-6.3 -6.3H6.3V6.3H-6.3Z',
     diamond: 'M0 -8.6L8.6 0L0 8.6L-8.6 0Z', star: 'M' + star.join('L') + 'Z', pentagon: 'M' + pent.join('L') + 'Z',
     cross: 'M-2.7 -8H2.7V-2.7H8V2.7H2.7V8H-2.7V2.7H-8V-2.7H-2.7Z',
   };
 })();
-const shp = s => `<svg class="shp" viewBox="-10 -10 20 20" aria-label="${SHAPES[s].role}"${TINT[s] ? ` style="color:${TINT[s]}"` : ''}><path d="${SHAPE_PATH[s]}"/></svg>`;
+// 5.50: Proxima b's icon is a ringed planet, like the place and its freight on the map: back of the ring, the disc, then the front
+const RING_ARC = sweep => `<path transform="rotate(-22)" fill="none" d="M-9.3 0A9.3 2.9 0 0 ${sweep} 9.3 0"`;
+const shp = s => `<svg class="shp" viewBox="-10 -10 20 20" aria-label="${SHAPES[s].role}"${TINT[s] ? ` style="color:${TINT[s]}"` : ''}>${s === 'proxb'
+  ? `${RING_ARC(1)} stroke="currentColor" stroke-width="1.7"/><path d="${SHAPE_PATH[s]}"/>${RING_ARC(0)} stroke="#04060b" stroke-width="3.4"/>${RING_ARC(0)} stroke="currentColor" stroke-width="1.7"/>`
+  : `<path d="${SHAPE_PATH[s]}"/>`}</svg>`;
 const ICON = n => `<svg viewBox="0 0 24 24"><use href="#${n}"/></svg>`;
 const gi = n => `<svg class="gi" viewBox="0 0 24 24" aria-hidden="true"><use href="#${n}"/></svg>`;
 
@@ -3841,6 +3845,23 @@ function shapePath(s, x, y, r) {
   else if (s === 'pentagon') { for (let i = 0; i < 5; i++) { const a = -Math.PI / 2 + i * 2 * Math.PI / 5; i ? ctx.lineTo(x + r * 1.1 * Math.cos(a), y + r * 1.1 * Math.sin(a)) : ctx.moveTo(x + r * 1.1 * Math.cos(a), y + r * 1.1 * Math.sin(a)); } ctx.closePath(); }
   else if (s === 'cross') { const a = r * .38, b = r * 1.1; ctx.moveTo(x - a, y - b); ctx.lineTo(x + a, y - b); ctx.lineTo(x + a, y - a); ctx.lineTo(x + b, y - a); ctx.lineTo(x + b, y + a); ctx.lineTo(x + a, y + a); ctx.lineTo(x + a, y + b); ctx.lineTo(x - a, y + b); ctx.lineTo(x - a, y + a); ctx.lineTo(x - b, y + a); ctx.lineTo(x - b, y - a); ctx.lineTo(x - a, y - a); ctx.closePath(); }
 }
+// 5.50: Proxima b, and the freight bound for it, wear a tilted ring. A plain teal circle was too easy to take for a
+// green world's or Earth's at freight size. Draw the back half before the disc and the front half after it, so the
+// ring goes round the planet; a dark edge keeps the front half visible where it crosses the disc.
+function ringHalf(x, y, d, front, col, w, edge) {
+  ctx.beginPath(); ctx.ellipse(x, y, d * 1.7, d * .52, -.38, front ? 0 : Math.PI, front ? Math.PI : Math.PI * 2);
+  const lc = ctx.lineCap; ctx.lineCap = 'butt'; ctx.strokeStyle = 'rgba(4,6,11,.85)'; ctx.lineWidth = w + edge; ctx.stroke();
+  ctx.strokeStyle = col; ctx.lineWidth = w; ctx.stroke(); ctx.lineCap = lc;
+}
+// one piece of waiting freight: its destination's shape in its destination's colour, with a thin dark edge
+function drawFreight(want, x, y, r, col) {
+  ctx.fillStyle = col; ctx.strokeStyle = 'rgba(4,6,11,.8)'; ctx.lineWidth = 1.3 * uk; ctx.lineJoin = 'round';
+  if (want !== 'proxb') { shapePath(want, x, y, r); ctx.stroke(); ctx.fill(); return; }
+  const d = r * .82, w = 1.05 * uk, e = 1.3 * uk;
+  ringHalf(x, y, d, false, col, w, e);
+  ctx.fillStyle = col; ctx.strokeStyle = 'rgba(4,6,11,.8)'; ctx.lineWidth = e; shapePath(want, x, y, d); ctx.stroke(); ctx.fill();
+  ringHalf(x, y, d, true, col, w, e);
+}
 function polyline(pts) { ctx.beginPath(); pts.forEach((p, i) => (i ? ctx.lineTo(X(p.x), Y(p.y)) : ctx.moveTo(X(p.x), Y(p.y)))); }
 function sampleAt(sg, d) {
   d = Math.max(0, Math.min(sg.len, d));
@@ -4352,8 +4373,11 @@ function drawPlace(i) {
   else if (p.body === 'alien') { const g = ctx.createRadialGradient(x, y, 1, x, y, r * 1.3); g.addColorStop(0, '#f1e2ff'); g.addColorStop(.45, '#8a4fe0'); g.addColorStop(1, '#2a1150'); ctx.fillStyle = g; }
   else if (p.body === 'worm') { const g = ctx.createRadialGradient(x, y, 1, x, y, r); g.addColorStop(0, '#000'); g.addColorStop(.6, '#22144d'); g.addColorStop(1, '#7d5cf0'); ctx.fillStyle = g; }
   else ctx.fillStyle = '#0a0f1c';
+  const ringed = p.body === 'proxb', ringCol = '#9cefe3';   // 5.50: Proxima b is the ringed planet
+  if (ringed) ringHalf(x, y, r, false, ringCol, 2.6, 2.4);
   shapePath(s, x, y, r); ctx.fill();
   ctx.lineWidth = 3; ctx.strokeStyle = over ? (Math.sin(clock * 8) > 0 ? '#ff5c5c' : '#ffd0d0') : p.body === 'worm' || p.body === 'alien' ? '#cbb8ff' : '#e9edf4'; ctx.stroke();
+  if (ringed) ringHalf(x, y, r, true, ringCol, 2.6, 2.4);
   if (p.body === 'alien') {
     // a slow, uneven pulse: it isn't ours
     const k = .5 + .5 * Math.sin(wclock * 2.3) * Math.sin(wclock * .7);
@@ -4387,11 +4411,9 @@ function drawPlace(i) {
   // 5.41/5.42: a soft see-through backing that follows the shapes (one fill, so overlaps don't darken), and a thin
   // dark edge on each shape, so they read over a line without hiding it
   if (shown) { ctx.fillStyle = 'rgba(4,6,11,.5)'; ctx.beginPath(); for (const [fx, fy] of spots) { ctx.moveTo(fx + 6.2 * uk, fy); ctx.arc(fx, fy, 6.2 * uk, 0, Math.PI * 2); } ctx.fill(); }
-  ctx.strokeStyle = 'rgba(4,6,11,.8)'; ctx.lineWidth = 1.3 * uk; ctx.lineJoin = 'round';
   for (let k = 0; k < shown; k++) {
     const [fx, fy] = spots[k];
-    ctx.fillStyle = k >= rm ? '#ff6b6b' : TINT[q[k].want] || '#d8dee9';
-    shapePath(q[k].want, fx, fy, 3.5 * uk); ctx.stroke(); ctx.fill();
+    drawFreight(q[k].want, fx, fy, 3.5 * uk, k >= rm ? '#ff6b6b' : TINT[q[k].want] || '#d8dee9');
   }
   if (S.tut && S.tut.step === 2 && shown) {
     // the walkthrough points at the freight itself

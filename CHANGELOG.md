@@ -1,5 +1,8 @@
 # Changelog
 
+## 5.50
+- **Proxima b is the ringed planet.** Its freight now shows a tiny ringed planet too, so it can't be mistaken for a green world's freight or Earth's. Both were teal-ish circles that looked almost the same at freight size. The Help key and the notes use the same icon.
+
 ## 5.49
 - **Report a problem.** ≡ → **Report** (it was Diag) has a box to say what happened, an optional email for a reply, and **⚑ Send report**. The report carries the game's version, browser, screen, recent log and any errors, and with **Include run** on (the default), the run itself, so it can be loaded exactly as it was. What gets sent · copy shows all of it, with Copy diagnostics and Copy save as before.
 - The Network Lost card's Copy diag is now **⚑ Report**, and opens the same tab. Inside Claude it still copies the diagnostics straight away.
