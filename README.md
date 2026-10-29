@@ -68,7 +68,9 @@ Every run has a code like `SOL-HALO-417`. Type it on the start screen to play th
 
 ## Reporting a problem
 
-Open ≡ → **Diag** → **Copy diagnostics**, or tap **Copy diag** on the Network Lost card. This copies a short text report covering version, device, frame rate, the run's state, the recent log and any errors. **Copy save too** adds the run itself, compressed, so the exact moment can be loaded and looked at.
+Open ≡ → **Report**, or tap **⚑ Report** on the Network Lost card. Say what happened, add an email if you'd like a reply, and tap **Send report**. It sends a short text report covering version, device, frame rate, the run's state, the recent log and any errors, and with **Include run** on, the run itself, compressed, so the exact moment can be loaded and looked at. Nothing else is sent. **What gets sent · copy** shows the report and copies it.
+
+Reports are filed privately through a small relay in [`report-worker/`](report-worker/SETUP.md).
 
 ## Credits
 

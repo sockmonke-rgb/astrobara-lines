@@ -88,6 +88,20 @@ body{font-family:var(--f-body);font-size:14px;-webkit-user-select:none;user-sele
 #banner.to .bt{pointer-events:auto;cursor:pointer}   /* 5.43: a note about a place or line: tap it to go there */
 textarea.diag{width:100%;box-sizing:border-box;height:150px;margin-top:8px;padding:8px 10px;border-radius:8px;border:1px solid var(--rule);background:#05070d;color:#c3cad8;
   font:400 11px/1.4 var(--f-data);resize:vertical;white-space:pre;overflow:auto;-webkit-user-select:text;user-select:text;touch-action:auto}
+/* 5.49: the Report tab */
+.rep{display:block;width:100%;box-sizing:border-box;margin-top:8px;padding:10px 12px;border-radius:10px;border:1px solid var(--rule);background:rgba(255,255,255,.04);color:var(--ink);
+  font:400 16px/1.35 var(--f-data);-webkit-user-select:text;user-select:text;-webkit-touch-callout:default;touch-action:auto}
+textarea.rep{min-height:78px;resize:vertical}
+input.rep{height:44px}
+.rep::placeholder{color:var(--dim)}
+.rep:focus{outline:2px solid var(--capy);outline-offset:1px}
+.hp{position:absolute;left:-9999px;top:0;width:1px;height:1px;opacity:0;pointer-events:none}
+.card .row button.tog.on{border-color:var(--capy);background:rgba(242,166,90,.14);color:#ffd8a8}
+.card .row button[aria-disabled=true]{opacity:.55}
+.repfail{margin-top:10px;padding:10px 12px;border:1px solid rgba(255,92,92,.5);border-radius:10px;background:rgba(255,92,92,.08);font:400 13px/1.4 var(--f-body)}
+.repfail a{color:#ffd8a8;font-weight:600}
+details.repmore{margin-top:12px}
+details.repmore summary{cursor:pointer;font:600 12px/1.2 var(--f-display);letter-spacing:.06em;color:var(--dim);padding:6px 0}
 #banner button.go{height:30px;min-width:0;padding:0 10px;border:1px solid var(--capy);border-radius:8px;background:rgba(242,166,90,.2);color:#ffd8a8;
   font:600 13px/1 var(--f-display);letter-spacing:.04em;white-space:nowrap;display:inline-flex;align-items:center;gap:4px;animation:nudge 1.2s ease-in-out infinite}
 #banner button.go .gi{width:15px;height:15px}
@@ -514,7 +528,7 @@ button.link{height:auto;min-height:0;padding:2px 0;border:none;background:none;c
       <svg class="lines" id="splashLines" aria-hidden="true"></svg>
       <div class="big" aria-hidden="true"><svg viewBox="0 0 64 64"><use href="#capy"/></svg></div>
       <div class="txt">
-        <div class="eyebrow" id="splashEyebrow">Prototype 5.48</div>
+        <div class="eyebrow" id="splashEyebrow">Prototype 5.49</div>
         <h1>Astrobara Lines</h1>
         <p>Capybaras run the Lagrange Alliance’s freight. <b>Drag through places</b> to draw a shipping line. Freight shape = where it’s going. Too much waiting fills a red ring; a full ring ends the run.</p>
         <div class="scen" role="radiogroup" aria-label="Start in">
@@ -593,7 +607,11 @@ const $ = id => document.getElementById(id);
 const app = $('app'), cv = $('cv'), ctx = cv.getContext('2d');
 
 /* ================= Tuning ================= */
-const VERSION = '5.48';
+const VERSION = '5.49';
+// 5.49: where ≡ → Report sends reports: a Cloudflare Worker that files each one as an issue in a private repo
+// (report-worker/ has its code and setup). While it's empty, Report copies the report and offers a GitHub issue.
+const REPORT_URL = '';
+const ISSUE_URL = 'https://github.com/sockmonke-rgb/astrobara-lines/issues/new';
 const YEAR = 80, QTR = YEAR / 4, HORIZON = 10, Y0 = 2027, STEP = 1 / 30;
 const SOON = 30;   // seconds before a place opens that it, its countdown and the note all appear
 const SPEED = 80;                 // ship speed in map units per second
@@ -2311,7 +2329,7 @@ function lostHTML() {
     ${awardsRow()}
     <div class="fadein lrank" id="lRank">${rankLine(lost.entry)}</div>
     <p class="credit fadein" id="lCred">Run code <b style="color:#ffd8a8">${runCode()}</b> · Astrobara Lines ${VERSION} · © 2026 Mark Florentino LLC · MIT</p>
-    <div class="row go"><button class="primary" data-a="again">Same code again</button><button data-a="new">${newRunLabel()}</button><button data-a="board">Leaderboard</button><button data-a="sandbox">Keep playing without failing</button><button data-a="log">Timeline</button><button data-a="lostDiag">Copy diag</button>${otherRuns()}</div>
+    <div class="row go"><button class="primary" data-a="again">Same code again</button><button data-a="new">${newRunLabel()}</button><button data-a="board">Leaderboard</button><button data-a="sandbox">Keep playing without failing</button><button data-a="log">Timeline</button><button data-a="lostDiag">⚑ Report</button>${otherRuns()}</div>
   </div>`;
 }
 const lostCells = () => [...MC.querySelectorAll('.endc .typed')];
@@ -2503,7 +2521,7 @@ onTap($('board'), (a, el) => {
 });
 
 /* ================= Diagnostics =================
-   The ≡ menu's Diag tab: a plain-text report (version, device, speed of play, the run's state, recent
+   The ≡ menu's Report tab (Diag before 5.49): a plain-text report (version, device, speed of play, the run's state, recent
    log, any errors) to copy and paste to Claude, and the save itself, packed small, to load the exact
    moment back up. Nothing personal: no account id, no budget history beyond the run. */
 const plainText = t => String(t).replace(ICON_RE, (m, n) => ({ iShield: 'shield', iSun: 'sun', iDebris: 'debris', iFlag: 'flag', iShip: 'ship', iPod: 'pod', iDepot: 'depot', iDock: 'dock', iAlien: 'alien', iSensor: 'sensor', iLine: 'line', iLoop: 'loop', iCapy: 'capybara' }[n] || '')).replace(/<svg class="shp"[^>]*aria-label="([^"]*)"[^>]*>[\s\S]*?<\/svg>/g, '[$1]').replace(/<[^>]+>/g, '').replace(/&amp;/g, '&');   // 5.27: shapes become [Fuel depot]
@@ -2556,21 +2574,89 @@ async function saveText() {
 }
 // ...and back: for loading a pasted save (used when chasing a bug).
 async function loadSaveText(t) {
-  const [head, body] = String(t).split('\n'); let json = body;
-  if (/ gz$/.test(head)) { const bin = atob(body), u = new Uint8Array(bin.length); for (let k = 0; k < bin.length; k++) u[k] = bin.charCodeAt(k); json = await new Response(new Blob([u]).stream().pipeThrough(new DecompressionStream('gzip'))).text(); }
+  const [head, ...rest] = String(t).trim().split('\n');   // 5.49: a save pasted in parts (from a report) still loads
+  const gz = / gz$/.test(head.trim()), body = gz ? rest.join('').replace(/\s+/g, '') : rest.join('\n'); let json = body;
+  if (gz) { const bin = atob(body), u = new Uint8Array(bin.length); for (let k = 0; k < bin.length; k++) u[k] = bin.charCodeAt(k); json = await new Response(new Blob([u]).stream().pipeThrough(new DecompressionStream('gzip'))).text(); }
   const sv = JSON.parse(json); $('splash').hidden = true; return resumeRun(sv);
 }
+const inClaude = () => !!(window.claude && typeof window.claude.use === 'function');
 async function copyText(t, what) {
   let ok = false;
   try { if (navigator.clipboard && navigator.clipboard.writeText) { await navigator.clipboard.writeText(t); ok = true; } } catch (_) {}
-  if (!ok) { try { const ta = $('diagText'); ta.focus(); ta.select(); ta.setSelectionRange(0, t.length); ok = document.execCommand('copy'); } catch (_) {} }
-  toast(ok ? `✓ ${what} copied · paste it to Claude` : `Couldn’t copy here · press and hold the text below to copy it`, 4000);
+  if (!ok) { try { const ta = $('diagText'), d = ta.closest('details'); if (d) d.open = true; ta.value = t; ta.focus(); ta.select(); ta.setSelectionRange(0, t.length); ok = document.execCommand('copy'); } catch (_) {} }
+  toast(ok ? `✓ ${what} copied${inClaude() ? ' · paste it to Claude' : ''}` : `Couldn’t copy here · press and hold the text below to copy it`, 4000);
+  return ok;
+}
+
+/* ================= Report (5.49) =================
+   ≡ → Report: a note, an optional email, and Send. The note travels with diagText() and, with Include run
+   on, the save, to REPORT_URL (report-worker/ files it as an issue in a private repo). If that isn't set,
+   or can't be reached, the report is copied and a GitHub issue offered instead. The copy tools stay below. */
+const rep = { msg: '', mail: '', save: true, busy: false, sent: 0, failed: null };
+const repWait = () => rep.sent && performance.now() - rep.sent < 60000;   // one report a minute from here
+const repSends = () => `Sends your note${rep.mail ? ', email' : ''}, the version, browser, screen and any errors${rep.save ? ', and this run' : ''}. Nothing else.`;
+function repTitle() {
+  const where = S && $('splash').hidden ? `${runCode()} · ${S.started ? qLabel(S.t) : 'no line yet'}${S.over ? ' · lost' : ''}${S.hard ? ' · hard' : ''}${S.tut ? ' · walkthrough' : ''}` : 'start screen';
+  const note = rep.msg.replace(/\s+/g, ' ').trim();
+  return `v${VERSION} · ${where}${note ? ` · ${note.length > 60 ? note.slice(0, 59) + '…' : note}` : ''}`;
+}
+function issueLink(f) {
+  const body = `${rep.msg ? rep.msg + '\n\n' : ''}Diagnostics:\n\n\`\`\`text\n${f.diag}\n\`\`\``;
+  const short = `${rep.msg ? rep.msg + '\n\n' : ''}Diagnostics (copied, paste them here):\n\n`;
+  const u = b => `${ISSUE_URL}?title=${encodeURIComponent(f.title)}&body=${encodeURIComponent(b)}`;
+  return u(body).length < 7500 ? u(body) : u(short);
+}
+function repFailHTML() {
+  const f = rep.failed; if (!f) return '';
+  const head = f.why === 'slow down' ? 'Too many reports just now.' : 'Couldn’t send it from here.';
+  return `<div class="repfail"><b>${head}</b> ${f.copied ? 'It’s copied.' : 'Copy it below.'} Paste it in a <a href="${esc(issueLink(f))}" target="_blank" rel="noopener">GitHub issue ↗</a> (public, needs an account)${inClaude() ? ', or to Claude' : ''}.</div>`;
 }
 function diagBody() {
-  return `<p>If something goes wrong, copy this and paste it to Claude. It’s the game’s state and your device, nothing personal.</p>
-    <div class="row"><button class="primary" data-a="copyDiag">Copy diagnostics</button><button data-a="copySave">Copy save too (bigger)</button></div>
-    <p class="credit" style="margin-top:8px">The save lets Claude load your exact moment. If copying is blocked, press and hold the text to copy it.</p>
-    <textarea id="diagText" class="diag" readonly spellcheck="false">${esc(diagText())}</textarea>`;
+  const wait = repWait(), off = rep.busy || wait;
+  return `<p>Something wrong or odd? Say what happened and send it to the developer, with the game’s state.</p>
+    <textarea id="repMsg" class="rep" maxlength="4000" rows="3" placeholder="What happened? (optional)" aria-label="What happened">${esc(rep.msg)}</textarea>
+    <input id="repMail" class="rep" type="email" maxlength="200" placeholder="Email, if you’d like a reply (optional)" aria-label="Email, if you’d like a reply" autocomplete="email" value="${esc(rep.mail)}">
+    <input id="repHp" class="hp" type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">
+    <div class="row"><button class="primary" data-a="sendRep" ${off ? 'aria-disabled="true"' : ''}>${rep.busy ? 'Sending…' : wait ? '✓ Sent · thank you' : '⚑ Send report'}</button><button class="tog${rep.save ? ' on' : ''}" data-a="repSave" aria-pressed="${rep.save}">${rep.save ? '✓' : '○'} Include run</button></div>
+    ${repFailHTML()}
+    <p class="credit" id="repSends" style="margin-top:8px">${repSends()}</p>
+    <details class="repmore"${inClaude() || (rep.failed && !rep.failed.copied) ? ' open' : ''}><summary>What gets sent · copy</summary>
+      <div class="row" style="margin-top:4px"><button data-a="copyDiag">Copy diagnostics</button><button data-a="copySave">Copy save too (bigger)</button></div>
+      <textarea id="diagText" class="diag" readonly spellcheck="false">${esc(rep.failed ? rep.failed.text : diagText())}</textarea>
+    </details>`;
+}
+const repRedraw = () => { if (modalKind === 'log' && logTab === 'diag') { const lb = MC.querySelector('.lbody'), st = lb ? lb.scrollTop : 0; showLog(null, 'diag'); const nb = MC.querySelector('.lbody'); if (nb) nb.scrollTop = st; } };
+async function sendReport() {
+  if (rep.busy || repWait()) return;
+  const hp = ($('repHp') || {}).value || '';
+  rep.msg = (($('repMsg') || {}).value || rep.msg).slice(0, 4000); rep.mail = (($('repMail') || {}).value || '').trim().slice(0, 200);
+  if (rep.mail && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(rep.mail)) { toast('That email doesn’t look right · or leave it empty', 3200); return; }
+  rep.busy = true; rep.failed = null;
+  const b = MC.querySelector('[data-a="sendRep"]'); if (b) { b.textContent = 'Sending…'; b.setAttribute('aria-disabled', 'true'); }
+  const diag = diagText(), title = repTitle();
+  let ok = false, why = 'not set up';
+  if (REPORT_URL) {
+    let save = ''; if (rep.save && S && S.started) try { save = await saveText(); } catch (_) {}
+    const ac = typeof AbortController === 'function' ? new AbortController() : null, tm = ac ? setTimeout(() => ac.abort(), 20000) : 0;
+    try {
+      // text/plain keeps it a simple request (no CORS preflight); the Worker reads it as JSON
+      const r = await fetch(REPORT_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain' }, signal: ac ? ac.signal : undefined,
+        body: JSON.stringify({ v: VERSION, title, msg: rep.msg.trim(), mail: rep.mail, diag, save, hp, from: location.hostname || location.protocol }) });
+      const j = await r.json().catch(() => ({}));
+      ok = r.ok && !!j.ok; why = j.why || `HTTP ${r.status}`;
+    } catch (e) { why = e && e.name === 'AbortError' ? 'timed out' : 'offline or blocked'; }
+    clearTimeout(tm);
+  }
+  rep.busy = false;
+  if (ok) { rep.sent = performance.now(); rep.msg = ''; toast(`✓ ${gi('iCapy')} Report sent · thank you`, 4000); }
+  else {
+    // copy straight away, while the tap still counts as the player's (Safari won't copy later)
+    const text = `${title}\n\n${rep.msg.trim() ? `Note: ${rep.msg.trim()}\n\n` : ''}${diag}`;
+    rep.failed = { why, title, diag, text, copied: true };
+    diagNote(`report not sent: ${why}`);
+    rep.failed.copied = await copyText(text, 'Report');
+  }
+  repRedraw();
 }
 
 /* ================= Log, hints, toast ================= */
@@ -3443,7 +3529,7 @@ const CTRL_TIP = {
   fit: () => 'Fit the whole map in view',
   play: () => `${S && S.paused ? 'Play' : 'Pause'} <span class="k">Space</span>`,
   speed: () => 'Game speed, and pausing for new places and talks <span class="k">1</span><span class="k">2</span><span class="k">3</span><span class="k">5</span>',
-  log: () => 'Timeline, log, how it works and diagnostics',
+  log: () => 'Timeline, log, how it works, and report a problem',
 };
 function tipText(el) {
   if (el.dataset.tip) return el.dataset.tip;
@@ -3633,12 +3719,17 @@ const modalAct = (a, el) => {
   else if (a === 'sandbox') { S.sandbox = true; S.over = false; saveSoon = true; S.of = S.of.map(v => Math.min(v, .99)); M.hidden = true; modalKind = null; S.paused = false; lastPlay = null; log('Sandbox: freight can pile up without ending the run.', ''); }
   else if (a === 'log') { const html = MC.innerHTML, k = modalKind, n = modalNext; showLog(() => openModal(html, k, n), 'timeline'); }
   else if (a === 'tab') showLog(null, el.dataset.t);
-  else if (a === 'lostDiag') { const html = MC.innerHTML, k = modalKind, n = modalNext; showLog(() => openModal(html, k, n), 'diag'); const t = diagText(); $('diagText').value = t; copyText(t, 'Diagnostics'); }   // 5.26: one tap from the lost card
+  else if (a === 'lostDiag') { const html = MC.innerHTML, k = modalKind, n = modalNext; showLog(() => openModal(html, k, n), 'diag'); if (inClaude()) { const t = diagText(); $('diagText').value = t; copyText(t, 'Diagnostics'); } }   // 5.26: one tap from the lost card · 5.49: opens Report (and still copies in Claude)
+  else if (a === 'sendRep') { if (el.getAttribute('aria-disabled') !== 'true') sendReport(); }
+  else if (a === 'repSave') { rep.save = !rep.save; el.classList.toggle('on', rep.save); el.setAttribute('aria-pressed', rep.save); el.textContent = `${rep.save ? '✓' : '○'} Include run`; const s = $('repSends'); if (s) s.textContent = repSends(); }
   else if (a === 'copyDiag') { const t = diagText(); $('diagText').value = t; copyText(t, 'Diagnostics'); }
   else if (a === 'copySave') saveText().then(t => { $('diagText').value = t; copyText(t, `Save (${Math.round(t.length / 1024)} KB)`); });
   else if (a === 'close') { const b = backTo; backTo = null; M.hidden = true; modalKind = null; if (b) b(); else if (!wasPaused) { S.paused = false; lastPlay = null; } }
 };
 onTap(M, modalAct);
+// 5.49: the Report tab keeps what you've typed if you switch tabs or close it; Enter in the email field sends
+MC.addEventListener('input', e => { if (e.target.id === 'repMsg') rep.msg = e.target.value; else if (e.target.id === 'repMail') { rep.mail = e.target.value; const s = $('repSends'); if (s) s.textContent = repSends(); } });
+MC.addEventListener('keydown', e => { if (e.target.id === 'repMail' && e.key === 'Enter') { e.preventDefault(); sendReport(); } });
 // 5.29: with a mouse, a click on the map around a panel closes it, as its own Close or Not now would. Panels that
 // need a choice (the Alliance Shop, the end of a run) stay; touch is unchanged, so a stray tap can't close one.
 const BG_CLOSE = { log: 'close', talks: 'close', five: 'no5' };
@@ -3665,7 +3756,7 @@ function showLog(back, tab) {
   if (!back && modalKind !== 'log') pauseFor();
   if (modalKind !== 'log') backTo = back || null;
   logTab = tab || logTab;
-  const tabs = `<div class="tabs">${[['timeline', 'Timeline'], ['log', 'Log'], ['help', 'Help'], ['diag', 'Diag']].map(([k, n]) => `<button data-a="tab" data-t="${k}" class="${logTab === k ? 'on' : ''}">${n}</button>`).join('')}</div>`;
+  const tabs = `<div class="tabs">${[['timeline', 'Timeline'], ['log', 'Log'], ['help', 'Help'], ['diag', 'Report']].map(([k, n]) => `<button data-a="tab" data-t="${k}" class="${logTab === k ? 'on' : ''}">${n}</button>`).join('')}</div>`;
   let body;
   if (logTab === 'help') body = helpBody();
   else if (logTab === 'diag') body = diagBody();
@@ -3686,7 +3777,7 @@ function showLog(back, tab) {
       <div class="eyebrow" style="margin-top:12px">Places</div><ul class="ledger tl">${places}</ul>
       <div class="eyebrow" style="margin-top:12px">Storm sensors · bought, not connected</div><ul class="ledger tl">${SENSORS.map((z, k) => !SCEN[S.scen].sensors.includes(z.id) ? '' : `<li class="${S.sensor[k] ? '' : 'later'}"><span class="t">${z.st === 'now' ? 'now' : sensorFrom(k)}</span><span><b>${z.name}</b> <span class="st st-${z.st}">${STATUS[z.st]}</span> <span class="when">${S.sensor[k] ? 'yours' : fmt(z.cost)}</span><br>${esc(z.note)}</span></li>`).join('')}</ul>`;
   }
-  openModal(`<div class="lbody"><h2>${{ log: 'Log', help: 'How it works', timeline: 'Timeline', diag: 'Diagnostics' }[logTab]}</h2>${body}</div><div class="foot">${tabs}<button class="ghost" data-a="home">Start screen</button><button class="primary" data-a="close">Close</button></div>`, 'log', modalKind === 'log' ? modalNext : null);
+  openModal(`<div class="lbody"><h2>${{ log: 'Log', help: 'How it works', timeline: 'Timeline', diag: 'Report a problem' }[logTab]}</h2>${body}</div><div class="foot">${tabs}<button class="ghost" data-a="home">Start screen</button><button class="primary" data-a="close">Close</button></div>`, 'log', modalKind === 'log' ? modalNext : null);
 }
 function helpBody() {
   return `<ul>
@@ -3723,7 +3814,7 @@ function helpBody() {
     <li><b>Saving.</b> Your run saves itself as you play, and when you close the page. Continue on the start screen picks it up where you left off. A run that ends is not kept.</li>
     <li><b>Other system’s storms.</b> When a storm or flare is coming on the map you’re not looking at and a shield there would help, a message says so and the ⇄ button turns amber.</li>
     <li><b>Alliance Shop.</b> The shop opens once a period (the countdown is at the top right). The Alliance sends a ship each time, and every third time a line too. Buy what you like from the budget, then pick one free upgrade, or skip it and bank the interest, to close the shop.</li>
-    <li><b>Diagnostics.</b> Something odd? ≡ menu → Diag → Copy diagnostics (or Copy diag on the Network Lost card), and paste it to Claude. “Copy save too” adds the run itself, so it can be loaded exactly as it was.</li>
+    <li><b>Report a problem.</b> Something odd? ≡ menu → Report (or ⚑ Report on the Network Lost card): say what happened and Send. It goes to the developer with the game’s state, and with Include run on, the run itself, so it can be loaded exactly as it was. What gets sent · copy shows all of it, with Copy diagnostics and Copy save.</li>
     <li><b>Keyboard.</b> On a computer: Space plays or pauses, 1, 2, 3 and 5 set the speed, Esc closes the bar along the bottom. While you draw or reshape a line, Esc or the right mouse button cancels it. Scroll to zoom; drag empty space, or hold the middle or right button anywhere, to pan.</li>
     <li><b>Speed.</b> Tap the speed button for 0.1× and 0.5× slow motion or 2×, 3× and 5× (5× asks first). When a new place opens, or a restless place votes on a demand or declares independence, the game pauses so you don’t miss it: white rings spread from any place that isn’t on a line yet, amber rings from a place that wants to talk, the play button pulses, and ▶ carries on. Turn the pause off with the “❚❚ new place · talks” switch in the same menu.</li>
     <li><b>Capybaras.</b> They run the Alliance. The quartermaster at the Alliance Shop has advice, and late in a run a capybara envoy can calm a restless place for free, once a period.</li>

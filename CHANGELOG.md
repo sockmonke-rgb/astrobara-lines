@@ -1,5 +1,11 @@
 # Changelog
 
+## 5.49
+- **Report a problem.** ≡ → **Report** (it was Diag) has a box to say what happened, an optional email for a reply, and **⚑ Send report**. The report carries the game's version, browser, screen, recent log and any errors, and with **Include run** on (the default), the run itself, so it can be loaded exactly as it was. What gets sent · copy shows all of it, with Copy diagnostics and Copy save as before.
+- The Network Lost card's Copy diag is now **⚑ Report**, and opens the same tab. Inside Claude it still copies the diagnostics straight away.
+- Reports go to a small Cloudflare Worker that files each one as an issue in a private repo (`report-worker/`, with setup steps). Until it's live, or if it can't be reached, Send copies the report and offers a GitHub issue instead.
+- A pasted save that arrives in parts (a big one from a report) loads as one.
+
 ## 5.48
 - **Normal and Hard.** Pick on the start screen; it's remembered. **Hard** is the tuning you've been playing: upkeep up to 60% of earnings, long lines without a ◆ fuel stop run 30% slower, breakdowns late in a run, and the late red ring closes in 20s. **Normal** is gentler: upkeep capped at 35% with a smaller share per ship, no fuel slowdown, breakdowns about 2.5× rarer, and the red ring stays at 30s. Everything else is the same.
 - New players start on Normal. Runs saved before 5.48 continue on Hard, since that's how they were played. Same code again and playing a code from the leaderboard keep that run's difficulty. The leaderboard marks hard runs, and the date line says "· hard" during one.

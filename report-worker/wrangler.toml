@@ -1,0 +1,8 @@
+# Only needed to deploy from a terminal (npx wrangler deploy). Pasting worker.js into the
+# Cloudflare dashboard works without it; see SETUP.md.
+name = "astrobara-report"
+main = "worker.js"
+compatibility_date = "2025-09-01"
+
+# The token goes in as a secret, never in this file:
+#   npx wrangler secret put GITHUB_TOKEN
