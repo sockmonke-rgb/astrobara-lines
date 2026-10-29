@@ -528,7 +528,7 @@ button.link{height:auto;min-height:0;padding:2px 0;border:none;background:none;c
       <svg class="lines" id="splashLines" aria-hidden="true"></svg>
       <div class="big" aria-hidden="true"><svg viewBox="0 0 64 64"><use href="#capy"/></svg></div>
       <div class="txt">
-        <div class="eyebrow" id="splashEyebrow">Prototype 5.50</div>
+        <div class="eyebrow" id="splashEyebrow">Prototype 5.51</div>
         <h1>Astrobara Lines</h1>
         <p>Capybaras run the Lagrange Alliance’s freight. <b>Drag through places</b> to draw a shipping line. Freight shape = where it’s going. Too much waiting fills a red ring; a full ring ends the run.</p>
         <div class="scen" role="radiogroup" aria-label="Start in">
@@ -607,7 +607,7 @@ const $ = id => document.getElementById(id);
 const app = $('app'), cv = $('cv'), ctx = cv.getContext('2d');
 
 /* ================= Tuning ================= */
-const VERSION = '5.50';
+const VERSION = '5.51';
 // 5.49: where ≡ → Report sends reports: a Cloudflare Worker that files each one as an issue in a private repo
 // (report-worker/ has its code and setup). While it's empty, Report copies the report and offers a GitHub issue.
 const REPORT_URL = '';
@@ -3111,7 +3111,9 @@ function refreshPop(force) {
       const how = lineHow(L);
       // one little hull per ship, numbered like the badges on the map
       const nowMs = performance.now(), hulls = L.ships.map((sh, k) => `<span class="hull${bornAt.has(sh) && nowMs - bornAt.get(sh) < 700 ? ' new' : ''}${sel.ship === sh ? ' on' : ''}" data-a="pickHull" data-k="${k}" role="button" aria-label="Ship ${k + 1}" style="--c:${L.color}">${k + 1}${sh.pods ? '<i></i>'.repeat(sh.pods) : ''}${sh.fix || sh.brk ? '🔧' : ''}</span>`).join('');
-      const html = `${hulls}<span>${how} · holds ${cap}${L.dry ? ` · no ${shp('diamond')} fuel, slow` : ''}</span>`;
+      // 5.51: with a ship picked, what it carries takes the place of the line's summary (tap its number again to go back)
+      const pk = sel.ship && L.ships.includes(sel.ship) ? sel.ship : null;
+      const html = `${hulls}<span>${pk ? loadText(pk) : `${how} · holds ${cap}`}${L.dry ? ` · no ${shp('diamond')} fuel, slow` : ''}</span>`;
       const el = P.querySelector('[data-f="lst"]'); if (el && el.dataset.sig !== html) { el.dataset.sig = html; el.innerHTML = html; }
       setF('nShips', String(S.inv.ships), true); setF('nPods', String(S.inv.pods), true); setF('lyr', yrTag(L.stops));
       const nudge = P.querySelector('[data-a="addShip"]'); if (nudge) nudge.classList.toggle('nudge', !!(S.tut && S.tut.step === 5 && S.inv.ships > 0));
@@ -3794,7 +3796,7 @@ function helpBody() {
       <br>· <b>››</b> at a place's corner: a fast dock · <b>%</b>: a toll, deliveries there pay less for a while
       <br>· <b>red badge with a wrench</b>: storm damage, tap to repair · <b>orange flag</b>: restless crews (dashed orange outline: independent)
       <br>· <b>crossed-out ${shp('diamond')}</b> halfway along a line: no ${shp('diamond')} fuel stop, its ships run ${Math.round((1 - FUEL_SLOW) * 100)}% slower
-      <br>· <b>numbered badges</b> on ships: ship 1, 2, 3 of the line · <b>amber outline / 🔧</b> on a ship: breaking down · <b>white ring</b>: the ship you picked
+      <br>· <b>numbered badges</b> on ships: ship 1, 2, 3 of the line · <b>amber outline / 🔧</b> on a ship: breaking down · <b>white ring</b>: the ship you picked, drawn on top, with what it carries beside its number
       <br>· <b>dashed amber circle</b>: a storm on its way · <b>shaded orange circle</b>: a storm now · <b>NEW</b>: just opened · <b>arrows at the screen edge</b>: places off screen (red: crowding)</li>
     <li><b>Lines.</b> Drag from a place through others to draw a line. Drag the round knob at either end to extend it (dragging from a place starts a new line, unless a line is selected and ends there: then it extends that line; a selected line’s knobs can be grabbed from a little further away too), or drag the knob back along the line to cut stops off (as many as you like, down to two), or drop it on the line’s first stop to make a loop. While drawing, go back over the stops one by one to take them off (going straight back to the first stop makes a loop instead); with a mouse, Esc or the right button cancels the whole drag. Undo appears for a few seconds after every change. Changing a line you already have costs a little (never more than you have, and Undo gives it back); drawing a new one is free. Tap a line to add ships or pods, or to remove it.</li>
     <li><b>Ships.</b> On a line, ships shuttle back and forth between the ends. On a loop they go round, split between the two ways: if they bunch up going one way, one turns round at its next stop. On a loop with one ship, freight rides the long way round. The pointed end shows which way a ship is heading.</li>
@@ -3861,6 +3863,29 @@ function drawFreight(want, x, y, r, col) {
   ringHalf(x, y, d, false, col, w, e);
   ctx.fillStyle = col; ctx.strokeStyle = 'rgba(4,6,11,.8)'; ctx.lineWidth = e; shapePath(want, x, y, d); ctx.stroke(); ctx.fill();
   ringHalf(x, y, d, true, col, w, e);
+}
+// 5.51: the picked ship's load, in a pill beside its number badge: each piece of freight in its destination's shape and
+// colour, then a faint dot per free slot, five to a row, read top to bottom. The pill sits up and to the right of the
+// badge (x, y - hl - 9), off the ship; it drops below the ship near the top of the map, and goes left near the right edge.
+function drawLoad(L, sh, x, y, hl) {
+  const cap = shipCap(sh), n = sh.cargo.length, cols = 5, gp = 9.5 * uk, rows = Math.max(1, Math.ceil(cap / cols)), pad = 7 * uk;
+  const pw = (Math.min(Math.max(cap, 1), cols) - 1) * gp + 2 * pad, ph = (rows - 1) * gp + 2 * pad, { side, top, rw } = mapBox();
+  let px = x + 12, py = y - hl - 9 + pad - ph;           // bottom row level with the badge
+  if (py < top + 4) py = y + hl + 6;                      // no room above: just under the ship instead
+  if (px + pw > side + rw) px = x - 12 - pw;              // no room to the right: the badge's left
+  ctx.fillStyle = 'rgba(4,6,11,.86)'; ctx.strokeStyle = L.color; ctx.lineWidth = 1.6;
+  ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(px, py, pw, ph, 6 * uk); else ctx.rect(px, py, pw, ph); ctx.fill(); ctx.stroke();
+  for (let k = 0; k < cap; k++) {
+    const fx = px + pad + (k % cols) * gp, fy = py + pad + Math.floor(k / cols) * gp;
+    if (k < n) { const w = sh.cargo[k].want; drawFreight(w, fx, fy, 3.5 * uk, TINT[w] || '#d8dee9'); }
+    else { ctx.fillStyle = 'rgba(233,237,244,.25)'; ctx.beginPath(); ctx.arc(fx, fy, 1.5 * uk, 0, Math.PI * 2); ctx.fill(); }
+  }
+}
+// 5.51: what a ship carries, for the line panel: grouped by destination, most first ("5★ 2◆ · 7/12"), or "empty · 0/12"
+function loadText(sh) {
+  const m = new Map(); for (const c of sh.cargo) m.set(c.want, (m.get(c.want) || 0) + 1);
+  const g = [...m].sort((a, b) => b[1] - a[1]).map(([w, k]) => `${k}${shp(w)}`).join(' ');
+  return `${g || 'empty'} · ${sh.cargo.length}/${shipCap(sh)}`;
 }
 function polyline(pts) { ctx.beginPath(); pts.forEach((p, i) => (i ? ctx.lineTo(X(p.x), Y(p.y)) : ctx.moveTo(X(p.x), Y(p.y)))); }
 function sampleAt(sg, d) {
@@ -4149,8 +4174,10 @@ function draw(rdt) {
     }
     if (drag.mode === 'extend') previewPath(drag.stops, drag.L.color, drag.p, drag.loop && drag.stops.length >= 3, false, `${drag.L.name} line${redrawFee() ? ' · −' + fmt(redrawFee()) : ''}`);
   }
-  // ships (the selected line's last, bigger, outlined and numbered)
-  shipSpots = [];
+  // ships (the selected line's last, bigger, outlined and numbered). 5.51: the ship you picked waits until after the
+  // places, so it is on top of everything, even docked under a place or stacked with its line's other ships, and
+  // shows its freight beside its number. (Its tap spot keeps its usual order.)
+  shipSpots = []; let picked = null;
   for (const L of order) for (let si = 0; si < L.ships.length; si++) {
     const sh = L.ships[si], chosen = L.id === selId;
     let pos;
@@ -4166,31 +4193,35 @@ function draw(rdt) {
     }
     const bt = bornAt.has(sh) ? (performance.now() - bornAt.get(sh)) / 1000 : 9, pop = bt < .45 ? 1 + .55 * Math.sin(bt / .45 * Math.PI) : 1;
     const zk = uk * (chosen ? 1.3 : 1) * pop, x = X(pos.x), y = Y(pos.y), len = (22 + 8 * sh.pods) * zk, wid = 11 * zk, hl = len / 2, hw = wid / 2, nose = 6 * zk, rr = 3 * zk;
-    if (chosen) { ctx.fillStyle = 'rgba(255,255,255,.1)'; ctx.beginPath(); ctx.arc(x, y, hl + 4, 0, Math.PI * 2); ctx.fill(); }
     shipSpots.push({ L, sh, x, y, r: hl });
-    if (sel && sel.ship === sh) { ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2.5; ctx.globalAlpha = .7 + .25 * Math.sin(clock * 5); ctx.beginPath(); ctx.arc(x, y, hl + 6, 0, Math.PI * 2); ctx.stroke(); ctx.globalAlpha = 1; }   // 5.38: the ship you picked
-    if (bt < 1.6) { ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2.5; ctx.globalAlpha = 1 - bt / 1.6; ctx.beginPath(); ctx.arc(x, y, hl + 5 + bt * 14, 0, Math.PI * 2); ctx.stroke(); ctx.globalAlpha = 1; }
-    ctx.save(); ctx.translate(x, y); ctx.rotate(pos.ang); ctx.globalAlpha = selId != null && !chosen ? .3 : 1;
-    const sick = sh.fix || (sh.brk && Math.sin(clock * 10) > 0);
-    ctx.fillStyle = L.color; ctx.strokeStyle = sick ? '#ffc35a' : chosen ? '#ffffff' : '#04060b'; ctx.lineWidth = sick ? 2.6 : chosen ? 2.2 : 2; ctx.lineJoin = 'round';
-    if (sh.fix) ctx.globalAlpha *= .55;
-    // a hull with a pointed nose, so you can see which way it is going
-    ctx.beginPath(); ctx.moveTo(-hl + rr, -hw); ctx.lineTo(hl - nose, -hw); ctx.lineTo(hl, 0); ctx.lineTo(hl - nose, hw); ctx.lineTo(-hl + rr, hw);
-    ctx.quadraticCurveTo(-hl, hw, -hl, hw - rr); ctx.lineTo(-hl, -hw + rr); ctx.quadraticCurveTo(-hl, -hw, -hl + rr, -hw); ctx.closePath(); ctx.fill(); ctx.stroke();
-    const n = sh.cargo.length, cols = Math.ceil(shipCap(sh) / 2), cw = (len - nose - 4 * zk) / cols;
-    ctx.fillStyle = '#0a0f1c'; const cb = 2.6 * zk;
-    for (let k = 0; k < n; k++) ctx.fillRect(-len / 2 + 3 * zk + (k % cols) * cw + (cw - cb) / 2, -wid / 2 + 2.2 * zk + Math.floor(k / cols) * 3.8 * zk, cb, cb);
-    ctx.restore();
-    if (sh.fix) { ctx.font = `${Math.round(12 * uk)}px system-ui, sans-serif`; ctx.textAlign = 'center'; ctx.fillText('🔧', x, y - hl - (chosen ? 20 : 6)); }
-    if (chosen && L.ships.length > 0) {
-      // number badge, kept upright
-      const by = y - hl - 9; ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(x, by, 8, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = '#0a0f1c'; ctx.font = '700 11px "IBM Plex Mono", ui-monospace, monospace'; ctx.textAlign = 'center'; ctx.fillText(String(si + 1), x, by + 4);
-    }
+    const paint = () => {
+      if (chosen) { ctx.fillStyle = 'rgba(255,255,255,.1)'; ctx.beginPath(); ctx.arc(x, y, hl + 4, 0, Math.PI * 2); ctx.fill(); }
+      if (sel && sel.ship === sh) { ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2.5; ctx.globalAlpha = .7 + .25 * Math.sin(clock * 5); ctx.beginPath(); ctx.arc(x, y, hl + 6, 0, Math.PI * 2); ctx.stroke(); ctx.globalAlpha = 1; }   // 5.38: the ship you picked
+      if (bt < 1.6) { ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2.5; ctx.globalAlpha = 1 - bt / 1.6; ctx.beginPath(); ctx.arc(x, y, hl + 5 + bt * 14, 0, Math.PI * 2); ctx.stroke(); ctx.globalAlpha = 1; }
+      ctx.save(); ctx.translate(x, y); ctx.rotate(pos.ang); ctx.globalAlpha = selId != null && !chosen ? .3 : 1;
+      const sick = sh.fix || (sh.brk && Math.sin(clock * 10) > 0);
+      ctx.fillStyle = L.color; ctx.strokeStyle = sick ? '#ffc35a' : chosen ? '#ffffff' : '#04060b'; ctx.lineWidth = sick ? 2.6 : chosen ? 2.2 : 2; ctx.lineJoin = 'round';
+      if (sh.fix) ctx.globalAlpha *= .55;
+      // a hull with a pointed nose, so you can see which way it is going
+      ctx.beginPath(); ctx.moveTo(-hl + rr, -hw); ctx.lineTo(hl - nose, -hw); ctx.lineTo(hl, 0); ctx.lineTo(hl - nose, hw); ctx.lineTo(-hl + rr, hw);
+      ctx.quadraticCurveTo(-hl, hw, -hl, hw - rr); ctx.lineTo(-hl, -hw + rr); ctx.quadraticCurveTo(-hl, -hw, -hl + rr, -hw); ctx.closePath(); ctx.fill(); ctx.stroke();
+      const n = sh.cargo.length, cols = Math.ceil(shipCap(sh) / 2), cw = (len - nose - 4 * zk) / cols;
+      ctx.fillStyle = '#0a0f1c'; const cb = 2.6 * zk;
+      for (let k = 0; k < n; k++) ctx.fillRect(-len / 2 + 3 * zk + (k % cols) * cw + (cw - cb) / 2, -wid / 2 + 2.2 * zk + Math.floor(k / cols) * 3.8 * zk, cb, cb);
+      ctx.restore();
+      if (sh.fix) { ctx.font = `${Math.round(12 * uk)}px system-ui, sans-serif`; ctx.textAlign = 'center'; ctx.fillText('🔧', x, y - hl - (chosen ? 20 : 6)); }
+      if (chosen && L.ships.length > 0) {
+        // number badge, kept upright
+        const by = y - hl - 9; ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(x, by, 8, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#0a0f1c'; ctx.font = '700 11px "IBM Plex Mono", ui-monospace, monospace'; ctx.textAlign = 'center'; ctx.fillText(String(si + 1), x, by + 4);
+      }
+    };
+    if (sel && sel.ship === sh) picked = () => { paint(); drawLoad(L, sh, x, y, hl); }; else paint();
   }
   // places
   onLine = new Set(); for (const L of S.lines) for (const st of L.stops) onLine.add(st);
   for (let i = 0; i < NP; i++) if (inView(i)) drawPlace(i);
+  if (picked) picked();
   drawFx();
   drawLook();
   drawLost();

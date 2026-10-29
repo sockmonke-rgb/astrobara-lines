@@ -1,5 +1,9 @@
 # Changelog
 
+## 5.51
+- **The ship you pick is drawn on top.** It used to sit under the place it was docked at, and under its line's other ships when they stacked up. Now it's above everything, number badge included.
+- **See what a picked ship carries.** A pill beside its number shows each piece of freight in its destination's shape and colour, plus a faint dot per free slot. The line panel swaps "back & forth · holds 40" for that ship's load, e.g. 5★ 2◆ · 7/12. Tap its number again to go back. Handy before taking a ship off, since its freight is dropped where it is.
+
 ## 5.50
 - **Proxima b is the ringed planet.** Its freight now shows a tiny ringed planet too, so it can't be mistaken for a green world's freight or Earth's. Both were teal-ish circles that looked almost the same at freight size. The Help key and the notes use the same icon.
 
