@@ -1,5 +1,13 @@
 # Changelog
 
+## 5.52
+- **A new ship starts the most useful way.** It used to look only at freight at its own stop, default to "forward" otherwise, and simply alternate on loops. Now it weighs both ways, on loops and mid-line alike:
+  - freight at its stop that goes that way counts most;
+  - freight at the stops ahead that way counts too, more if the stop is close or crowded;
+  - another ship of the line already heading that way, right there or one stop ahead, halves that way's worth, so ships spread out instead of bunching.
+  With nothing waiting either way, it goes the way fewer of the line's ships are heading. Line ends still have only one way.
+- The note when you place a ship says which way it set off, e.g. Verdance Well → Basin Works.
+
 ## 5.51
 - **The ship you pick is drawn on top.** It used to sit under the place it was docked at, and under its line's other ships when they stacked up. Now it's above everything, number badge included.
 - **See what a picked ship carries.** A pill beside its number shows each piece of freight in its destination's shape and colour, plus a faint dot per free slot. The line panel swaps "back & forth · holds 40" for that ship's load, e.g. 5★ 2◆ · 7/12. Tap its number again to go back. Handy before taking a ship off, since its freight is dropped where it is.

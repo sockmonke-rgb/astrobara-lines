@@ -528,7 +528,7 @@ button.link{height:auto;min-height:0;padding:2px 0;border:none;background:none;c
       <svg class="lines" id="splashLines" aria-hidden="true"></svg>
       <div class="big" aria-hidden="true"><svg viewBox="0 0 64 64"><use href="#capy"/></svg></div>
       <div class="txt">
-        <div class="eyebrow" id="splashEyebrow">Prototype 5.51</div>
+        <div class="eyebrow" id="splashEyebrow">Prototype 5.52</div>
         <h1>Astrobara Lines</h1>
         <p>Capybaras run the Lagrange Alliance’s freight. <b>Drag through places</b> to draw a shipping line. Freight shape = where it’s going. Too much waiting fills a red ring; a full ring ends the run.</p>
         <div class="scen" role="radiogroup" aria-label="Start in">
@@ -607,7 +607,7 @@ const $ = id => document.getElementById(id);
 const app = $('app'), cv = $('cv'), ctx = cv.getContext('2d');
 
 /* ================= Tuning ================= */
-const VERSION = '5.51';
+const VERSION = '5.52';
 // 5.49: where ≡ → Report sends reports: a Cloudflare Worker that files each one as an issue in a private repo
 // (report-worker/ has its code and setup). While it's empty, Report copies the report and offers a GitHub issue.
 const REPORT_URL = '';
@@ -1255,12 +1255,35 @@ const busiestStop = L => { let k = 0, most = -1; L.stops.forEach((p, i) => { if 
 function addShip(L, at) {
   if (S.inv.ships < 1) return `No spare ${gi('iShip')}`;
   // 5.32: it starts where you chose, or else at the busiest stop
-  const k = at != null && at >= 0 && at < L.stops.length ? at : busiestStop(L), m = L.stops.length, p = L.stops[k];
-  // on a loop, every second ship goes the other way round; mid-line (5.32), the way most of the freight there is going
-  const fw = L.ships.filter(s => s.dir > 0).length, ways = d => S.Q[p].filter(c => helps(c, p, L.stops[k + d])).length;
-  const dir = L.loop ? (fw > L.ships.length - fw ? -1 : 1) : k === m - 1 ? -1 : k === 0 ? 1 : ways(-1) > ways(1) ? -1 : 1;
+  const k = at != null && at >= 0 && at < L.stops.length ? at : busiestStop(L), dir = startDir(L, k, shipCap({ pods: 0 }));
   S.inv.ships--; L.ships.push({ k, dir, d: 0, state: 'stop', dwell: 0.2, cargo: [], pods: 0, wait: 0 });
   trayUI(); return null;
+}
+// 5.52: which way a new ship at stop k starts, on loops and mid-line alike: the way that gets the most waiting freight
+// moving soonest. Freight at k for that way counts most (as much as the ship holds); then freight at the stops ahead
+// that way, worth more the closer the stop and the fuller it is (at a line's end the ship turns, so freight there going
+// back counts too). Each of the line's ships already heading that way at, into or one stop past k halves that way's
+// worth, so ships spread out instead of bunching. A tie (say, nothing waiting): the way fewer of the line's ships head.
+// A line's ends have only one way.
+function startDir(L, k, cap) {
+  const m = L.stops.length;
+  if (m < 2 || (!L.loop && k === 0)) return 1;
+  if (!L.loop && k === m - 1) return -1;
+  const heading = o => (o.state === 'stop' ? nextDir(L, o) : o.dir), inLine = j => j >= 0 && j < m;
+  const worth = d => {
+    const p = L.stops[k], n0 = stepK(L, k, d);
+    let w = 2 * Math.min(cap, S.Q[p].filter(c => helps(c, p, L.stops[n0])).length);
+    for (let j = n0, s = 1; inLine(j) && j !== k && s < m; j = stepK(L, j, d), s++) {
+      const q = L.stops[j], nx = stepK(L, j, d), turn = !inLine(nx), to = L.stops[turn ? j - d : nx];
+      w += S.Q[q].filter(c => helps(c, q, to)).length * (1 + S.Q[q].length / room(q)) / s;
+    }
+    for (const o of L.ships) if (heading(o) === d && (o.k === k || o.k === n0 || (o.state === 'move' && stepK(L, o.k, o.dir) === k))) w *= .5;
+    return w;
+  };
+  const a = worth(1), b = worth(-1);
+  if (Math.abs(a - b) > 1e-9) return a > b ? 1 : -1;
+  const fw = L.ships.filter(o => heading(o) > 0).length;
+  return fw > L.ships.length - fw ? -1 : 1;
 }
 function removeShip(L, pick) {
   if (!L.ships.length) return 'No ships here';
@@ -3063,7 +3086,8 @@ function placeShip(L, k, el) {
   if (r) { why(r); noFx(el); return r; }
   const sh = L.ships[L.ships.length - 1], p = shipAt(L, sh); bornAt.set(sh, performance.now()); burst(p.x, p.y, sysOf(L.stops[0]), `+ship ${L.ships.length}`, L.color);
   if (sel && sel.type === 'line' && sel.id === L.id) sel.ship = sh;   // 5.44: the ship you just added is the one picked
-  deployFx(el, `+1 ${gi('iShip')} ${esc(L.name)} · from ${esc(placeName(L.stops[sh.k]))} · ${L.ships.length} ship${L.ships.length > 1 ? 's' : ''}`);
+  const toward = L.stops[stepK(L, sh.k, nextDir(L, sh))];   // 5.52: say which way it set off
+  deployFx(el, `+1 ${gi('iShip')} ${esc(L.name)} · ${esc(placeName(L.stops[sh.k]))}${toward != null ? ' → ' + esc(placeName(toward)) : ''} · ${L.ships.length} ship${L.ships.length > 1 ? 's' : ''}`);
   return null;
 }
 function scrapBar(force) {
