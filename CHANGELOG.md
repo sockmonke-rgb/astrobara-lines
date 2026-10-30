@@ -1,5 +1,8 @@
 # Changelog
 
+## 5.58
+- **Fixed: the name and status at the left of the bottom bar could be cut off**, with no way to scroll to the rest. With a place, line or sensor picked, the box squeezed to make room for the buttons, most of all at bigger text sizes, so a tag like "fiction 2225" lost its end. Now the box widens until its name line and both status lines fit. It doesn't get narrower again while the same thing stays picked, so it doesn't jiggle as counts change. If that pushes buttons past the edge, the bar fades there and you drag it sideways to reach them, as it already did when full. It stops growing at about half the bar; tap the box to see everything in a note.
+
 ## 5.57
 - **Fixed: a black band along the bottom on iPhone**, with the map and its bar squeezed above it, until the phone was turned a couple of times. Right after the page loads (the Update button reloads it) or turns, an iPhone can report a window shorter than the screen, and doesn't always say so when it settles. Now:
   - added to an iPhone's home screen, where the game always has the whole screen, it goes by the size of the screen itself;

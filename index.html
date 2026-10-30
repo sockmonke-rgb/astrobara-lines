@@ -557,7 +557,7 @@ button.link{height:auto;min-height:0;padding:2px 0;border:none;background:none;c
       <svg class="lines" id="splashLines" aria-hidden="true"></svg>
       <div class="big" aria-hidden="true"><svg viewBox="0 0 64 64"><use href="#capy"/></svg></div>
       <div class="txt">
-        <div class="eyebrow" id="splashEyebrow">Prototype 5.57</div>
+        <div class="eyebrow" id="splashEyebrow">Prototype 5.58</div>
         <h1>Astrobara Lines</h1>
         <p>Capybaras run the Lagrange Alliance’s freight. <b>Drag through places</b> to draw a shipping line. Freight shape = where it’s going. Too much waiting fills a red ring; a full ring ends the run.</p>
         <div class="scen" role="radiogroup" aria-label="Start in">
@@ -637,7 +637,7 @@ const $ = id => document.getElementById(id);
 const app = $('app'), cv = $('cv'), ctx = cv.getContext('2d');
 
 /* ================= Tuning ================= */
-const VERSION = '5.57';
+const VERSION = '5.58';
 // 5.49: where ≡ → Report sends reports: a Cloudflare Worker that files each one as an issue in a private repo
 // (report-worker/ has its code and setup). While it's empty, Report copies the report and offers a GitHub issue.
 const REPORT_URL = '';
@@ -3065,6 +3065,7 @@ function layout() {
   cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); cv.style.width = W + 'px'; cv.style.height = H + 'px';
   trackSc = 0; fitCam(); barTop = $('bar').offsetTop || H - 56; plxPrev = null;
   if (typeof splashFit === 'function') splashFit();
+  if (!P.hidden) fitInfo(true);   // 5.58: refit the bar's name and status to the new width
 }
 const X = v => ox + v * sc, Y = v => oy + v * sc;
 const lp = e => (rot ? { x: e.clientY, y: VW - e.clientX } : { x: e.clientX, y: e.clientY });
@@ -3397,6 +3398,21 @@ function dragScroll(el) {
   el.addEventListener('wheel', e => { if (el.scrollWidth > el.clientWidth + 2) { el.scrollLeft += e.deltaX || e.deltaY; e.preventDefault(); } }, { passive: false });
 }
 dragScroll($('tray')); dragScroll(P);
+// 5.58: the name and status at the left of the bar used to squeeze to make room for the buttons and cut off, with
+// nothing to scroll. Now the box widens until its name line and both status lines fit (never narrower while the same
+// thing stays picked, so it doesn't jiggle as counts change) and the bar scrolls sideways, as it does when full, if that
+// pushes buttons past the edge. Past about half the bar it stops growing; tapping the box still shows it all in a note.
+let fitRaf = 0;
+function fitInfo(reset) {
+  const si = P.querySelector('.si'); if (!si || P.hidden) return;
+  if (reset) si.style.minWidth = '';
+  const nm = si.querySelector('.nm'), st = si.querySelector('.st'), cap = Math.max(190, W * .48);
+  const cut = () => (nm && nm.scrollWidth > nm.clientWidth + 1) || (st && st.scrollHeight > st.clientHeight + 1);
+  let w = si.offsetWidth, n = 0;
+  while (cut() && w < cap && n++ < 60) { w = Math.min(cap, w + 12); si.style.minWidth = w + 'px'; }
+  edgeFade(P);
+}
+new MutationObserver(() => { if (!fitRaf) fitRaf = requestAnimationFrame(() => { fitRaf = 0; fitInfo(); }); }).observe(P, { childList: true, subtree: true, characterData: true });
 function setF(f, v, tick) {
   const el = P.querySelector(`[data-f="${f}"]`); if (!el || el.textContent === v) return;
   const was = el.textContent; el.textContent = v;
@@ -5214,7 +5230,7 @@ requestAnimationFrame(frame);
 // Hooks for headless balancing and input tests.
 window.LC = {
   get S() { return S; }, get GEN() { return GEN; }, plx: () => PLX.map(L => ({ ux: L.ux, uy: L.uy, k: L.k, ls: Math.pow(sc / sc0, L.d) })), IDX, PL, YEAR, startRun, step, tutGo, tutEnd, createLine, setStops, removeLine, addShip, removeShip, addPod, shieldPlace, buildDepot, select, room, setLine, openLoop, undo,
-  snapCam, cal, calOf, perOf, lineYear, showLog, setCB, setTextSize, showSettings, get cbSafe() { return cbSafe; }, get TK() { return TK; }, buySensor, SENSORS, setSys, setAutoPause, inScen, trayUI, recordRun, readBoard, openBoard, showLost, endLost, showWin, award, readAch, needList, lookAt, ACH, ask5, qmTip, diagText, saveText, loadSaveText, perf, get capyImg() { return capyImg; }, get won() { return won; }, get lost() { return lost; }, get boardAll() { return boardAll; }, scrap, scrapVal, repairCost, negotiateCost, voteDemand, sysNeeds, get fxs() { return fxs; }, negotiate, startRebel, tunnelEnds, saveAll, readLocal, resumeRun, bestSave, parseCode, runCode, codeOf, splashUI, SCEN, repairPlace, repairSensor, buyOffer, price, sysOf, tunnelOpen, hud, get sc() { return sc; }, UPKEEP, upkeepShare, ovT, reliefFor, BRK_GAP, openPlace, fuelNear, crowdAt, warnRoom, shipSpots: () => shipSpots, get wclock() { return wclock; }, pins: () => pins.map(q => ({ x: rot ? VW - q.y : q.x, y: rot ? q.x : q.y, i: q.i })),
+  snapCam, cal, calOf, perOf, lineYear, showLog, fitInfo, setCB, setTextSize, showSettings, get cbSafe() { return cbSafe; }, get TK() { return TK; }, buySensor, SENSORS, setSys, setAutoPause, inScen, trayUI, recordRun, readBoard, openBoard, showLost, endLost, showWin, award, readAch, needList, lookAt, ACH, ask5, qmTip, diagText, saveText, loadSaveText, perf, get capyImg() { return capyImg; }, get won() { return won; }, get lost() { return lost; }, get boardAll() { return boardAll; }, scrap, scrapVal, repairCost, negotiateCost, voteDemand, sysNeeds, get fxs() { return fxs; }, negotiate, startRebel, tunnelEnds, saveAll, readLocal, resumeRun, bestSave, parseCode, runCode, codeOf, splashUI, SCEN, repairPlace, repairSensor, buyOffer, price, sysOf, tunnelOpen, hud, get sc() { return sc; }, UPKEEP, upkeepShare, ovT, reliefFor, BRK_GAP, openPlace, fuelNear, crowdAt, warnRoom, shipSpots: () => shipSpots, get wclock() { return wclock; }, pins: () => pins.map(q => ({ x: rot ? VW - q.y : q.x, y: rot ? q.x : q.y, i: q.i })),
   redrawFee, chargeRedraw, fixShips, whyCrowded, worstTrouble, selLine, checkUpdate, verNum, get newer() { return newer; }, upkeepDue, berths, docked, queueAt, stuckAt, stuckNote, startSwing, breakdowns, lateGame, ovT, crowdFix,
   toast, toastMs, hideToast, get toastT() { return toastT; },
   fast(sec) { const n = Math.round(sec / STEP); for (let i = 0; i < n && !S.over; i++) step(STEP); },
