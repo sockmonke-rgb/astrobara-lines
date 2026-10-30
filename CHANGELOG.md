@@ -1,5 +1,11 @@
 # Changelog
 
+## 5.56
+- **No pause for an overflow that's about to clear itself.** When a place goes over its room but ships already heading there have enough free space to bring it back under (with one to spare) before its red ring is half full, the game keeps running. The note shows the ship icon and **on the way** instead of what to add.
+- It still pauses if that stops being true: a ship on the way breaks down, a storm closes the stretch, more freight piles up than they can take. And it pauses anyway if the ring reaches half full.
+- Each ship counts the room it will have after dropping what's for that place, only the freight its next stop helps, and minus any freight it drops there to change lines. Two ships never count the same load.
+- Report → diagnostics shows whether ships coming are enough and whether the pause is being held.
+
 ## 5.55
 - **Settings.** ≡ menu → ⚙, or ⚙ on the start screen. Both settings below are kept in this browser and apply at once, so the map behind the panel shows the change.
 - **Colour-blind safe colours.** On, it:

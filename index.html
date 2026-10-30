@@ -557,7 +557,7 @@ button.link{height:auto;min-height:0;padding:2px 0;border:none;background:none;c
       <svg class="lines" id="splashLines" aria-hidden="true"></svg>
       <div class="big" aria-hidden="true"><svg viewBox="0 0 64 64"><use href="#capy"/></svg></div>
       <div class="txt">
-        <div class="eyebrow" id="splashEyebrow">Prototype 5.55</div>
+        <div class="eyebrow" id="splashEyebrow">Prototype 5.56</div>
         <h1>Astrobara Lines</h1>
         <p>Capybaras run the Lagrange Alliance’s freight. <b>Drag through places</b> to draw a shipping line. Freight shape = where it’s going. Too much waiting fills a red ring; a full ring ends the run.</p>
         <div class="scen" role="radiogroup" aria-label="Start in">
@@ -637,7 +637,7 @@ const $ = id => document.getElementById(id);
 const app = $('app'), cv = $('cv'), ctx = cv.getContext('2d');
 
 /* ================= Tuning ================= */
-const VERSION = '5.55';
+const VERSION = '5.56';
 // 5.49: where ≡ → Report sends reports: a Cloudflare Worker that files each one as an issue in a private repo
 // (report-worker/ has its code and setup). While it's empty, Report copies the report and offers a GitHub issue.
 const REPORT_URL = '';
@@ -648,6 +648,7 @@ const SPEED = 80;                 // ship speed in map units per second
 const CAP = 6, POD = 6, MAX_PODS = 2;
 const ROOM = 10, DEPOT_ROOM = 8;  // freight a place holds before it starts to overflow
 const OVERFLOW = 30;              // seconds a place may stay over capacity
+const OV_HOLD = 0.5;              // 5.56: an overflow ships on their way will clear doesn't pause, until its ring is this full
 // 5.21: friction that bites but always leaves you a move
 const OVERFLOW_LATE = 20;         // ...late in a run the ring fills faster, and crowding warnings start earlier
 // 5.31: upkeep is a share of what the network earned since the last shop visit: `ship` per ship in service (a pod counts
@@ -1467,13 +1468,18 @@ function step(dt) {
       const was = S.of[i];
       S.of[i] += dt / ovT();
       // 5.19: an overflow you could miss (in another system, or at 3× and up) pauses the game, once each time it starts
-      if (!was && !S.paused && willPause() && (!inView(i) || S.speed >= 3)) { S.paused = true; S.autoPaused = i; lastPlay = null; }
+      // 5.56: ...unless ships already on their way will clear it. Then it waits, and pauses only if that stops being
+      // true (a ship breaks down, a storm closes the line) or the ring gets half full anyway.
+      const ovW = S.ovW || (S.ovW = {}), missable = !S.paused && willPause() && (!inView(i) || S.speed >= 3);
+      if (!was) { if (missable) ovW[i] = 1; else delete ovW[i]; }
+      if (ovW[i] && missable && (S.of[i] >= OV_HOLD || !reliefFor(i))) { delete ovW[i]; S.paused = true; S.autoPaused = i; lastPlay = null; }
       if (!was && !S.auto) log(`${placeName(i)} is overflowing: ${S.Q[i].length} loads waiting with room for ${room(i)}. Clear it within ${ovT()}s or the run ends.`, 'bad');
       if (S.stat && was < .6 && S.of[i] >= .6) S.stat.close++;
       if (S.stat && S.of[i] >= .9) (S.stat.hi || (S.stat.hi = {}))[i] = 1;
       if (S.of[i] >= 1) { if (S.sandbox) S.of[i] = 1; else { fail(i); return; } }
     } else if (S.of[i] > 0) {
       S.of[i] = Math.max(0, S.of[i] - dt / (ovT() * 1.5));
+      if (!S.of[i] && S.ovW) delete S.ovW[i];
       if (!S.of[i] && S.stat && S.stat.hi && S.stat.hi[i]) { delete S.stat.hi[i]; award('saved'); }
     }
   }
@@ -1569,6 +1575,46 @@ function stuckAt(i) {
   return n ? { n, by, noRoute } : null;
 }
 const stuckNote = i => (S.stuckT && S.stuckT[i] && S.stuckT[i].t >= 4 ? S.stuckT[i] : null);
+// 5.56: whether ships already heading for a place over its room will take enough of its freight to bring it back
+// under, with one to spare, before its ring is OV_HOLD full. Each ship counts the room it will have once it drops
+// what's for here, the waiting loads its next stop helps (nearest ship first, so two don't count the same load),
+// less any loads it drops here to change lines. Ships one stop away, docked or moving, count; broken ones and
+// ones behind a closed stretch don't.
+function reliefFor(i) {
+  const over = S.Q[i].length - room(i);
+  if (over <= 0) return true;
+  const left = (OV_HOLD - S.of[i]) * ovT();
+  if (left <= 0) return false;
+  const come = [];
+  for (const L of S.lines) {
+    const k = L.stops.indexOf(i); if (k < 0) continue;
+    for (const sh of L.ships) {
+      if (sh.fix || (sh.state === 'stop' && sh.k === k)) continue;   // docked here already took what it could
+      const dir = sh.state === 'move' ? sh.dir : nextDir(L, sh);
+      if (stepK(L, sh.k, dir) !== k) continue;
+      const sg = segOf(L, sh.k, dir); if (!sg || sg.closed) continue;
+      const slow = S.debris && !S.shield[IDX.LEO] && (sg.a === IDX.LEO || sg.b === IDX.LEO) ? 0.4 : 1;
+      const v = SPEED * (1 + 0.12 * S.up.fast) * slow * (L.dry ? FUEL_SLOW : 1);
+      const eta = sh.state === 'move' ? Math.max(0, sg.len - sh.d) / v : Math.max(0, sh.dwell) + sg.len / v;
+      if (eta <= left) come.push({ L, sh, k, dir, eta });
+    }
+  }
+  if (!come.length) return false;
+  come.sort((a, b) => a.eta - b.eta);
+  const taken = new Set(); let net = 0;
+  for (const { L, sh, k, dir: d0 } of come) {
+    const d = L.loop ? d0 : k >= L.stops.length - 1 ? -1 : k <= 0 ? 1 : d0;   // the way it leaves here
+    const q = L.stops[stepK(L, k, d)], sg = segOf(L, k, d);
+    if (q == null || !sg || sg.closed) continue;
+    const lap = oneWay(L), rides = c => helps(c, i, q) || (lap && ahead(L, k, d, c, i));
+    let keep = 0, drop = 0;
+    for (const c of sh.cargo) { if (S.shape[i] === c.want) { if (swingLive('strike', i)) keep++; continue; } if (rides(c)) keep++; else drop++; }
+    let free = shipCap(sh) - keep, took = 0;
+    for (let j = 0; j < S.Q[i].length && free > 0; j++) if (!taken.has(j) && rides(S.Q[i][j])) { taken.add(j); free--; took++; }
+    net += took - drop;
+  }
+  return net >= over + 1;
+}
 // 5.21: how many ships a place loads at once, and how many are loading or waiting there now
 const berths = i => BERTHS + (S.fastDock && S.fastDock[i] ? 2 : 0) + (PL[i].rate === 0 ? 2 : 0);
 function docked(i) { let n = 0; for (const L of S.lines) for (const sh of L.ships) if (sh.state === 'stop' && L.stops[sh.k] === i) n++; return n; }
@@ -2641,7 +2687,7 @@ function diagText() {
     { const f = S.over ? (lost ? lost.i : S.fail) : null; if (f != null) L.push(`LOST at ${nm(f)} ${lost ? lost.waiting : S.Q[f].length}/${lost ? lost.room : room(f)} · wants ${wants(f)} · lines ${S.lines.filter(x => x.stops.includes(f)).map(x => `${x.name}:${x.ships.length}`).join(' ') || 'none'} · why: ${plainText((lost && lost.why) || whyCrowded(f).story || '-')}`); }
     L.push(`places: ` + PL.map((pl, i) => (S.open[i] ? `${nm(i)} (${kind(i)}${onLines(i) ? '' : ', NO LINE'}) ${S.Q[i].length}/${room(i)}${S.of[i] > 0 ? ' ring ' + Math.round(S.of[i] * 100) + '%' : ''}${S.dmg[i] ? ' damaged' : ''}${S.shield[i] ? ' shield' : ''}${S.depot[i] ? ' depot' : ''}${S.fastDock && S.fastDock[i] ? ' dock' : ''}${S.unrest && S.unrest[i] >= .3 ? ' unrest ' + Math.round(S.unrest[i] * 100) + '%' : ''}${rebelNow(i) ? ' INDEPENDENT' : ''}` : '')).filter(Boolean).join(', '));
     L.push(`hazard: ${S.haz ? `${S.haz.type} ${S.haz.phase} "${plainText(S.haz.title)}" at ${S.haz.at.toFixed(1)}` : 'none'} · next at ${S.nextHaz != null ? S.nextHaz.toFixed(0) : '-'} · boom ${S.boom ? S.boom.shape : 'none'} · opening act ${JSON.stringify(S.script || [])}`);
-    { const ov = overflowing(); if (ov >= 0) L.push(`overflowing: ${PL[ov].id} ${placeName(ov)} · ${plainText(whyCrowded(ov).note)}`); }
+    { const ov = overflowing(); if (ov >= 0) L.push(`overflowing: ${PL[ov].id} ${placeName(ov)} · ${plainText(whyCrowded(ov).note)} · ring ${Math.round(S.of[ov] * 100)}% · ships coming ${reliefFor(ov) ? 'enough' : 'not enough'}${S.ovW && S.ovW[ov] ? ' · pause held' : ''}`); }
     L.push(`note: ${S.hint ? S.hint.id : 'none'} · selected ${sel ? sel.type + ' ' + sel.id : 'nothing'} · awards ${Object.keys(readAch()).filter(k => ACH.some(a => a.id === k)).length}/${ACH.length} · board rows ${readBoard().length}`);
     L.push('recent log:'); for (const e of S.log.slice(-15)) L.push(`  ${qShort(e.t)} ${plainText(e.text)}`);
   }
@@ -3615,6 +3661,8 @@ function whyCrowded(i) {
   if (dry) return { note: `${dry.name} has no ${shp('diamond')} fuel, runs slow${fuelNear(dry) >= 0 ? ` · add ${shp('diamond')} ${esc(placeName(fuelNear(dry)))} to it` : ''}`, story: `The ${dry.name.toLowerCase()} line had no ${shp('diamond')} fuel stop, so its ships ran ${Math.round((1 - FUEL_SLOW) * 100)}% slow.` };
   const broken = mine.find(L => L.ships.some(x => x.fix));
   if (broken) return { note: `${broken.name} ship broken down`, story: `A ship on the ${broken.name.toLowerCase()} line was broken down.`, go: { label: `Repair ${fmt(repairCost())}`, line: broken.id } };
+  // 5.56: ships on their way will clear it, so there's nothing to do yet
+  if (S.Q[i].length > room(i) && reliefFor(i)) return { note: `${gi('iShip')} on the way`, story: 'It made more freight than its lines could carry away.' };
   return { note: crowdFix(i), story: 'It made more freight than its lines could carry away.' };
 }
 function crowdFix(i) {
@@ -5140,7 +5188,7 @@ requestAnimationFrame(frame);
 // Hooks for headless balancing and input tests.
 window.LC = {
   get S() { return S; }, get GEN() { return GEN; }, plx: () => PLX.map(L => ({ ux: L.ux, uy: L.uy, k: L.k, ls: Math.pow(sc / sc0, L.d) })), IDX, PL, YEAR, startRun, step, tutGo, tutEnd, createLine, setStops, removeLine, addShip, removeShip, addPod, shieldPlace, buildDepot, select, room, setLine, openLoop, undo,
-  snapCam, cal, calOf, perOf, lineYear, showLog, setCB, setTextSize, showSettings, get cbSafe() { return cbSafe; }, get TK() { return TK; }, buySensor, SENSORS, setSys, setAutoPause, inScen, trayUI, recordRun, readBoard, openBoard, showLost, endLost, showWin, award, readAch, needList, lookAt, ACH, ask5, qmTip, diagText, saveText, loadSaveText, perf, get capyImg() { return capyImg; }, get won() { return won; }, get lost() { return lost; }, get boardAll() { return boardAll; }, scrap, scrapVal, repairCost, negotiateCost, voteDemand, sysNeeds, get fxs() { return fxs; }, negotiate, startRebel, tunnelEnds, saveAll, readLocal, resumeRun, bestSave, parseCode, runCode, codeOf, splashUI, SCEN, repairPlace, repairSensor, buyOffer, price, sysOf, tunnelOpen, hud, get sc() { return sc; }, UPKEEP, upkeepShare, ovT, BRK_GAP, openPlace, fuelNear, crowdAt, warnRoom, shipSpots: () => shipSpots, get wclock() { return wclock; }, pins: () => pins.map(q => ({ x: rot ? window.innerWidth - q.y : q.x, y: rot ? q.x : q.y, i: q.i })),
+  snapCam, cal, calOf, perOf, lineYear, showLog, setCB, setTextSize, showSettings, get cbSafe() { return cbSafe; }, get TK() { return TK; }, buySensor, SENSORS, setSys, setAutoPause, inScen, trayUI, recordRun, readBoard, openBoard, showLost, endLost, showWin, award, readAch, needList, lookAt, ACH, ask5, qmTip, diagText, saveText, loadSaveText, perf, get capyImg() { return capyImg; }, get won() { return won; }, get lost() { return lost; }, get boardAll() { return boardAll; }, scrap, scrapVal, repairCost, negotiateCost, voteDemand, sysNeeds, get fxs() { return fxs; }, negotiate, startRebel, tunnelEnds, saveAll, readLocal, resumeRun, bestSave, parseCode, runCode, codeOf, splashUI, SCEN, repairPlace, repairSensor, buyOffer, price, sysOf, tunnelOpen, hud, get sc() { return sc; }, UPKEEP, upkeepShare, ovT, reliefFor, BRK_GAP, openPlace, fuelNear, crowdAt, warnRoom, shipSpots: () => shipSpots, get wclock() { return wclock; }, pins: () => pins.map(q => ({ x: rot ? window.innerWidth - q.y : q.x, y: rot ? q.x : q.y, i: q.i })),
   redrawFee, chargeRedraw, fixShips, whyCrowded, worstTrouble, selLine, checkUpdate, verNum, get newer() { return newer; }, upkeepDue, berths, docked, queueAt, stuckAt, stuckNote, startSwing, breakdowns, lateGame, ovT, crowdFix,
   toast, toastMs, hideToast, get toastT() { return toastT; },
   fast(sec) { const n = Math.round(sec / STEP); for (let i = 0; i < n && !S.over; i++) step(STEP); },
