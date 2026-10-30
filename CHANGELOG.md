@@ -1,5 +1,12 @@
 # Changelog
 
+## 5.59
+- **The black band on iPhone, properly this time.** It's a WebKit bug in home-screen web apps: after a reload (the Update button does one), the keyboard or turning, iOS can shrink the app's own window by about a status bar's height, and the band below is outside the page, where nothing can be drawn. 5.57 drew for the whole screen, which only cut the bottom of the game off. Now:
+  - the game always fits the window it's really shown in, so nothing is cut off;
+  - on a home-screen iPhone, when that window is shorter than the screen, the game nudges WebKit to measure it again (hiding and showing a full-height element, the known way round this) up to three times, a second apart, and again just after a text box closes;
+  - if iOS still won't give the room back, a note says to turn the phone once, which does.
+- Reports say whether the window was shrunk, and how many shrinks were healed and not.
+
 ## 5.58
 - **Fixed: the name and status at the left of the bottom bar could be cut off**, with no way to scroll to the rest. With a place, line or sensor picked, the box squeezed to make room for the buttons, most of all at bigger text sizes, so a tag like "fiction 2225" lost its end. Now the box widens until its name line and both status lines fit. It doesn't get narrower again while the same thing stays picked, so it doesn't jiggle as counts change. If that pushes buttons past the edge, the bar fades there and you drag it sideways to reach them, as it already did when full. It stops growing at about half the bar; tap the box to see everything in a note.
 

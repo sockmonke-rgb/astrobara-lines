@@ -557,7 +557,7 @@ button.link{height:auto;min-height:0;padding:2px 0;border:none;background:none;c
       <svg class="lines" id="splashLines" aria-hidden="true"></svg>
       <div class="big" aria-hidden="true"><svg viewBox="0 0 64 64"><use href="#capy"/></svg></div>
       <div class="txt">
-        <div class="eyebrow" id="splashEyebrow">Prototype 5.58</div>
+        <div class="eyebrow" id="splashEyebrow">Prototype 5.59</div>
         <h1>Astrobara Lines</h1>
         <p>Capybaras run the Lagrange Alliance’s freight. <b>Drag through places</b> to draw a shipping line. Freight shape = where it’s going. Too much waiting fills a red ring; a full ring ends the run.</p>
         <div class="scen" role="radiogroup" aria-label="Start in">
@@ -637,7 +637,7 @@ const $ = id => document.getElementById(id);
 const app = $('app'), cv = $('cv'), ctx = cv.getContext('2d');
 
 /* ================= Tuning ================= */
-const VERSION = '5.58';
+const VERSION = '5.59';
 // 5.49: where ≡ → Report sends reports: a Cloudflare Worker that files each one as an issue in a private repo
 // (report-worker/ has its code and setup). While it's empty, Report copies the report and offers a GitHub issue.
 const REPORT_URL = '';
@@ -2669,7 +2669,7 @@ function diagText() {
   const L = [];
   L.push(`Astrobara Lines diagnostics · v${VERSION} · ${new Date().toISOString()}`);
   L.push(`device: ${navigator.userAgent}`);
-  L.push(`screen: ${innerWidth}×${innerHeight} (laid out ${VW}×${VH}${IOS_APP ? ` · home-screen iPhone, screen ${screen.width}×${screen.height} ${(screen.orientation && screen.orientation.type) || window.orientation}` : ''}) @${devicePixelRatio}x · ${rot ? 'turned (held upright)' : 'landscape'} · touch points ${navigator.maxTouchPoints || 0} · reduced motion ${reducedMotion()} · in Claude ${!!(window.claude && window.claude.use)} · cloud save ${!!cloud} · board ${!!boardRef}`);
+  L.push(`screen: ${innerWidth}×${innerHeight} (laid out ${VW}×${VH}${IOS_APP ? ` · home-screen iPhone, screen ${screen.width}×${screen.height} ${(screen.orientation && screen.orientation.type) || window.orientation}${shrunk() ? ' · window SHRUNK' : ''} · shrinks healed ${heal.fixed}, not healed ${heal.gave}` : ''}) @${devicePixelRatio}x · ${rot ? 'turned (held upright)' : 'landscape'} · touch points ${navigator.maxTouchPoints || 0} · reduced motion ${reducedMotion()} · in Claude ${!!(window.claude && window.claude.use)} · cloud save ${!!cloud} · board ${!!boardRef}`);
   L.push(`perf: ${perfLine()}`);
   L.push(`settings: colour-blind safe ${cbSafe ? 'on' : 'off'} · text ${Math.round(TK * 100)}%`);   // 5.55
   if (S) {
@@ -3034,26 +3034,42 @@ function fitCam() {
   ox = side + (rw - (cam.x1 - cam.x0) * sc) / 2 - cam.x0 * sc; oy = top + (rh - (cam.y1 - cam.y0) * sc) / 2 - cam.y0 * sc;
   if (Math.abs(sc - trackSc) > trackSc * 0.01) { trackSc = sc; gapV = 7 * uk / sc; if (S) buildTracks(); }
 }
-// 5.57: how big the screen really is. An iPhone can report a short or stale window size just after the page loads (the
-// Update button reloads it) or turns, and doesn't always send another resize once it settles, which left a black band
-// along the bottom until the phone was turned a couple of times. So: added to an iPhone's home screen, where the game
-// always has the whole screen, go by the screen itself; anywhere else by the window. Either way the size is looked at
-// again twice a second (sizeWatch, from frame) and the game re-laid out as soon as it changes.
+// 5.57/5.59: the size of the window the game is shown in. A home-screen iPhone has a WebKit bug: after a reload (the Update
+// button does one), the keyboard, or turning, iOS can shrink the app's own window by about a status bar's height and
+// leave a black band below that the page can't draw into, until the phone is turned. (5.57 drew for the whole screen
+// instead, which only cut the bottom off.) So the game always fits what's really shown, re-checking twice a second
+// (sizeWatch, from frame), and when that's shorter than the screen it nudges WebKit to measure again (heal), the way
+// hiding and showing a full-height element does; if three nudges don't give the room back, a note says to turn the phone.
 const IOS_APP = navigator.standalone === true && /iPhone|iPod/.test(navigator.userAgent);
 let VW = 0, VH = 0, sizeAt = 0;   // the window as last laid out; turned for a phone held upright, touches are measured against VW
-function viewSize() {
-  let w = window.innerWidth, h = window.innerHeight;
-  if (IOS_APP && screen.width > 0 && screen.height > 0) {
-    const long = Math.max(screen.width, screen.height), short = Math.min(screen.width, screen.height);
-    const ot = screen.orientation && screen.orientation.type, wo = window.orientation;
-    const land = ot ? /^landscape/.test(ot) : typeof wo === 'number' ? Math.abs(wo) === 90 : w > h;
-    w = land ? long : short; h = land ? short : long;
+const viewSize = () => ({ w: window.innerWidth, h: window.innerHeight });
+// on a home-screen iPhone: the whole screen, the way it's turned now
+function fullSize() {
+  const long = Math.max(screen.width, screen.height), short = Math.min(screen.width, screen.height);
+  const ot = screen.orientation && screen.orientation.type, wo = window.orientation;
+  const land = ot ? /^landscape/.test(ot) : typeof wo === 'number' ? Math.abs(wo) === 90 : innerWidth > innerHeight;
+  return land ? { w: long, h: short, land } : { w: short, h: long, land };
+}
+const shrunk = () => { if (!IOS_APP || !(screen.width > 0)) return false; const f = fullSize(); return innerHeight < f.h - 4 || innerWidth < f.w - 4; };
+const heal = { tries: 0, at: 0, told: false, fixed: 0, gave: 0 };   // gave/fixed: counts for reports
+const vprobe = document.createElement('div'); vprobe.setAttribute('aria-hidden', 'true');
+vprobe.style.cssText = 'position:fixed;left:0;top:0;width:1px;height:100vh;height:100dvh;visibility:hidden;pointer-events:none';
+document.body.appendChild(vprobe);
+function healView(ts) {
+  if (!shrunk()) { if (heal.tries) heal.fixed++; heal.tries = 0; heal.told = false; return; }
+  if (ts - heal.at < 900) return; heal.at = ts;
+  if (heal.tries < 3) {
+    heal.tries++;
+    for (const el of [vprobe, app]) { el.style.display = 'none'; void el.offsetHeight; el.style.display = ''; }
+    void app.offsetHeight; window.scrollTo(0, 0);
+    return;
   }
-  return { w, h };
+  if (!heal.told && fullSize().land) { heal.told = true; heal.gave++; toast('⟳ iOS shrank the game’s window · turn the phone once to fill the screen', 8000); }
 }
 function sizeWatch(ts) {
   if (ts - sizeAt < 500) return; sizeAt = ts;
   const v = viewSize(); if (v.w !== VW || v.h !== VH) layout();
+  if (IOS_APP) healView(ts);
 }
 function layout() {
   const v = viewSize(), iw = v.w, ih = v.h; VW = iw; VH = ih;
@@ -5201,6 +5217,7 @@ window.addEventListener('orientationchange', () => { for (const t of [120, 500, 
 // 5.57: iPhones send these when the size settles even when they skip resize; sizeWatch catches anything else
 if (window.visualViewport) visualViewport.addEventListener('resize', () => { const v = viewSize(); if (v.w !== VW || v.h !== VH) layout(); });
 window.addEventListener('pageshow', layout);
+document.addEventListener('focusout', e => { if (IOS_APP && e.target.matches && e.target.matches('input, textarea')) setTimeout(() => { heal.at = 0; healView(performance.now()); layout(); }, 160); });
 document.addEventListener('visibilitychange', () => { if (!document.hidden) setTimeout(layout, 60); });
 // 5.23: on the web, look now and then for a newer version (version.json next to the page) and offer it: an Update
 // button on the start screen, and one note during a run. Phones can keep an old copy for a while otherwise.
