@@ -1,5 +1,8 @@
 # Changelog
 
+## 5.53
+- **The overflow note can be put away while paused.** Its **×** hides it so whatever note it was covering (a breakdown to repair, a storm, a tip) shows again. It comes back as soon as you press Play, or straight away if a different place starts overflowing. The red ring on the map stays either way. While the game is running there's no ×, since the clock is ticking.
+
 ## 5.52
 - **A new ship starts the most useful way.** It used to look only at freight at its own stop, default to "forward" otherwise, and simply alternate on loops. Now it weighs both ways, on loops and mid-line alike:
   - freight at its stop that goes that way counts most;

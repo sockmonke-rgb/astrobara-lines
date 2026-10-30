@@ -528,7 +528,7 @@ button.link{height:auto;min-height:0;padding:2px 0;border:none;background:none;c
       <svg class="lines" id="splashLines" aria-hidden="true"></svg>
       <div class="big" aria-hidden="true"><svg viewBox="0 0 64 64"><use href="#capy"/></svg></div>
       <div class="txt">
-        <div class="eyebrow" id="splashEyebrow">Prototype 5.52</div>
+        <div class="eyebrow" id="splashEyebrow">Prototype 5.53</div>
         <h1>Astrobara Lines</h1>
         <p>Capybaras run the Lagrange Alliance’s freight. <b>Drag through places</b> to draw a shipping line. Freight shape = where it’s going. Too much waiting fills a red ring; a full ring ends the run.</p>
         <div class="scen" role="radiogroup" aria-label="Start in">
@@ -607,7 +607,7 @@ const $ = id => document.getElementById(id);
 const app = $('app'), cv = $('cv'), ctx = cv.getContext('2d');
 
 /* ================= Tuning ================= */
-const VERSION = '5.52';
+const VERSION = '5.53';
 // 5.49: where ≡ → Report sends reports: a Cloudflare Worker that files each one as an issue in a private repo
 // (report-worker/ has its code and setup). While it's empty, Report copies the report and offers a GitHub issue.
 const REPORT_URL = '';
@@ -2948,7 +2948,7 @@ cv.addEventListener('pointerdown', e => {
   if (e.pointerType === 'mouse' && e.button !== 0) { if (e.button === 2) cancelDrag(); return; }   // only the left button draws
   toggleSpeedMenu(false);
   // 5.32: with a mouse, a click on the map clears a tip the way its × does (only a tip that's showing and has one)
-  if (e.pointerType === 'mouse' && S.hint && !$('banner').hidden && !$('bX').hidden) { S.hint = null; bannerSig = ''; hud(); }
+  if (e.pointerType === 'mouse' && S.hint && bannerKind === 'hint' && !$('banner').hidden && !$('bX').hidden) { S.hint = null; bannerSig = ''; hud(); }
   // the first finger of a new gesture starts clean, so a touch whose release we never heard
   // can't turn the next one-finger drag into a pinch
   if (e.isPrimary) { touches.clear(); pinch = null; }
@@ -3425,7 +3425,9 @@ function trayUI() {
   $('cDocks').hidden = !(S.inv.docks > 0); $('tDocks').textContent = S.inv.docks || 0;
   for (const [id, v] of [['tShips', S.inv.ships], ['tPods', S.inv.pods], ['tDepots', S.inv.depots], ['tShields', S.inv.shields]]) { $(id).textContent = v; $(id).parentElement.classList.toggle('zero', !v); }
 }
-let bannerSig = '', bannerGo = null, bannerTo = null;
+let bannerSig = '', bannerGo = null, bannerTo = null, bannerKind = '';
+// 5.53: × on an overflow note while paused puts it away, so the note it covered shows; Play brings it back
+let ovSnooze = -1;
 function banner() {
   const h = S.haz, el = $('banner');
   let cls = '', html = '', cd = '', x = false, go = null, to = null;
@@ -3433,10 +3435,13 @@ function banner() {
   const held = S.paused && S.autoPaused != null && S.hint && ['new', 'gate', 'worm', 'same', 'talks'].includes(S.hint.id);
   // 5.19: a place overflowing is how a run ends, so it outranks every other note: red, with the time left and Show
   const ov = S.started && !S.tut && !S.over ? overflowing() : -1;
-  if (ov >= 0) {
+  if (ovSnooze >= 0 && (ov !== ovSnooze || !S.paused)) ovSnooze = -1;
+  let kind = '';
+  if (ov >= 0 && ov !== ovSnooze) {
     const why = whyCrowded(ov);
     cls = 'live'; html = `${shp(S.shape[ov])} <b>${esc(placeName(ov))}</b> overflowing ${S.Q[ov].length}/${room(ov)} · ${why.note}${S.paused && S.autoPaused === ov ? ' · paused' : ''}${via(ov)}`;
     cd = Math.max(0, Math.ceil((1 - S.of[ov]) * ovT())) + 's'; go = why.go || { label: 'Show', place: ov }; to = { place: ov };
+    x = S.paused; kind = 'ov';
   }
   // a storm or debris you're already protected from needs no banner
   else if (h && !held && !quietHaz(h)) {
@@ -3450,10 +3455,10 @@ function banner() {
     const w = worstTrouble(), secs = Math.max(0, Math.ceil((w.x.fix || w.x.brk) - S.t));
     cls = 'coach act'; html = `🔧 <b>${esc(w.L.name)} ship ${w.k + 1}</b> ${w.x.fix ? `stopped · ${secs}s` : `breaks down in ${secs}s`}${sysOf(w.L.stops[0]) !== S.view ? ' · ' + esc(sysLabel(sysOf(w.L.stops[0]))) : ''}`;
     go = { label: `Repair ${fmt(repairCost())}`, line: w.L.id, icon: '' }; to = { line: w.L.id };
-  } else if (S.hint) { cls = 'hint'; html = S.hint.html; x = S.hint.id !== 'start'; go = S.hint.go || null; to = S.hint.to || (S.hint.i != null ? { place: S.hint.i } : null) || (go && go.place != null ? { place: go.place } : go && go.talk != null ? { place: go.talk } : null); }
+  } else if (S.hint) { cls = 'hint'; kind = 'hint'; html = S.hint.html; x = S.hint.id !== 'start'; go = S.hint.go || null; to = S.hint.to || (S.hint.i != null ? { place: S.hint.i } : null) || (go && go.place != null ? { place: go.place } : go && go.talk != null ? { place: go.talk } : null); }
   else { const c = coach(); if (c) { cls = 'coach' + (c.act ? ' act' : ''); html = c.html; go = c.go || null; to = c.to || null; } }
   if (to) cls += ' to';
-  bannerGo = go; bannerTo = to;
+  bannerGo = go; bannerTo = to; bannerKind = kind;
   const sig = cls + html + x + (go ? go.label : '');
   if (sig !== bannerSig) {
     bannerSig = sig; el.className = cls; $('bText').innerHTML = (html && /^(hint|coach)/.test(cls) ? '<svg class="bcapy" viewBox="0 0 64 64" aria-hidden="true"><use href="#capy"/></svg>' : '') + html; $('bX').hidden = !x; el.hidden = !html;
@@ -3677,7 +3682,7 @@ onTap($('speedMenu'), (a, el) => {
   S.speed = +el.dataset.v; toggleSpeedMenu(false); hud();
 });
 onTap($('banner'), a => {
-  if (a === 'dismiss') { S.hint = null; bannerSig = ''; hud(); }
+  if (a === 'dismiss') { if (bannerKind === 'ov') ovSnooze = overflowing(); else S.hint = null; bannerSig = ''; hud(); }
   if (a === 'bTo' && bannerTo) goTo(bannerTo);
   if (a === 'bGo' && bannerGo) {
     const g = bannerGo;
