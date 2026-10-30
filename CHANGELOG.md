@@ -1,5 +1,12 @@
 # Changelog
 
+## 5.57
+- **Fixed: a black band along the bottom on iPhone**, with the map and its bar squeezed above it, until the phone was turned a couple of times. Right after the page loads (the Update button reloads it) or turns, an iPhone can report a window shorter than the screen, and doesn't always say so when it settles. Now:
+  - added to an iPhone's home screen, where the game always has the whole screen, it goes by the size of the screen itself;
+  - everywhere, it looks at the size again twice a second and re-lays out as soon as it changes, and also listens for the other signals iPhones send when the size settles;
+  - after turning the phone it checks three times over the next second, not once.
+- Reports say both the window size the browser gave and the size the game laid out, and on a home-screen iPhone the screen size and which way it's turned.
+
 ## 5.56
 - **No pause for an overflow that's about to clear itself.** When a place goes over its room but ships already heading there have enough free space to bring it back under (with one to spare) before its red ring is half full, the game keeps running. The note shows the ship icon and **on the way** instead of what to add.
 - It still pauses if that stops being true: a ship on the way breaks down, a storm closes the stretch, more freight piles up than they can take. And it pauses anyway if the ring reaches half full.

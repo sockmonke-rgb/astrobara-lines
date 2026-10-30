@@ -557,7 +557,7 @@ button.link{height:auto;min-height:0;padding:2px 0;border:none;background:none;c
       <svg class="lines" id="splashLines" aria-hidden="true"></svg>
       <div class="big" aria-hidden="true"><svg viewBox="0 0 64 64"><use href="#capy"/></svg></div>
       <div class="txt">
-        <div class="eyebrow" id="splashEyebrow">Prototype 5.56</div>
+        <div class="eyebrow" id="splashEyebrow">Prototype 5.57</div>
         <h1>Astrobara Lines</h1>
         <p>Capybaras run the Lagrange Alliance’s freight. <b>Drag through places</b> to draw a shipping line. Freight shape = where it’s going. Too much waiting fills a red ring; a full ring ends the run.</p>
         <div class="scen" role="radiogroup" aria-label="Start in">
@@ -637,7 +637,7 @@ const $ = id => document.getElementById(id);
 const app = $('app'), cv = $('cv'), ctx = cv.getContext('2d');
 
 /* ================= Tuning ================= */
-const VERSION = '5.56';
+const VERSION = '5.57';
 // 5.49: where ≡ → Report sends reports: a Cloudflare Worker that files each one as an issue in a private repo
 // (report-worker/ has its code and setup). While it's empty, Report copies the report and offers a GitHub issue.
 const REPORT_URL = '';
@@ -2669,7 +2669,7 @@ function diagText() {
   const L = [];
   L.push(`Astrobara Lines diagnostics · v${VERSION} · ${new Date().toISOString()}`);
   L.push(`device: ${navigator.userAgent}`);
-  L.push(`screen: ${innerWidth}×${innerHeight} @${devicePixelRatio}x · ${rot ? 'turned (held upright)' : 'landscape'} · touch points ${navigator.maxTouchPoints || 0} · reduced motion ${reducedMotion()} · in Claude ${!!(window.claude && window.claude.use)} · cloud save ${!!cloud} · board ${!!boardRef}`);
+  L.push(`screen: ${innerWidth}×${innerHeight} (laid out ${VW}×${VH}${IOS_APP ? ` · home-screen iPhone, screen ${screen.width}×${screen.height} ${(screen.orientation && screen.orientation.type) || window.orientation}` : ''}) @${devicePixelRatio}x · ${rot ? 'turned (held upright)' : 'landscape'} · touch points ${navigator.maxTouchPoints || 0} · reduced motion ${reducedMotion()} · in Claude ${!!(window.claude && window.claude.use)} · cloud save ${!!cloud} · board ${!!boardRef}`);
   L.push(`perf: ${perfLine()}`);
   L.push(`settings: colour-blind safe ${cbSafe ? 'on' : 'off'} · text ${Math.round(TK * 100)}%`);   // 5.55
   if (S) {
@@ -2898,7 +2898,7 @@ function loopRect(el, choice) {
   if (!el || !el.isConnected || !el.offsetWidth) return null;
   const r = el.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
   const pa = el.parentElement, pr = pa && pa.getBoundingClientRect(), k = pa && pa.offsetWidth ? (rot ? pr.height : pr.width) / pa.offsetWidth : 1;   // a scaled card
-  const w = el.offsetWidth * k, h = el.offsetHeight * k, ax = rot ? cy : cx, ay = rot ? window.innerWidth - cx : cy;
+  const w = el.offsetWidth * k, h = el.offsetHeight * k, ax = rot ? cy : cx, ay = rot ? VW - cx : cy;
   return { x: ax - w / 2, y: ay - h / 2, w, h, br: (parseFloat(getComputedStyle(el).borderTopLeftRadius) || 8) * k, choice, cx, cy };
 }
 function loopFx(q) {
@@ -3034,8 +3034,29 @@ function fitCam() {
   ox = side + (rw - (cam.x1 - cam.x0) * sc) / 2 - cam.x0 * sc; oy = top + (rh - (cam.y1 - cam.y0) * sc) / 2 - cam.y0 * sc;
   if (Math.abs(sc - trackSc) > trackSc * 0.01) { trackSc = sc; gapV = 7 * uk / sc; if (S) buildTracks(); }
 }
+// 5.57: how big the screen really is. An iPhone can report a short or stale window size just after the page loads (the
+// Update button reloads it) or turns, and doesn't always send another resize once it settles, which left a black band
+// along the bottom until the phone was turned a couple of times. So: added to an iPhone's home screen, where the game
+// always has the whole screen, go by the screen itself; anywhere else by the window. Either way the size is looked at
+// again twice a second (sizeWatch, from frame) and the game re-laid out as soon as it changes.
+const IOS_APP = navigator.standalone === true && /iPhone|iPod/.test(navigator.userAgent);
+let VW = 0, VH = 0, sizeAt = 0;   // the window as last laid out; turned for a phone held upright, touches are measured against VW
+function viewSize() {
+  let w = window.innerWidth, h = window.innerHeight;
+  if (IOS_APP && screen.width > 0 && screen.height > 0) {
+    const long = Math.max(screen.width, screen.height), short = Math.min(screen.width, screen.height);
+    const ot = screen.orientation && screen.orientation.type, wo = window.orientation;
+    const land = ot ? /^landscape/.test(ot) : typeof wo === 'number' ? Math.abs(wo) === 90 : w > h;
+    w = land ? long : short; h = land ? short : long;
+  }
+  return { w, h };
+}
+function sizeWatch(ts) {
+  if (ts - sizeAt < 500) return; sizeAt = ts;
+  const v = viewSize(); if (v.w !== VW || v.h !== VH) layout();
+}
 function layout() {
-  const iw = window.innerWidth, ih = window.innerHeight;
+  const v = viewSize(), iw = v.w, ih = v.h; VW = iw; VH = ih;
   rot = ih > iw; W = rot ? ih : iw; H = rot ? iw : ih;
   app.style.width = W + 'px'; app.style.height = H + 'px';
   app.style.transform = rot ? 'rotate(90deg) translateY(-100%)' : 'none';
@@ -3046,7 +3067,7 @@ function layout() {
   if (typeof splashFit === 'function') splashFit();
 }
 const X = v => ox + v * sc, Y = v => oy + v * sc;
-const lp = e => (rot ? { x: e.clientY, y: window.innerWidth - e.clientX } : { x: e.clientX, y: e.clientY });
+const lp = e => (rot ? { x: e.clientY, y: VW - e.clientX } : { x: e.clientX, y: e.clientY });
 const R = i => (PL[i].size || 11) * uk;
 function sensorAt(p) { let best = -1, bd = 22; SENSORS.forEach((z, k) => { if (!sensorPlay(k) || sensorSys(z) !== S.view) return; const d = Math.hypot(X(z.x) - p.x, Y(z.y) - p.y); if (d < bd) { bd = d; best = k; } }); return best; }
 function placeAt(p, r) {
@@ -4879,6 +4900,7 @@ function drawTut() {
 let last = performance.now(), acc = 0, uiT = 0, wasDrawing = false;
 function frame(ts) {
   const raw = Math.max(0, ts - last), rdt = Math.min(.1, raw / 1000); last = ts;
+  sizeWatch(ts);   // 5.57
   perf.dt.push(raw); if (perf.dt.length > 240) perf.dt.shift(); if (raw > 250) perf.long++;
   const st0 = performance.now();
   if (saveSoon && canSave()) { saveSoon = false; saveAll(); }
@@ -5159,7 +5181,11 @@ document.addEventListener('visibilitychange', () => { if (document.hidden && S &
 window.addEventListener('pagehide', () => saveAll());
 window.addEventListener('resize', layout);
 window.addEventListener('resize', () => { edgeFade($('tray')); edgeFade(P); });
-window.addEventListener('orientationchange', () => setTimeout(layout, 120));
+window.addEventListener('orientationchange', () => { for (const t of [120, 500, 1200]) setTimeout(layout, t); });
+// 5.57: iPhones send these when the size settles even when they skip resize; sizeWatch catches anything else
+if (window.visualViewport) visualViewport.addEventListener('resize', () => { const v = viewSize(); if (v.w !== VW || v.h !== VH) layout(); });
+window.addEventListener('pageshow', layout);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) setTimeout(layout, 60); });
 // 5.23: on the web, look now and then for a newer version (version.json next to the page) and offer it: an Update
 // button on the start screen, and one note during a run. Phones can keep an old copy for a while otherwise.
 // (The in-app copy has no version.json, so it never asks.)
@@ -5188,13 +5214,13 @@ requestAnimationFrame(frame);
 // Hooks for headless balancing and input tests.
 window.LC = {
   get S() { return S; }, get GEN() { return GEN; }, plx: () => PLX.map(L => ({ ux: L.ux, uy: L.uy, k: L.k, ls: Math.pow(sc / sc0, L.d) })), IDX, PL, YEAR, startRun, step, tutGo, tutEnd, createLine, setStops, removeLine, addShip, removeShip, addPod, shieldPlace, buildDepot, select, room, setLine, openLoop, undo,
-  snapCam, cal, calOf, perOf, lineYear, showLog, setCB, setTextSize, showSettings, get cbSafe() { return cbSafe; }, get TK() { return TK; }, buySensor, SENSORS, setSys, setAutoPause, inScen, trayUI, recordRun, readBoard, openBoard, showLost, endLost, showWin, award, readAch, needList, lookAt, ACH, ask5, qmTip, diagText, saveText, loadSaveText, perf, get capyImg() { return capyImg; }, get won() { return won; }, get lost() { return lost; }, get boardAll() { return boardAll; }, scrap, scrapVal, repairCost, negotiateCost, voteDemand, sysNeeds, get fxs() { return fxs; }, negotiate, startRebel, tunnelEnds, saveAll, readLocal, resumeRun, bestSave, parseCode, runCode, codeOf, splashUI, SCEN, repairPlace, repairSensor, buyOffer, price, sysOf, tunnelOpen, hud, get sc() { return sc; }, UPKEEP, upkeepShare, ovT, reliefFor, BRK_GAP, openPlace, fuelNear, crowdAt, warnRoom, shipSpots: () => shipSpots, get wclock() { return wclock; }, pins: () => pins.map(q => ({ x: rot ? window.innerWidth - q.y : q.x, y: rot ? q.x : q.y, i: q.i })),
+  snapCam, cal, calOf, perOf, lineYear, showLog, setCB, setTextSize, showSettings, get cbSafe() { return cbSafe; }, get TK() { return TK; }, buySensor, SENSORS, setSys, setAutoPause, inScen, trayUI, recordRun, readBoard, openBoard, showLost, endLost, showWin, award, readAch, needList, lookAt, ACH, ask5, qmTip, diagText, saveText, loadSaveText, perf, get capyImg() { return capyImg; }, get won() { return won; }, get lost() { return lost; }, get boardAll() { return boardAll; }, scrap, scrapVal, repairCost, negotiateCost, voteDemand, sysNeeds, get fxs() { return fxs; }, negotiate, startRebel, tunnelEnds, saveAll, readLocal, resumeRun, bestSave, parseCode, runCode, codeOf, splashUI, SCEN, repairPlace, repairSensor, buyOffer, price, sysOf, tunnelOpen, hud, get sc() { return sc; }, UPKEEP, upkeepShare, ovT, reliefFor, BRK_GAP, openPlace, fuelNear, crowdAt, warnRoom, shipSpots: () => shipSpots, get wclock() { return wclock; }, pins: () => pins.map(q => ({ x: rot ? VW - q.y : q.x, y: rot ? q.x : q.y, i: q.i })),
   redrawFee, chargeRedraw, fixShips, whyCrowded, worstTrouble, selLine, checkUpdate, verNum, get newer() { return newer; }, upkeepDue, berths, docked, queueAt, stuckAt, stuckNote, startSwing, breakdowns, lateGame, ovT, crowdFix,
   toast, toastMs, hideToast, get toastT() { return toastT; },
   fast(sec) { const n = Math.round(sec / STEP); for (let i = 0; i < n && !S.over; i++) step(STEP); },
-  screen(id) { const n = PL[IDX[id]], x = X(n.x), y = Y(n.y); return rot ? { x: window.innerWidth - y, y: x } : { x, y }; },
-  linePoint(i) { const p = S.lines[i].segs[0].pts[12], x = X(p.x), y = Y(p.y); return rot ? { x: window.innerWidth - y, y: x } : { x, y }; },
-  handles: () => handles().map(h => ({ line: h.L.id, end: h.end, x: rot ? window.innerWidth - h.y : h.x, y: rot ? h.x : h.y })),
+  screen(id) { const n = PL[IDX[id]], x = X(n.x), y = Y(n.y); return rot ? { x: VW - y, y: x } : { x, y }; },
+  linePoint(i) { const p = S.lines[i].segs[0].pts[12], x = X(p.x), y = Y(p.y); return rot ? { x: VW - y, y: x } : { x, y }; },
+  handles: () => handles().map(h => ({ line: h.L.id, end: h.end, x: rot ? VW - h.y : h.x, y: rot ? h.x : h.y })),
 };
 })();
 </script>
