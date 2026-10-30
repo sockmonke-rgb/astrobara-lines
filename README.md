@@ -43,6 +43,7 @@ Every run has a code like `SOL-HALO-417`. Type it on the start screen to play th
   - <kbd>Esc</kbd> closes the bar along the bottom.
 - **Notes:** the notes that pop up at the top right fade on their own. Hold one to pause the game and read it; tap it to put it away.
 - **Pauses:** by default the game pauses when a new place opens or a place wants to talk. Turn this off in the speed menu.
+- **Settings:** ≡ → ⚙, or ⚙ on the start screen. **Colour-blind safe** uses line colours that stay apart with colour blindness, numbers every line on its knobs and swatch, and marks round freight (the Moon a crescent, Mars a band). **Text size** goes to 120% or 140%. Both are kept in the browser.
 
 ## Saving, leaderboard, awards
 

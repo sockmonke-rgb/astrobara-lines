@@ -45,10 +45,12 @@
   --f-display:"Saira Condensed","Arial Narrow",system-ui,sans-serif;
   --f-body:"Saira",system-ui,-apple-system,sans-serif;
   --f-data:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  --ts:1;--tsc:1;   /* 5.55: text size (Settings); the strips along the top and bottom grow half as much (--tsc) */
 }
+#hud,#bar,#speedMenu,.card.split .foot{--ts:var(--tsc)}
 html,body{height:100%;margin:0;background:var(--void);color:var(--ink);overflow:hidden}
 html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
-body{font-family:var(--f-body);font-size:14px;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent;overscroll-behavior:none}
+body{font-family:var(--f-body);font-size:calc(14px*var(--ts));-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent;overscroll-behavior:none}
 #app{position:fixed;left:0;top:0;overflow:hidden;transform-origin:0 0;background:var(--void);
   --sl:env(safe-area-inset-left,0px);--sr:env(safe-area-inset-right,0px);--sb:env(safe-area-inset-bottom,0px)}
 #app.rot{--sl:env(safe-area-inset-top,0px);--sr:env(safe-area-inset-bottom,0px);--sb:env(safe-area-inset-left,0px)}
@@ -63,34 +65,34 @@ body{font-family:var(--f-body);font-size:14px;-webkit-user-select:none;user-sele
 #prog{position:absolute;left:0;bottom:-1px;height:2px;width:0;background:var(--capy);opacity:.7}
 .blk{display:flex;align-items:center;gap:8px;min-width:0}
 .col{display:flex;flex-direction:column;min-width:0}
-.lbl{font:600 10.5px/1.15 var(--f-display);letter-spacing:.1em;text-transform:uppercase;color:var(--dim);white-space:nowrap}
-.num{font:600 16px/1.2 var(--f-data);font-variant-numeric:tabular-nums;white-space:nowrap}
-.sub{font:400 11px/1.25 var(--f-data);font-variant-numeric:tabular-nums;color:var(--dim);white-space:nowrap}
+.lbl{font:600 calc(10.5px*var(--ts))/1.15 var(--f-display);letter-spacing:.1em;text-transform:uppercase;color:var(--dim);white-space:nowrap}
+.num{font:600 calc(16px*var(--ts))/1.2 var(--f-data);font-variant-numeric:tabular-nums;white-space:nowrap}
+.sub{font:400 calc(11px*var(--ts))/1.25 var(--f-data);font-variant-numeric:tabular-nums;color:var(--dim);white-space:nowrap}
 .fund .num{color:var(--capy)}
 .av{width:30px;height:30px;flex:none}
 .av svg{width:100%;height:100%;display:block}
 .right{margin-left:auto;text-align:right}
 #hBoom{color:#ffd48a}
-#hud .right .sub{font-size:12px;line-height:1.35}
+#hud .right .sub{font-size:calc(12px*var(--ts));line-height:1.35}
 #app.narrow #hud{gap:14px}
 
 /* Banner: warnings and hints */
 #banner{position:absolute;top:52px;left:calc(12px + var(--sl));z-index:6;max-width:min(340px,46%);box-sizing:border-box;
   display:flex;align-items:center;gap:10px;padding:7px 8px 7px 12px;border-radius:10px;background:var(--glass);border:1px solid var(--rule);
-  font:500 12.5px/1.35 var(--f-body);pointer-events:none}
+  font:500 calc(12.5px*var(--ts))/1.35 var(--f-body);pointer-events:none}
 #banner.hint{border-color:rgba(242,166,90,.55)}
 #banner.warn{border-color:rgba(255,195,90,.75);background:rgba(40,26,6,.94)}
 #banner.live{border-color:rgba(255,92,92,.7);background:rgba(44,10,12,.94)}
 #banner.coach{border-color:rgba(160,180,220,.28)}
 #banner.coach.act{border-color:rgba(242,166,90,.7)}
-#banner .k{font:600 10.5px/1 var(--f-display);letter-spacing:.12em;text-transform:uppercase;color:var(--capy);margin-right:6px}
+#banner .k{font:600 calc(10.5px*var(--ts))/1 var(--f-display);letter-spacing:.12em;text-transform:uppercase;color:var(--capy);margin-right:6px}
 #banner .bt{flex:1;min-width:0}
 #banner.to .bt{pointer-events:auto;cursor:pointer}   /* 5.43: a note about a place or line: tap it to go there */
 textarea.diag{width:100%;box-sizing:border-box;height:150px;margin-top:8px;padding:8px 10px;border-radius:8px;border:1px solid var(--rule);background:#05070d;color:#c3cad8;
-  font:400 11px/1.4 var(--f-data);resize:vertical;white-space:pre;overflow:auto;-webkit-user-select:text;user-select:text;touch-action:auto}
+  font:400 calc(11px*var(--ts))/1.4 var(--f-data);resize:vertical;white-space:pre;overflow:auto;-webkit-user-select:text;user-select:text;touch-action:auto}
 /* 5.49: the Report tab */
 .rep{display:block;width:100%;box-sizing:border-box;margin-top:8px;padding:10px 12px;border-radius:10px;border:1px solid var(--rule);background:rgba(255,255,255,.04);color:var(--ink);
-  font:400 16px/1.35 var(--f-data);-webkit-user-select:text;user-select:text;-webkit-touch-callout:default;touch-action:auto}
+  font:400 calc(16px*var(--ts))/1.35 var(--f-data);-webkit-user-select:text;user-select:text;-webkit-touch-callout:default;touch-action:auto}
 textarea.rep{min-height:78px;resize:vertical}
 input.rep{height:44px}
 .rep::placeholder{color:var(--dim)}
@@ -98,15 +100,15 @@ input.rep{height:44px}
 .hp{position:absolute;left:-9999px;top:0;width:1px;height:1px;opacity:0;pointer-events:none}
 .card .row button.tog.on{border-color:var(--capy);background:rgba(242,166,90,.14);color:#ffd8a8}
 .card .row button[aria-disabled=true]{opacity:.55}
-.repfail{margin-top:10px;padding:10px 12px;border:1px solid rgba(255,92,92,.5);border-radius:10px;background:rgba(255,92,92,.08);font:400 13px/1.4 var(--f-body)}
+.repfail{margin-top:10px;padding:10px 12px;border:1px solid rgba(255,92,92,.5);border-radius:10px;background:rgba(255,92,92,.08);font:400 calc(13px*var(--ts))/1.4 var(--f-body)}
 .repfail a{color:#ffd8a8;font-weight:600}
 details.repmore{margin-top:12px}
-details.repmore summary{cursor:pointer;font:600 12px/1.2 var(--f-display);letter-spacing:.06em;color:var(--dim);padding:6px 0}
+details.repmore summary{cursor:pointer;font:600 calc(12px*var(--ts))/1.2 var(--f-display);letter-spacing:.06em;color:var(--dim);padding:6px 0}
 #banner button.go{height:30px;min-width:0;padding:0 10px;border:1px solid var(--capy);border-radius:8px;background:rgba(242,166,90,.2);color:#ffd8a8;
-  font:600 13px/1 var(--f-display);letter-spacing:.04em;white-space:nowrap;display:inline-flex;align-items:center;gap:4px;animation:nudge 1.2s ease-in-out infinite}
+  font:600 calc(13px*var(--ts))/1 var(--f-display);letter-spacing:.04em;white-space:nowrap;display:inline-flex;align-items:center;gap:4px;animation:nudge 1.2s ease-in-out infinite}
 #banner button.go .gi{width:15px;height:15px}
-#banner .cd{font:600 15px/1 var(--f-data);font-variant-numeric:tabular-nums;color:var(--storm);white-space:nowrap}
-#banner button{height:30px;min-width:30px;padding:0;border:none;background:transparent;color:var(--dim);font-size:18px;pointer-events:auto}
+#banner .cd{font:600 calc(15px*var(--ts))/1 var(--f-data);font-variant-numeric:tabular-nums;color:var(--storm);white-space:nowrap}
+#banner button{height:30px;min-width:30px;padding:0;border:none;background:transparent;color:var(--dim);font-size:calc(18px*var(--ts));pointer-events:auto}
 
 /* Bottom bar: inventory and controls */
 #bar{position:absolute;left:0;right:0;bottom:0;height:56px;box-sizing:content-box;z-index:5;display:flex;align-items:center;gap:10px;
@@ -114,14 +116,14 @@ details.repmore summary{cursor:pointer;font:600 12px/1.2 var(--f-display);letter
   background:linear-gradient(0deg,rgba(4,6,11,.97),rgba(4,6,11,.72));border-top:1px solid var(--rule)}
 #tray{display:flex;align-items:center;gap:6px;min-width:0;overflow:hidden}
 .chip{display:inline-flex;align-items:center;gap:5px;height:40px;padding:0 10px;border-radius:10px;border:1px solid var(--rule);
-  background:rgba(255,255,255,.03);font:600 14px/1 var(--f-data);color:var(--ink);touch-action:manipulation;cursor:pointer;box-sizing:border-box}
+  background:rgba(255,255,255,.03);font:600 calc(14px*var(--ts))/1 var(--f-data);color:var(--ink);touch-action:manipulation;cursor:pointer;box-sizing:border-box}
 .chip svg{width:18px;height:18px;color:var(--dim)}
 .chip.zero{color:var(--dim)}
 .dots{display:inline-flex;gap:4px}
 .dot{width:11px;height:11px;border-radius:50%;box-sizing:border-box}
 .dot.free{border:2.5px solid currentColor;background:transparent}
 #ctrls{display:flex;gap:6px;margin-left:auto}
-button{font:600 14px/1 var(--f-display);letter-spacing:.05em;color:var(--ink);background:rgba(255,255,255,.05);
+button{font:600 calc(14px*var(--ts))/1 var(--f-display);letter-spacing:.05em;color:var(--ink);background:rgba(255,255,255,.05);
   border:1px solid var(--rule);border-radius:10px;height:44px;min-width:46px;padding:0 12px;cursor:pointer;
   display:inline-flex;align-items:center;justify-content:center;gap:6px;touch-action:manipulation}
 button:active,.chip:active{background:rgba(255,255,255,.14)}
@@ -157,11 +159,11 @@ button.undo{border-color:var(--capy);color:#ffd2a8}
 #banner .bcapy{width:22px;height:22px;flex:none;vertical-align:-6px;margin:-3px 6px -3px -3px}
 .qm{display:flex;align-items:center;gap:10px;margin:0 0 10px;padding:7px 10px;border-radius:10px;background:rgba(181,128,79,.1);border:1px solid rgba(181,128,79,.35)}
 .qm svg{width:34px;height:34px;flex:none}
-.qm span{font:400 12.5px/1.35 var(--f-body);color:#e6d3bf}.qm b{color:#f3c79a;font-weight:600}
-#tut .tc{font:600 11px/1 var(--f-display);letter-spacing:.13em;text-transform:uppercase;color:var(--capy);flex:1}
-#tut .tt{font:500 13.5px/1.42 var(--f-body)}
+.qm span{font:400 calc(12.5px*var(--ts))/1.35 var(--f-body);color:#e6d3bf}.qm b{color:#f3c79a;font-weight:600}
+#tut .tc{font:600 calc(11px*var(--ts))/1 var(--f-display);letter-spacing:.13em;text-transform:uppercase;color:var(--capy);flex:1}
+#tut .tt{font:500 calc(13.5px*var(--ts))/1.42 var(--f-body)}
 #tut .tt b{font-weight:600}
-#tut button{height:38px;min-width:0;font-size:14px;padding:0 16px}
+#tut button{height:38px;min-width:0;font-size:calc(14px*var(--ts));padding:0 16px}
 #tut .skip{background:transparent;border-color:transparent;color:var(--dim);padding:0 6px}
 #tut.tl{right:auto;left:calc(12px + var(--sl))}
 #tut.br{top:auto;bottom:calc(68px + var(--sb))}
@@ -176,12 +178,12 @@ button.undo{border-color:var(--capy);color:#ffd2a8}
 /* Speed menu: opens above the speed button */
 #speedMenu{position:absolute;bottom:calc(64px + var(--sb));right:calc(12px + var(--sr));z-index:9;display:flex;flex-wrap:wrap;justify-content:flex-end;max-width:calc(100vw - 24px - var(--sr));gap:5px;padding:6px;border-radius:12px;
   background:rgba(12,16,27,.97);border:1px solid var(--rule);box-shadow:0 8px 24px rgba(0,0,0,.5)}
-#speedMenu button{min-width:52px;padding:0 8px;font-family:var(--f-data);font-size:14px}
+#speedMenu button{min-width:52px;padding:0 8px;font-family:var(--f-data);font-size:calc(14px*var(--ts))}
 #speedMenu button.on{background:rgba(242,166,90,.18);border-color:var(--capy);color:#ffd8a8}
-#speedMenu .ap{gap:4px;font-family:var(--f-display);font-size:12px;letter-spacing:.02em;padding:0 10px}
+#speedMenu .ap{gap:4px;font-family:var(--f-display);font-size:calc(12px*var(--ts));letter-spacing:.02em;padding:0 10px}
 #speedMenu .ap svg{width:14px;height:14px}
 #speedMenu .ap:not(.on){opacity:.6}
-#speedMenu .sysopt{font-family:var(--f-display);font-size:13.5px;letter-spacing:.04em;padding:0 12px;color:#d9ccff;border-color:rgba(160,130,255,.45)}
+#speedMenu .sysopt{font-family:var(--f-display);font-size:calc(13.5px*var(--ts));letter-spacing:.04em;padding:0 12px;color:#d9ccff;border-color:rgba(160,130,255,.45)}
 #speedMenu .sysopt .shp{width:14px;height:14px}#speedMenu .sysopt .gi{width:16px;height:16px}
 #speedMenu .sysopt.hot{border-color:var(--alarm);color:#ffc4c4;background:rgba(255,92,92,.16)}
 #speedMenu .sysopt.warn{border-color:#ffc35a;color:#ffe2a8}
@@ -189,7 +191,7 @@ button.undo{border-color:var(--capy);color:#ffd2a8}
 
 /* Toast */
 #toast{position:absolute;right:calc(14px + var(--sr));top:54px;z-index:25;max-width:min(270px,36%);box-sizing:border-box;
-  padding:7px 11px;border-radius:9px;background:var(--glass);border:1px solid var(--rule);font:500 12.5px/1.35 var(--f-body);
+  padding:7px 11px;border-radius:9px;background:var(--glass);border:1px solid var(--rule);font:500 calc(12.5px*var(--ts))/1.35 var(--f-body);
   pointer-events:auto;cursor:default;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;transition:opacity .25s,border-color .15s}
 /* 5.54: a note fades slowly so its tail can still be caught; a tap puts it away at once */
 #toast.out{opacity:0;pointer-events:none;transition:opacity .6s}
@@ -209,26 +211,26 @@ button.undo{border-color:var(--capy);color:#ffd2a8}
 /* Selection bar: takes the inventory's place in the bottom bar, so nothing covers the map */
 #sel{display:flex;align-items:center;gap:6px;min-width:0;flex:1}
 #sel .si{display:flex;flex-direction:column;gap:3px;min-width:0;flex:1 1 auto}
-#sel .nm{display:flex;align-items:center;gap:6px;font:700 14px/1.1 var(--f-display);letter-spacing:.06em;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#sel .nm{display:flex;align-items:center;gap:6px;font:700 calc(14px*var(--ts))/1.1 var(--f-display);letter-spacing:.06em;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #sel .sw{width:12px;height:12px;border-radius:50%;flex:none}
-#sel .yr{font:500 10.5px/1 var(--f-data);letter-spacing:0;text-transform:none;color:#ffd8a8;padding:2px 5px;border:1px solid rgba(242,166,90,.45);border-radius:5px;flex:none}
-#sel .st{font:500 11px/1.2 var(--f-data);color:var(--dim);overflow:hidden;font-variant-numeric:tabular-nums;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2}
+#sel .yr{font:500 calc(10.5px*var(--ts))/1 var(--f-data);letter-spacing:0;text-transform:none;color:#ffd8a8;padding:2px 5px;border:1px solid rgba(242,166,90,.45);border-radius:5px;flex:none}
+#sel .st{font:500 calc(11px*var(--ts))/1.2 var(--f-data);color:var(--dim);overflow:hidden;font-variant-numeric:tabular-nums;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2}
 #sel .si{cursor:pointer}
 #sel .st .shp{width:.95em;height:.95em}
 #sel .hull{display:inline-flex;align-items:center;gap:2px;height:13px;padding:0 6px 0 4px;margin-right:4px;border-radius:3px 7px 7px 3px;background:var(--c);
-  color:#0a0f1c;font:700 10px/1 var(--f-data);vertical-align:-1px;clip-path:polygon(0 0,78% 0,100% 50%,78% 100%,0 100%)}
+  color:#0a0f1c;font:700 calc(10px*var(--ts))/1 var(--f-data);vertical-align:-1px;clip-path:polygon(0 0,78% 0,100% 50%,78% 100%,0 100%)}
 #sel .hull i{display:inline-block;width:5px;height:7px;border-radius:2px;background:rgba(10,15,28,.55)}
-#sel button{flex:none;padding:0 8px;font-size:13.5px}
+#sel button{flex:none;padding:0 8px;font-size:calc(13.5px*var(--ts))}
 #sel .ic{min-width:44px;padding:0}
 #sel .ic svg{width:19px;height:19px}
 #sel button .gi{width:17px;height:17px;margin-right:2px}
 #sel .ic .gi{margin:0}
 #sel button.on{border-color:rgba(127,211,255,.75);background:rgba(127,211,255,.14);color:#cdeeff}
-#sel button small{font:600 11px/1 var(--f-data);color:var(--dim);margin-left:2px}
+#sel button small{font:600 calc(11px*var(--ts))/1 var(--f-data);color:var(--dim);margin-left:2px}
 #sel button.primary small{color:#5b3510}
-#sel .x{min-width:40px;padding:0;font-size:22px;background:transparent;border-color:transparent;color:var(--dim)}
-#sel .ask{font:500 12.5px/1.25 var(--f-body);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:1}
-#app.narrow #sel button{padding:0 6px;font-size:13px}
+#sel .x{min-width:40px;padding:0;font-size:calc(22px*var(--ts));background:transparent;border-color:transparent;color:var(--dim)}
+#sel .ask{font:500 calc(12.5px*var(--ts))/1.25 var(--f-body);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:1}
+#app.narrow #sel button{padding:0 6px;font-size:calc(13px*var(--ts))}
 #app.narrow #sel .ic{min-width:40px}
 
 /* Overlays */
@@ -237,10 +239,10 @@ button.undo{border-color:var(--capy);color:#ffd2a8}
 .card{background:#080c15;border:1px solid var(--rule);border-radius:14px;max-width:660px;width:100%;max-height:100%;overflow:auto;
   padding:14px 18px;box-sizing:border-box;-webkit-user-select:text;user-select:text}
 .card h1,.card h2{font-family:var(--f-display);font-weight:700;letter-spacing:.04em;margin:0;text-wrap:balance}
-.card h1{font-size:31px;line-height:1;text-transform:uppercase}
-.card h2{font-size:22px;line-height:1.1}
-.eyebrow{font:600 11.5px/1.2 var(--f-display);letter-spacing:.14em;text-transform:uppercase;color:var(--dim)}
-.card p,.card li{font:400 13px/1.4 var(--f-body);color:#d3d9e5}
+.card h1{font-size:calc(31px*var(--ts));line-height:1;text-transform:uppercase}
+.card h2{font-size:calc(22px*var(--ts));line-height:1.1}
+.eyebrow{font:600 calc(11.5px*var(--ts))/1.2 var(--f-display);letter-spacing:.14em;text-transform:uppercase;color:var(--dim)}
+.card p,.card li{font:400 calc(13px*var(--ts))/1.4 var(--f-body);color:#d3d9e5}
 .card p{margin:6px 0 0}
 .card ul{margin:6px 0 0;padding-left:18px;display:flex;flex-direction:column;gap:3px}
 .card b{color:var(--ink);font-weight:600}
@@ -262,14 +264,14 @@ button.undo{border-color:var(--capy);color:#ffd2a8}
 #splash .card.splash{padding-bottom:36px;max-height:none;overflow:hidden;transform-origin:50% 50%;flex:none}
 .scen{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px}
 .scen button{height:auto;min-height:44px;flex-direction:column;align-items:flex-start;justify-content:center;gap:3px;padding:5px 13px}
-.scen button small{font:500 11px/1.1 var(--f-data);letter-spacing:0;color:var(--dim)}
+.scen button small{font:500 calc(11px*var(--ts))/1.1 var(--f-data);letter-spacing:0;color:var(--dim)}
 .scen button.on{border-color:var(--capy);background:rgba(242,166,90,.14);color:#ffd8a8}
 .scen .credit{flex:1;min-width:120px}
 .code input{height:44px;box-sizing:border-box;border-radius:10px;border:1px solid var(--rule);background:rgba(255,255,255,.04);color:var(--ink);
-  font:500 16px/1 var(--f-data);padding:0 12px;width:min(270px,100%);min-width:0;flex:1 1 200px;max-width:290px;text-transform:uppercase}
+  font:500 calc(16px*var(--ts))/1 var(--f-data);padding:0 12px;width:min(270px,100%);min-width:0;flex:1 1 200px;max-width:290px;text-transform:uppercase}
 .code input::placeholder{text-transform:none;color:var(--dim)}
 .code input:focus{outline:2px solid var(--capy);outline-offset:1px}
-.credit{font:400 11px/1.2 var(--f-data);color:var(--dim)}
+.credit{font:400 calc(11px*var(--ts))/1.2 var(--f-data);color:var(--dim)}
 .hd{display:flex;align-items:center;gap:10px}.hd>div,.hd>h2{flex:1;min-width:0}
 .card.split{display:flex;flex-direction:column;overflow:hidden;padding:0}
 .card.split .lbody{flex:1;min-height:0;overflow:auto;padding:14px 18px 12px}
@@ -282,21 +284,21 @@ button.undo{border-color:var(--capy);color:#ffd2a8}
   background:rgba(255,255,255,.04);border:1px solid var(--rule);font-family:var(--f-body);letter-spacing:0}
 .offer:active{border-color:var(--capy)}
 .offer svg{width:30px;height:30px;color:var(--capy)}
-.offer b{font:700 16px/1.1 var(--f-display);letter-spacing:.05em;text-transform:uppercase;color:var(--ink)}
+.offer b{font:700 calc(16px*var(--ts))/1.1 var(--f-display);letter-spacing:.05em;text-transform:uppercase;color:var(--ink)}
 .offer .ot{display:flex;flex-direction:column;gap:3px;min-width:0}
-.offer .ot span{font:400 12.5px/1.3 var(--f-body);color:#c9d0de}
+.offer .ot span{font:400 calc(12.5px*var(--ts))/1.3 var(--f-body);color:#c9d0de}
 .offer svg{flex:none}
 .shop{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px;margin-top:6px}
-.shop .buy{height:auto;min-height:44px;justify-content:flex-start;gap:8px;padding:6px 10px;font:500 12px/1.25 var(--f-data);text-align:left;letter-spacing:0}
+.shop .buy{height:auto;min-height:44px;justify-content:flex-start;gap:8px;padding:6px 10px;font:500 calc(12px*var(--ts))/1.25 var(--f-data);text-align:left;letter-spacing:0}
 .shop .buy svg{width:20px;height:20px;color:var(--capy);flex:none}
 .shop .buy span{display:flex;flex-direction:column;color:#ffd8a8}
-.shop .buy b{font:600 12.5px/1.2 var(--f-body);color:var(--ink)}
+.shop .buy b{font:600 calc(12.5px*var(--ts))/1.2 var(--f-body);color:var(--ink)}
 .shop .buy[aria-disabled=true]{opacity:.4}
-.shop .buy small{font:500 11px/1.2 var(--f-data);color:var(--dim);margin-top:1px}
-.offer em{font:500 12px/1.2 var(--f-data);font-style:normal;color:#ffd8a8}
+.shop .buy small{font:500 calc(11px*var(--ts))/1.2 var(--f-data);color:var(--dim);margin-top:1px}
+.offer em{font:500 calc(12px*var(--ts))/1.2 var(--f-data);font-style:normal;color:#ffd8a8}
 .card.split .mhead{flex:none;display:flex;align-items:flex-end;justify-content:space-between;gap:12px;padding:10px 18px 9px;border-bottom:1px solid var(--rule);background:#0b101b}
 .mfund{position:relative;display:flex;align-items:baseline;gap:8px;margin-top:3px}
-.mfund b{font:700 24px/1.05 var(--f-data);color:var(--capy);font-variant-numeric:tabular-nums}
+.mfund b{font:700 calc(24px*var(--ts))/1.05 var(--f-data);color:var(--capy);font-variant-numeric:tabular-nums}
 .mfunds{display:flex;gap:24px;flex-wrap:wrap;align-items:baseline}
 .mnote{text-align:right;line-height:1.45}.mnote .gi{width:13px;height:13px;vertical-align:-2px}
 .card.split .foot .credit{flex:1;min-width:0;line-height:1.35}
@@ -305,14 +307,14 @@ button.undo{border-color:var(--capy);color:#ffd2a8}
 @keyframes fundUp{0%{color:#9ff0b8;transform:scale(1.14)}100%{transform:none}}
 #hFund{display:inline-block;transform-origin:left center}.mfund b{transform-origin:left center}
 #hFundBox{position:relative}
-.fx{position:absolute;left:100%;top:0;margin-left:8px;font:700 15px/1 var(--f-data);font-style:normal;white-space:nowrap;pointer-events:none;animation:fxDrift 1.3s ease-out forwards}
-#hFundBox .fx{left:-5px;top:-3px;margin:0;font-size:13px;padding:1px 5px;border-radius:5px;background:#05070d;animation-name:fxUp}
+.fx{position:absolute;left:100%;top:0;margin-left:8px;font:700 calc(15px*var(--ts))/1 var(--f-data);font-style:normal;white-space:nowrap;pointer-events:none;animation:fxDrift 1.3s ease-out forwards}
+#hFundBox .fx{left:-5px;top:-3px;margin:0;font-size:calc(13px*var(--ts));padding:1px 5px;border-radius:5px;background:#05070d;animation-name:fxUp}
 @keyframes fxUp{0%{opacity:0;transform:translateY(5px)}15%{opacity:1}75%{opacity:1}100%{opacity:0;transform:translateY(-6px)}}
 .fx.neg{color:#ff8a7a}.fx.pos{color:#9ff0b8}
 @keyframes fxDrift{0%{opacity:0;transform:translateY(-4px)}15%{opacity:1}100%{opacity:0;transform:translateY(14px)}}
 .buy{position:relative}
 .buy.bought{animation:bought .8s}
-.buy.bought::after{content:'✓ +1';position:absolute;right:8px;top:6px;font:700 12px/1 var(--f-data);color:#9ff0b8;animation:fadeOut 1.4s forwards}
+.buy.bought::after{content:'✓ +1';position:absolute;right:8px;top:6px;font:700 calc(12px*var(--ts))/1 var(--f-data);color:#9ff0b8;animation:fadeOut 1.4s forwards}
 @keyframes bought{0%{border-color:#7fe0a0;background:rgba(127,224,160,.22);transform:scale(1.04)}100%{transform:none}}
 @keyframes fadeOut{0%,60%{opacity:1}100%{opacity:0}}
 .terms{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
@@ -320,18 +322,18 @@ button.undo{border-color:var(--capy);color:#ffd2a8}
 .term > svg{width:24px;height:24px;color:#ffb27a;flex:none}
 .term .ot{display:flex;flex-direction:column;gap:2px;min-width:0}
 .term .gi{width:13px;height:13px;vertical-align:-2px}
-.term b{font:700 14px/1.15 var(--f-display);letter-spacing:.04em;text-transform:uppercase;color:var(--ink)}
-.term .ot span{font:400 12px/1.3 var(--f-body);color:#c9d0de}
-.term em{font:500 11.5px/1.2 var(--f-data);font-style:normal;color:#ff9a9a}
+.term b{font:700 calc(14px*var(--ts))/1.15 var(--f-display);letter-spacing:.04em;text-transform:uppercase;color:var(--ink)}
+.term .ot span{font:400 calc(12px*var(--ts))/1.3 var(--f-body);color:#c9d0de}
+.term em{font:500 calc(11.5px*var(--ts))/1.2 var(--f-data);font-style:normal;color:#ff9a9a}
 .term[aria-disabled=true]{opacity:.45}
 .term.demand{width:100%;margin-top:6px;border-color:#ffb27a;background:rgba(255,178,122,.12)}
-.term.demand b{font-size:15px}
+.term.demand b{font-size:calc(15px*var(--ts))}
 .term .sw{display:inline-block;width:11px;height:11px;border-radius:50%;margin-right:6px;vertical-align:0}
 .term.refused{opacity:.4}.term.refused b{text-decoration:line-through}
 .term.shake{animation:shake .45s}
 @keyframes shake{20%{transform:translateX(-6px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(3px)}}
 .offer.picked,button.picked{border-color:var(--capy);background:rgba(242,166,90,.2);box-shadow:0 0 0 3px rgba(242,166,90,.35);transform:scale(1.02);transition:transform .15s}
-.offer.picked::after{content:'✓';position:absolute;right:12px;top:10px;font:700 18px/1 var(--f-data);color:var(--capy)}
+.offer.picked::after{content:'✓';position:absolute;right:12px;top:10px;font:700 calc(18px*var(--ts))/1 var(--f-data);color:var(--capy)}
 #toast.pop{animation:toastPop .45s}
 /* Network lost: the map goes dark around the place that failed, then the card says it slowly
    (the verdict fills from the top, the run types out line by line, the budget line draws itself)
@@ -342,7 +344,7 @@ button.undo{border-color:var(--capy);color:#ffd2a8}
 .card.lostcard,.card.wincard{border-color:rgba(255,92,92,.32);max-width:700px;padding:12px 20px 12px}
 .card.wincard{border-color:rgba(255,210,122,.45);box-shadow:0 0 40px rgba(255,190,90,.12)}
 #modal.won{background:rgba(3,5,10,.9)}
-.endc .verdict{font:700 34px/1 var(--f-display);letter-spacing:.2em;text-transform:uppercase;margin:6px 0 0;--vcol:var(--alarm);color:var(--vcol)}
+.endc .verdict{font:700 calc(34px*var(--ts))/1 var(--f-display);letter-spacing:.2em;text-transform:uppercase;margin:6px 0 0;--vcol:var(--alarm);color:var(--vcol)}
 .endc p{margin-top:4px}
 .winc .verdict{--vcol:#ffd27a}
 .endc .vrow{display:flex;align-items:center;gap:12px}
@@ -350,20 +352,20 @@ button.undo{border-color:var(--capy);color:#ffd2a8}
 .capyw.in{opacity:1;transform:none}
 .awrow{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
 .aw{display:inline-flex;align-items:center;gap:5px;height:26px;padding:0 10px 0 8px;border-radius:13px;border:1px solid rgba(255,210,122,.45);background:rgba(255,210,122,.08);
-  font:600 12.5px/1 var(--f-body);color:#ffe2a8;opacity:0;transform:scale(.6);transition:transform .4s cubic-bezier(.3,1.7,.5,1),opacity .2s}
+  font:600 calc(12.5px*var(--ts))/1 var(--f-body);color:#ffe2a8;opacity:0;transform:scale(.6);transition:transform .4s cubic-bezier(.3,1.7,.5,1),opacity .2s}
 .aw.in,.endc.ready .aw{opacity:1;transform:none}
-.aw.new::after{content:'NEW';font:700 9.5px/1 var(--f-display);letter-spacing:.08em;color:#1d1206;background:#ffd27a;border-radius:4px;padding:2px 4px;margin-left:2px}
+.aw.new::after{content:'NEW';font:700 calc(9.5px*var(--ts))/1 var(--f-display);letter-spacing:.08em;color:#1d1206;background:#ffd27a;border-radius:4px;padding:2px 4px;margin-left:2px}
 #toast.gold{border-color:#ffd27a;color:#ffe9bf;box-shadow:0 0 18px rgba(255,200,100,.3)}
 /* awards gallery (in the leaderboard) */
 .agrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(205px,1fr));gap:8px;margin-top:4px}
 .atile{display:flex;gap:10px;align-items:center;padding:8px 10px;border-radius:10px;border:1px solid var(--rule);background:rgba(255,255,255,.03)}
-.atile .ai{font-size:22px;line-height:1;width:28px;text-align:center;flex:none}
-.atile b{display:block;font:600 13px/1.2 var(--f-body);color:var(--ink)}
-.atile span{display:block;font:400 11.5px/1.3 var(--f-body);color:var(--dim)}
+.atile .ai{font-size:calc(22px*var(--ts));line-height:1;width:28px;text-align:center;flex:none}
+.atile b{display:block;font:600 calc(13px*var(--ts))/1.2 var(--f-body);color:var(--ink)}
+.atile span{display:block;font:400 calc(11.5px*var(--ts))/1.3 var(--f-body);color:var(--dim)}
 .atile.got{border-color:rgba(255,210,122,.5);background:rgba(255,210,122,.07)}
 .atile.got span.when{color:#ffd8a8}
 .atile:not(.got) .ai{filter:grayscale(1);opacity:.4}
-.lbrow .who .ac{color:#ffd27a;font:600 11px var(--f-data);margin-left:6px}
+.lbrow .who .ac{color:#ffd27a;font:600 calc(11px*var(--ts)) var(--f-data);margin-left:6px}
 /* the bottom row scrolls sideways when it's full, with a fade at the edge that has more */
 #tray,#sel{overflow-x:auto;overflow-y:hidden;scrollbar-width:none;touch-action:none}
 #tray::-webkit-scrollbar,#sel::-webkit-scrollbar{display:none}
@@ -374,7 +376,7 @@ button.undo{border-color:var(--capy);color:#ffd2a8}
 #tray.fl,#sel.fl{-webkit-mask-image:linear-gradient(90deg,transparent,#000 30px);mask-image:linear-gradient(90deg,transparent,#000 30px)}
 #tray.fl.fr,#sel.fl.fr{-webkit-mask-image:linear-gradient(90deg,transparent,#000 30px,#000 calc(100% - 30px),transparent);mask-image:linear-gradient(90deg,transparent,#000 30px,#000 calc(100% - 30px),transparent)}
 .dots.two{display:grid;grid-template-columns:repeat(6,9px);gap:3px}.dots.two.wide{grid-template-columns:repeat(8,9px)}.dots.two .dot{width:9px;height:9px}.dots.two .dot.free{border-width:2px}
-.endc .row.go{margin-top:8px;gap:6px}.endc .row.go button{height:38px;padding:0 12px;font-size:13.5px}
+.endc .row.go{margin-top:8px;gap:6px}.endc .row.go button{height:38px;padding:0 12px;font-size:calc(13.5px*var(--ts))}
 @supports ((-webkit-background-clip:text) or (background-clip:text)){
   .endc .verdict{background-image:linear-gradient(to bottom,var(--vcol) 0%,var(--vcol) 30%,rgba(0,0,0,0) 62%,rgba(0,0,0,0) 100%);
     background-size:100% 300%;background-repeat:no-repeat;background-position:0 var(--vpos,0%);
@@ -382,39 +384,39 @@ button.undo{border-color:var(--capy);color:#ffd2a8}
 }
 .runstats{display:flex;gap:24px;margin-top:6px}
 .runstats .rsc{flex:1 1 0;min-width:0}
-.rs{position:relative;font:400 12px/1.6 var(--f-data);color:#c3cad8;white-space:nowrap;overflow:hidden}
+.rs{position:relative;font:400 calc(12px*var(--ts))/1.6 var(--f-data);color:#c3cad8;white-space:nowrap;overflow:hidden}
 .rs .ghost{visibility:hidden}
 .rs .typed{position:absolute;left:0;top:0;right:0}
 .endc .chart{max-height:66px;margin-top:4px}
-.lrank{margin-top:6px;font:400 12px/1.4 var(--f-data);color:#c3cad8}
+.lrank{margin-top:6px;font:400 calc(12px*var(--ts))/1.4 var(--f-data);color:#c3cad8}
 .endc .go{opacity:0;pointer-events:none;transition:opacity .45s ease}
 .endc.ready .go{opacity:1;pointer-events:auto}
-.endc .tapnote{float:right;font:400 11px/1.2 var(--f-data);color:var(--dim);letter-spacing:.06em}
+.endc .tapnote{float:right;font:400 calc(11px*var(--ts))/1.2 var(--f-data);color:var(--dim);letter-spacing:.06em}
 .endc.ready .tapnote{display:none}
-button.link{height:auto;min-height:0;padding:2px 0;border:none;background:none;color:#ffd8a8;font:600 12px/1.2 var(--f-data);letter-spacing:.02em;text-decoration:underline;text-underline-offset:3px}
+button.link{height:auto;min-height:0;padding:2px 0;border:none;background:none;color:#ffd8a8;font:600 calc(12px*var(--ts))/1.2 var(--f-data);letter-spacing:.02em;text-decoration:underline;text-underline-offset:3px}
 /* Leaderboard: one row per run code, best first, per starting system; everyone or just you */
 #board{z-index:22}
 .card.boardc{max-width:740px;height:100%}
-.card.boardc .mhead h2{font-size:22px}
+.card.boardc .mhead h2{font-size:calc(22px*var(--ts))}
 .tabsb{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
-.tabsb button,.seg button{height:36px;padding:0 12px;font-size:13px}
+.tabsb button,.seg button{height:36px;padding:0 12px;font-size:calc(13px*var(--ts))}
 .tabsb button.on,.seg button.on{border-color:var(--capy);background:rgba(242,166,90,.18);color:#ffd8a8}
 .seg{display:flex;gap:4px;margin-right:auto}
 .lbrow{display:grid;grid-template-columns:24px minmax(0,1fr) 156px 56px 72px 56px;gap:8px;align-items:center;padding:6px 2px;border-bottom:1px solid var(--rule);
-  font:400 12.5px/1.2 var(--f-data);color:#cfd6e3;font-variant-numeric:tabular-nums}
+  font:400 calc(12.5px*var(--ts))/1.2 var(--f-data);color:#cfd6e3;font-variant-numeric:tabular-nums}
 .lbrow > span:nth-child(n+4){text-align:right}
-.lbrow.head{font:600 10.5px/1.2 var(--f-display);letter-spacing:.08em;text-transform:uppercase;color:var(--dim);border-bottom-color:rgba(160,180,220,.3)}
+.lbrow.head{font:600 calc(10.5px*var(--ts))/1.2 var(--f-display);letter-spacing:.08em;text-transform:uppercase;color:var(--dim);border-bottom-color:rgba(160,180,220,.3)}
 .lbrow.me{background:rgba(242,166,90,.08)}
 .lbrow.cur{box-shadow:inset 3px 0 0 var(--capy)}
 .lbrow .rk{color:var(--dim)}
-.lbrow .who{font:600 13px/1.2 var(--f-body);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.lbrow .who i{font:400 10.5px var(--f-data);font-style:normal;color:#9ff0b8;margin-left:4px}
-.lbrow .code{height:30px;min-height:0;padding:0 8px;font:600 12px/1 var(--f-data);letter-spacing:.02em;color:#ffd8a8;justify-content:flex-start}
+.lbrow .who{font:600 calc(13px*var(--ts))/1.2 var(--f-body);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lbrow .who i{font:400 calc(10.5px*var(--ts)) var(--f-data);font-style:normal;color:#9ff0b8;margin-left:4px}
+.lbrow .code{height:30px;min-height:0;padding:0 8px;font:600 calc(12px*var(--ts))/1 var(--f-data);letter-spacing:.02em;color:#ffd8a8;justify-content:flex-start}
 .lbrow .code.armed{background:var(--capy);border-color:var(--capy);color:#1d1206}
-.boardc .empty{margin:18px 4px;font:400 13px/1.45 var(--f-body);color:#c3cad8}
+.boardc .empty{margin:18px 4px;font:400 calc(13px*var(--ts))/1.45 var(--f-body);color:#c3cad8}
 /* putting something to work from the bottom bar: the button pops green and a chip rises from it */
 .dfx{position:absolute;bottom:calc(100% + 6px);z-index:6;display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border-radius:999px;
-  background:#0a1a12;border:1.5px solid #7fe0a0;color:#b4f5c8;font:700 13px/1 var(--f-data);white-space:nowrap;pointer-events:none;
+  background:#0a1a12;border:1.5px solid #7fe0a0;color:#b4f5c8;font:700 calc(13px*var(--ts))/1 var(--f-data);white-space:nowrap;pointer-events:none;
   box-shadow:0 6px 18px rgba(0,0,0,.55),0 0 14px rgba(127,224,160,.35);animation:dfxUp 1.3s ease-out forwards}
 .dfx .gi{width:16px;height:16px;margin:0}
 .dfx.back{background:#10141f;border-color:var(--rule);color:var(--dim);box-shadow:0 6px 18px rgba(0,0,0,.55)}
@@ -433,33 +435,33 @@ button.link{height:auto;min-height:0;padding:2px 0;border:none;background:none;c
 @media (prefers-reduced-motion:reduce){.down,.up,.buy.bought,#toast.pop,.fx{animation-duration:.01s}}
 .vs{display:grid;grid-template-columns:repeat(4,1fr);gap:6px 8px;margin-top:8px}
 .vs div{display:flex;flex-direction:column}
-.vs span{font:600 10.5px/1.2 var(--f-display);letter-spacing:.08em;text-transform:uppercase;color:var(--dim)}
-.vs b{font:600 15px/1.3 var(--f-data);font-variant-numeric:tabular-nums}
+.vs span{font:600 calc(10.5px*var(--ts))/1.2 var(--f-display);letter-spacing:.08em;text-transform:uppercase;color:var(--dim)}
+.vs b{font:600 calc(15px*var(--ts))/1.3 var(--f-data);font-variant-numeric:tabular-nums}
 .chart{width:100%;height:auto;max-height:120px;display:block;margin-top:8px}
 .ledger{list-style:none;padding:0!important;margin:10px 0 0;display:flex;flex-direction:column;gap:0!important}
-.ledger li{display:flex;gap:10px;padding:5px 0;border-bottom:1px solid rgba(160,180,220,.08);font-size:13px}
-.ledger .t{font:500 11.5px/1.6 var(--f-data);color:var(--dim);flex:none;width:58px}
+.ledger li{display:flex;gap:10px;padding:5px 0;border-bottom:1px solid rgba(160,180,220,.08);font-size:calc(13px*var(--ts))}
+.ledger .t{font:500 calc(11.5px*var(--ts))/1.6 var(--f-data);color:var(--dim);flex:none;width:58px}
 .ledger li.bad{color:#ffb8b8}.ledger li.good{color:#b9f3cf}.ledger li.warn{color:#ffd8a0}
-.ledger li.year{font-family:var(--f-data);font-size:12px;color:var(--dim)}
+.ledger li.year{font-family:var(--f-data);font-size:calc(12px*var(--ts));color:var(--dim)}
 .tabs,.hd>.tabs{display:flex;gap:4px;flex:none}
-.tabs button{height:36px;min-width:0;padding:0 11px;font-size:13px;background:transparent}
+.tabs button{height:36px;min-width:0;padding:0 11px;font-size:calc(13px*var(--ts));background:transparent}
 .tabs button.on{background:rgba(242,166,90,.16);border-color:rgba(242,166,90,.6);color:#ffd8a8}
 .hd h2{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tl li{line-height:1.4}
 .tl li.later{color:#aab3c4}
-.tl .t{font-size:12.5px;color:#ffd8a8;font-weight:600}
+.tl .t{font-size:calc(12.5px*var(--ts));color:#ffd8a8;font-weight:600}
 .tl .shp{color:var(--ink)}
-.ledger .st{font:600 10px/1 var(--f-display);letter-spacing:.08em;text-transform:uppercase;padding:2px 5px;border-radius:4px;border:1px solid var(--rule);color:var(--dim);vertical-align:1px}
+.ledger .st{font:600 calc(10px*var(--ts))/1 var(--f-display);letter-spacing:.08em;text-transform:uppercase;padding:2px 5px;border-radius:4px;border:1px solid var(--rule);color:var(--dim);vertical-align:1px}
 .ledger .st-now{color:#b9f3cf;border-color:rgba(120,220,160,.45)}
 .ledger .st-plan{color:#bfe3ff;border-color:rgba(120,190,255,.45)}
 .ledger .st-goal{color:#ffd8a0;border-color:rgba(255,195,90,.45)}
 .ledger .st-idea{color:#d6c8ff;border-color:rgba(170,140,240,.45)}
 .ledger .st-fic{color:#ffb3e6;border-color:rgba(240,140,210,.45)}
-.ledger .when{font:500 11px/1 var(--f-data);color:var(--dim)}
-.legend{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:4px 14px;margin-top:6px;font:400 13px/1.35 var(--f-body);color:#d3d9e5}
+.ledger .when{font:500 calc(11px*var(--ts))/1 var(--f-data);color:var(--dim)}
+.legend{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:4px 14px;margin-top:6px;font:400 calc(13px*var(--ts))/1.35 var(--f-body);color:#d3d9e5}
 /* sized by the app's own box (#app.short / .low, set in layout()), so a phone held upright and one on its
    side with the same room get the same layout */
-#app.short .card:not(.splash) h1{font-size:27px}#app.short .offer{min-height:0}
+#app.short .card:not(.splash) h1{font-size:calc(27px*var(--ts))}#app.short .offer{min-height:0}
 #app.low .card:not(.splash) ul{gap:1px}
 /* 5.13: the icon's look carries through the rest of the UI. Every card gets the navy glow and runs on a
    cyan-and-orange line pair along its bottom edge, drawn in when the card opens (dimmed on a lost network).
@@ -482,12 +484,30 @@ button.link{height:auto;min-height:0;padding:2px 0;border:none;background:none;c
 #loops path{fill:none;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
 /* 5.17: with a mouse, resting on a button, a place, a line or a sensor says what it is */
 #tip{position:absolute;z-index:85;max-width:300px;box-sizing:border-box;padding:6px 10px;border-radius:9px;pointer-events:none;
-  background:rgba(8,12,21,.97);border:1px solid rgba(134,191,226,.32);box-shadow:0 6px 18px rgba(0,0,0,.5);font:500 12px/1.4 var(--f-body);color:#d3d9e5}
+  background:rgba(8,12,21,.97);border:1px solid rgba(134,191,226,.32);box-shadow:0 6px 18px rgba(0,0,0,.5);font:500 calc(12px*var(--ts))/1.4 var(--f-body);color:#d3d9e5}
 #tip b{color:var(--ink);font-weight:600}
 #tip .shp{width:12px;height:12px;vertical-align:-1px}#tip .gi{width:14px;height:14px;vertical-align:-3px}
 #tip .sw{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px;vertical-align:-1px}
-#tip .k{display:inline-block;margin-left:4px;padding:0 4px;border:1px solid var(--rule);border-radius:4px;font:500 10.5px/1.45 var(--f-data);color:var(--dim)}
+#tip .k{display:inline-block;margin-left:4px;padding:0 4px;border:1px solid var(--rule);border-radius:4px;font:500 calc(10.5px*var(--ts))/1.45 var(--f-data);color:var(--dim)}
 @media (hover:hover) and (pointer:fine){#hud [data-tip]{pointer-events:auto;cursor:default}}
+/* 5.55: Settings · Accessibility. In colour-blind safe mode a line's swatch carries its number, as its knob on the map does. */
+.sw.n{display:inline-flex!important;align-items:center;justify-content:center;width:auto!important;min-width:calc(16px*var(--ts));height:calc(16px*var(--ts))!important;padding:0 3px;box-sizing:border-box;
+  border-radius:calc(8px*var(--ts))!important;font:700 calc(10.5px*var(--ts))/1 var(--f-data);letter-spacing:0;text-transform:none;vertical-align:-3px}
+.setrow{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:12px}
+.setrow .sl{flex:1 1 220px;min-width:0;display:flex;flex-direction:column;gap:2px}
+.setrow .sl b{font:600 calc(15px*var(--ts))/1.2 var(--f-body)}
+.setrow .sl span{font:400 calc(12px*var(--ts))/1.35 var(--f-body);color:var(--dim)}
+.seg2{display:flex;gap:6px;flex:none}
+.seg2 button{min-width:64px;padding:0 14px}
+.seg2 button.on{border-color:var(--capy);background:rgba(242,166,90,.16);color:#ffd8a8}
+.seg2.ts button{height:auto;min-height:48px;flex-direction:column;gap:2px;padding:4px 12px;letter-spacing:0}
+.seg2.ts button small{font:500 calc(10.5px*var(--ts))/1 var(--f-data);color:var(--dim)}
+.prev{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;margin-top:10px;padding:9px 11px;border-radius:10px;border:1px solid var(--rule);background:rgba(4,6,11,.45)}
+.prev .lns{display:flex;gap:5px;flex-wrap:wrap}
+.prev .ln{display:inline-flex;align-items:center;justify-content:center;width:calc(26px*var(--ts));height:calc(18px*var(--ts));border-radius:9px;font:700 calc(11px*var(--ts))/1 var(--f-data)}
+.prev .fr{display:flex;gap:4px 12px;flex-wrap:wrap;font:400 calc(12.5px*var(--ts))/1.3 var(--f-body);color:#d3d9e5}
+.prev .fr .shp{width:calc(15px*var(--ts));height:calc(15px*var(--ts));vertical-align:-3px;margin-right:3px}
+.tabs button svg{width:18px;height:18px}
 @media (prefers-reduced-motion:reduce){.card{animation:none}}
 @media (prefers-reduced-motion:reduce){#toast{transition:none}}
 </style>
@@ -528,7 +548,7 @@ button.link{height:auto;min-height:0;padding:2px 0;border:none;background:none;c
       <button data-a="fit" id="bFit" hidden aria-label="Fit everything in view"><svg viewBox="0 0 16 16"><path d="M2 6V2h4M10 2h4v4M14 10v4h-4M6 14H2v-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Fit</span></button>
       <button data-a="play" id="bPlay" aria-label="Pause"></button>
       <button data-a="speed" id="bSpeed" aria-label="Game speed">1×</button>
-      <button data-a="log" aria-label="Timeline, log and how to play"><svg viewBox="0 0 16 16"><path d="M2 3h12M2 8h12M2 13h8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
+      <button data-a="log" aria-label="Timeline, log, help, report and settings"><svg viewBox="0 0 16 16"><path d="M2 3h12M2 8h12M2 13h8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
     </div>
   </div>
 
@@ -537,7 +557,7 @@ button.link{height:auto;min-height:0;padding:2px 0;border:none;background:none;c
       <svg class="lines" id="splashLines" aria-hidden="true"></svg>
       <div class="big" aria-hidden="true"><svg viewBox="0 0 64 64"><use href="#capy"/></svg></div>
       <div class="txt">
-        <div class="eyebrow" id="splashEyebrow">Prototype 5.54</div>
+        <div class="eyebrow" id="splashEyebrow">Prototype 5.55</div>
         <h1>Astrobara Lines</h1>
         <p>Capybaras run the Lagrange Alliance’s freight. <b>Drag through places</b> to draw a shipping line. Freight shape = where it’s going. Too much waiting fills a red ring; a full ring ends the run.</p>
         <div class="scen" role="radiogroup" aria-label="Start in">
@@ -548,7 +568,7 @@ button.link{height:auto;min-height:0;padding:2px 0;border:none;background:none;c
         </div>
         <div class="scen mode" role="radiogroup" aria-label="Difficulty"><button data-a="mode" data-k="0" role="radio" aria-checked="true" class="on">Normal<small>gentler</small></button><button data-a="mode" data-k="1" role="radio" aria-checked="false">Hard<small>tight money · fuel · breakdowns</small></button></div>
         <div class="row"><button class="primary" data-a="update" id="bUpdate" hidden>Update</button><button class="primary" data-a="cont" id="bCont" hidden>Continue</button><button data-a="start" id="bNow">Play</button><button data-a="startTut" id="bTut">Walkthrough</button><button data-a="relaxed" id="bRelax">Relaxed</button></div>
-        <div class="row code"><input id="codeIn" type="text" placeholder="Run code" autocapitalize="characters" autocomplete="off" autocorrect="off" spellcheck="false" aria-label="Run code" enterkeyhint="go"><button data-a="code">Go</button><button data-a="board" id="bBoard">Leaderboard</button><span class="credit">© 2026 Mark Florentino LLC · MIT License</span></div>
+        <div class="row code"><input id="codeIn" type="text" placeholder="Run code" autocapitalize="characters" autocomplete="off" autocorrect="off" spellcheck="false" aria-label="Run code" enterkeyhint="go"><button data-a="code">Go</button><button data-a="board" id="bBoard">Leaderboard</button><button data-a="settings" id="bSet" aria-label="Settings · colour-blind safe, text size"><svg viewBox="0 0 24 24"><use href="#iGear"/></svg></button><span class="credit">© 2026 Mark Florentino LLC · MIT License</span></div>
       </div>
     </div>
   </div>
@@ -600,6 +620,7 @@ button.link{height:auto;min-height:0;padding:2px 0;border:none;background:none;c
     <g id="iHold"><path d="M3.5 7.5h12.5l6 4.5-6 4.5H3.5A2 2 0 0 1 1.5 14.5v-5a2 2 0 0 1 2-2z" fill="none" stroke="currentColor" stroke-width="1.8"/><rect x="4.5" y="10.3" width="2.8" height="3.4" fill="currentColor"/><rect x="8.6" y="10.3" width="2.8" height="3.4" fill="currentColor"/><rect x="12.7" y="10.3" width="2.8" height="3.4" fill="currentColor"/></g>
     <g id="iDock"><circle cx="16" cy="12" r="5.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M1.5 12h8M6.5 8.5L10 12l-3.5 3.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></g>
     <g id="iRoom"><rect x="6" y="6" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 9v6M9 12h6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M2 2h3M2 2v3M22 2h-3M22 2v3M2 22h3M2 22v-3M22 22h-3M22 22v-3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></g>
+    <g id="iGear"><path d="M10.3 2.5h3.4l.5 2.6 1.9.8 2.2-1.5 2.4 2.4-1.5 2.2.8 1.9 2.6.5v3.4l-2.6.5-.8 1.9 1.5 2.2-2.4 2.4-2.2-1.5-1.9.8-.5 2.6h-3.4l-.5-2.6-1.9-.8-2.2 1.5-2.4-2.4 1.5-2.2-.8-1.9-2.6-.5v-3.4l2.6-.5.8-1.9-1.5-2.2 2.4-2.4 2.2 1.5 1.9-.8z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="12" cy="12" r="3.3" fill="none" stroke="currentColor" stroke-width="1.8"/></g>
     <g id="iLine"><path d="M4 18C8 6 16 18 20 6" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></g>
   </defs>
 </svg>
@@ -616,7 +637,7 @@ const $ = id => document.getElementById(id);
 const app = $('app'), cv = $('cv'), ctx = cv.getContext('2d');
 
 /* ================= Tuning ================= */
-const VERSION = '5.54';
+const VERSION = '5.55';
 // 5.49: where ≡ → Report sends reports: a Cloudflare Worker that files each one as an issue in a private repo
 // (report-worker/ has its code and setup). While it's empty, Report copies the report and offers a GitHub issue.
 const REPORT_URL = '';
@@ -673,8 +694,32 @@ const CENTURY = perOf(2100);
 const eraNow = () => (S.scen === 'rand' ? `${GEN.name} · ${GEN.star.type}` : S.scen === 'sol' && S.open[IDX.RIFT] && GEN ? `${GEN.name} era` : eraOf(cal(S.t)));
 const eraOf = y => (y < 2037 ? 'Earth–Moon era' : y < 2050 ? 'Mars era' : y < 2068 ? 'Belt era' : y < 2100 ? 'Outer planets era' : 'Proxima era');
 
-const LINE_COLORS = ['#f2a65a', '#5ad1e6', '#e86fa8', '#a6d85c', '#a98bf0', '#f2d04c', '#4fd1a5', '#ff7a6b', '#d9b98a', '#5f8dff', '#b8835a', '#d65ce0', '#c9ced8', '#a9a83c', '#d8394f'];
-const LINE_NAMES = ['Orange', 'Cyan', 'Pink', 'Lime', 'Violet', 'Yellow', 'Mint', 'Coral', 'Sand', 'Blue', 'Brown', 'Magenta', 'Silver', 'Olive', 'Crimson'];
+// 5.55: Settings · Accessibility, remembered in this browser: colour-blind safe colours, and the text size
+const PREF = (k, d) => { try { const v = localStorage.getItem(k); return v == null ? d : v; } catch (_) { return d; } };
+const setPref = (k, v) => { try { localStorage.setItem(k, String(v)); } catch (_) {} };
+const TEXT_SIZES = [1, 1.2, 1.4], TEXT_NAMES = ['Standard', 'Large', 'Larger'];
+let cbSafe = PREF('lagrange-cb', '0') === '1';
+let textIx = Math.max(0, Math.min(TEXT_SIZES.length - 1, Math.round(+PREF('lagrange-text', 0)) || 0)), TK = TEXT_SIZES[textIx];
+const STD_COLORS = ['#f2a65a', '#5ad1e6', '#e86fa8', '#a6d85c', '#a98bf0', '#f2d04c', '#4fd1a5', '#ff7a6b', '#d9b98a', '#5f8dff', '#b8835a', '#d65ce0', '#c9ced8', '#a9a83c', '#d8394f'];
+const STD_NAMES = ['Orange', 'Cyan', 'Pink', 'Lime', 'Violet', 'Yellow', 'Mint', 'Coral', 'Sand', 'Blue', 'Brown', 'Magenta', 'Silver', 'Olive', 'Crimson'];
+// The colour-blind safe set was searched for by computer: each colour as far as possible from the others under simulated
+// red–green (deutan, protan) and blue–yellow (tritan) colour blindness as well as normal sight, the first nine (one
+// system's worth of lines) most of all. Nine hues can't all stay apart for everyone, so in this mode every line also
+// shows its number, on its knobs and its swatch.
+const CB_COLORS = ['#e69f00', '#8f54f7', '#48d7fe', '#bf5b76', '#fbe48d', '#51a1d5', '#7cc39d', '#ea2413', '#fdc010', '#e266a7', '#91debc', '#a55bc5', '#8688fe', '#c2fd0a', '#b4d181'];
+const CB_NAMES = ['Orange', 'Violet', 'Sky', 'Rose', 'Cream', 'Blue', 'Sage', 'Red', 'Gold', 'Pink', 'Mint', 'Purple', 'Iris', 'Lime', 'Pear'];
+let LINE_COLORS = cbSafe ? CB_COLORS : STD_COLORS, LINE_NAMES = cbSafe ? CB_NAMES : STD_NAMES;
+// a line takes its colour and name from its slot, so switching the setting repaints lines already drawn (and saved)
+function paintLine(L) { if (L && L.slot != null && LINE_COLORS[L.slot]) { L.color = LINE_COLORS[L.slot]; L.name = LINE_NAMES[L.slot]; } }
+// dark or light writing on a colour, whichever reads better
+const inkOn = hex => { const v = parseInt(hex.slice(1), 16), f = c => { c /= 255; return c <= .04045 ? c / 12.92 : Math.pow((c + .055) / 1.055, 2.4); };
+  return .2126 * f(v >> 16) + .7152 * f((v >> 8) & 255) + .0722 * f(v & 255) > .22 ? '#0a0f1c' : '#ffffff'; };
+// a line's swatch in the panels; in colour-blind safe mode, a pill with its number
+// canvas fonts at the chosen text size, and the extra room a second line of map text needs below the first
+const FD = '"Saira Condensed", "Arial Narrow", sans-serif', FM = '"IBM Plex Mono", ui-monospace, monospace';
+const fnt = (w, px, fam) => `${w} ${Math.round(px * TK * 10) / 10}px ${fam}`;
+const lift = () => (TK - 1) * 12.5;
+const swatch = L => cbSafe ? `<span class="sw n" style="background:${L.color};color:${inkOn(L.color)}">${L.slot + 1}</span>` : `<span class="sw" style="background:${L.color}"></span>`;
 // Three more lines are allowed for each wormhole that opens, for the system on its far side.
 const PROX_LINES = 3, maxLines = () => MAX_LINES + (S ? PROX_LINES * tunnels().filter(([a]) => S.open[a]).length : 0);
 
@@ -978,9 +1023,16 @@ const SHAPE_PATH = (() => {
 })();
 // 5.50: Proxima b's icon is a ringed planet, like the place and its freight on the map: back of the ring, the disc, then the front
 const RING_ARC = sweep => `<path transform="rotate(-22)" fill="none" d="M-9.3 0A9.3 2.9 0 0 ${sweep} 9.3 0"`;
+// 5.55: in colour-blind safe mode the round freight that colour alone told apart gets a mark: the Moon a crescent, Mars a
+// band across, a colony world a band down (Earth stays a plain disc; Proxima b already has its ring)
+const CB_PATH = {
+  moon: 'M6.83 1.55A7 7 0 1 1 -0.09 -7A5.6 5.6 0 0 0 6.83 1.55Z',
+  mars: 'M7 0A7 7 0 1 1 -7 0A7 7 0 1 1 7 0ZM-6 -1.6H6V1.6H-6Z',
+  world: 'M7 0A7 7 0 1 1 -7 0A7 7 0 1 1 7 0ZM-1.6 -6H1.6V6H-1.6Z',
+};
 const shp = s => `<svg class="shp" viewBox="-10 -10 20 20" aria-label="${SHAPES[s].role}"${TINT[s] ? ` style="color:${TINT[s]}"` : ''}>${s === 'proxb'
   ? `${RING_ARC(1)} stroke="currentColor" stroke-width="1.7"/><path d="${SHAPE_PATH[s]}"/>${RING_ARC(0)} stroke="#04060b" stroke-width="3.4"/>${RING_ARC(0)} stroke="currentColor" stroke-width="1.7"/>`
-  : `<path d="${SHAPE_PATH[s]}"/>`}</svg>`;
+  : cbSafe && CB_PATH[s] ? `<path d="${CB_PATH[s]}" fill-rule="evenodd"/>` : `<path d="${SHAPE_PATH[s]}"/>`}</svg>`;
 const ICON = n => `<svg viewBox="0 0 24 24"><use href="#${n}"/></svg>`;
 const gi = n => `<svg class="gi" viewBox="0 0 24 24" aria-hidden="true"><use href="#${n}"/></svg>`;
 
@@ -1777,7 +1829,7 @@ function talksHTML(i) {
   if (!talk || talk.i !== i) talk = { i, refused: new Set() };
   if (!demandOK(i, S.demand[i])) S.demand[i] = demandFor(i);
   const d = S.demand[i], dNo = d.type === 'line' && S.lines.length >= S.inv.lines ? 'No free line' : d.type === 'pay' && S.fund < Math.round(negotiateCost() * 1.5) ? `Need ${fmt(Math.round(negotiateCost() * 1.5))}` : '';
-  const dIcon = d.type === 'pay' ? 'iFlag' : 'iLine', dSw = d.type === 'extend' ? `<span class="sw" style="background:${S.lines.find(x => x.id === d.L).color}"></span>` : '';
+  const dIcon = d.type === 'pay' ? 'iFlag' : 'iLine', dSw = d.type === 'extend' ? swatch(S.lines.find(x => x.id === d.L)) : '';
   return `<div class="mhead"><div class="col"><div class="eyebrow">Talks · ${esc(placeName(i))}</div>
       <div class="mfunds"><div class="mfund"><span class="lbl">${reb ? 'Independent' : 'Unrest'}</span><b style="color:#ffb27a">${reb ? Math.ceil(S.rebel[i] - S.t) + 's' : Math.round(S.unrest[i] * 100) + '%'}</b></div>
         <div class="mfund"><span class="lbl">Budget</span><b>${fmt(S.fund)}</b></div></div></div>
@@ -2159,7 +2211,7 @@ function drawFx() {
       if (f.sys !== S.view || !capyImg || !capyImg.complete) continue;
       const k = Math.min(1, a / .35), x = X(f.x), y = Y(f.y) - 26 - 26 * Math.min(1, a / 1.4), sz = 34 * (k < 1 ? .5 + .6 * k : 1.1 - .1 * Math.min(1, (a - .35) * 4));
       ctx.save(); ctx.globalAlpha = a > 1.1 ? Math.max(0, (1.5 - a) / .4) : 1; ctx.drawImage(capyImg, x - sz / 2, y - sz / 2, sz, sz);
-      ctx.font = '700 12px "IBM Plex Mono", ui-monospace, monospace'; ctx.textAlign = 'center'; ctx.fillStyle = f.color; ctx.fillText(f.label, x, y - sz / 2 - 6); ctx.restore();
+      ctx.font = fnt(700, 12, FM); ctx.textAlign = 'center'; ctx.fillStyle = f.color; ctx.fillText(f.label, x, y - sz / 2 - 6); ctx.restore();
       continue;
     }
     if (f.sys !== S.view) continue;
@@ -2173,9 +2225,9 @@ function drawFx() {
     if (f.label) {
       const ly = y - 34 - 20 * Math.min(1, a / 1.3);
       ctx.globalAlpha = a < .12 ? a / .12 : a > 1.1 ? Math.max(0, (1.5 - a) / .4) : 1;
-      ctx.font = '700 12.5px "IBM Plex Mono", ui-monospace, monospace'; const w = ctx.measureText(f.label).width + 14;
-      ctx.fillStyle = 'rgba(5,9,14,.92)'; ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(x - w / 2, ly - 12, w, 19, 9.5); else ctx.rect(x - w / 2, ly - 12, w, 19); ctx.fill();
-      ctx.lineWidth = 1.5; ctx.stroke(); ctx.fillStyle = f.color; ctx.textAlign = 'center'; ctx.fillText(f.label, x, ly + 2);
+      ctx.font = fnt(700, 12.5, FM); const w = ctx.measureText(f.label).width + 14;
+      ctx.fillStyle = 'rgba(5,9,14,.92)'; ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(x - w / 2, ly - 12 * TK, w, 19 * TK, 9.5 * TK); else ctx.rect(x - w / 2, ly - 12 * TK, w, 19 * TK); ctx.fill();
+      ctx.lineWidth = 1.5; ctx.stroke(); ctx.fillStyle = f.color; ctx.textAlign = 'center'; ctx.fillText(f.label, x, ly + 2 * TK);
     }
     ctx.restore();
   }
@@ -2335,9 +2387,9 @@ function drawLost() {
   for (let n = 0; n < 3; n++) { const f = (a * .7 + n / 3) % 1; ctx.globalAlpha = (1 - f) * .9; ctx.beginPath(); ctx.arc(x, y, 18 + f * 72, 0, Math.PI * 2); ctx.stroke(); }
   const txt = `${placeName(i)} · ${lost.waiting}/${lost.room} waiting`, n = Math.max(0, Math.floor((a - .9) / .045));
   if (n > 0) {
-    ctx.globalAlpha = 1; ctx.font = '600 14px "IBM Plex Mono", ui-monospace, monospace'; ctx.textAlign = 'center';
+    ctx.globalAlpha = 1; ctx.font = fnt(600, 14, FM); ctx.textAlign = 'center';
     const w = ctx.measureText(txt).width + 20, ty = y - 64;
-    ctx.fillStyle = 'rgba(20,6,8,.92)'; ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(x - w / 2, ty - 16, w, 24, 12); else ctx.rect(x - w / 2, ty - 16, w, 24); ctx.fill();
+    ctx.fillStyle = 'rgba(20,6,8,.92)'; ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(x - w / 2, ty - 16 * TK, w, 24 * TK, 12 * TK); else ctx.rect(x - w / 2, ty - 16 * TK, w, 24 * TK); ctx.fill();
     ctx.strokeStyle = 'rgba(255,92,92,.7)'; ctx.lineWidth = 1.5; ctx.stroke();
     ctx.fillStyle = '#ffb4b4'; ctx.fillText(txt.slice(0, n), x, ty + 1);
   }
@@ -2573,6 +2625,7 @@ function diagText() {
   L.push(`device: ${navigator.userAgent}`);
   L.push(`screen: ${innerWidth}×${innerHeight} @${devicePixelRatio}x · ${rot ? 'turned (held upright)' : 'landscape'} · touch points ${navigator.maxTouchPoints || 0} · reduced motion ${reducedMotion()} · in Claude ${!!(window.claude && window.claude.use)} · cloud save ${!!cloud} · board ${!!boardRef}`);
   L.push(`perf: ${perfLine()}`);
+  L.push(`settings: colour-blind safe ${cbSafe ? 'on' : 'off'} · text ${Math.round(TK * 100)}%`);   // 5.55
   if (S) {
     L.push(`run: ${runCode()} · ${S.scen}${S.scen === 'rand' ? ' ' + GEN.name : ''} · ${qLabel(S.t)} · t ${S.t.toFixed(1)} (period ${(S.t / YEAR).toFixed(2)}) · speed ${S.speed}× · ${S.paused ? 'paused' : 'running'}${S.over ? ' · OVER' : ''}${S.sandbox ? ' · no-fail' : ''}${S.relaxed ? ' · relaxed' : ''} · ${S.hard ? 'HARD' : 'normal'}${S.tut ? ' · walkthrough step ' + S.tut.step : ''} · view ${S.view} · auto-pause ${autoPause}`);
     L.push(`money: budget ${fmt(S.fund)} · earned ${fmt(S.earned)} · delivered ${S.delivered}`);
@@ -3196,7 +3249,7 @@ function refreshPop(force) {
       popSig = sig;
       P.innerHTML = confirmRm
         ? `<span class="ask">Remove the ${L.name.toLowerCase()} line? Its ships become spare.</span><button class="danger" data-a="rmYes">Remove</button>${L.ships.length ? `<button data-a="rmScrap" aria-label="Remove and scrap its ships">Scrap ${L.ships.length}${gi('iShip')} +${fmt(lineScrap(L))}</button>` : ''}<button data-a="rmNo">Keep</button>`
-        : `<div class="si" data-a="info"><span class="nm"><span class="sw" style="background:${L.color}"></span>${L.name}<span class="yr" data-f="lyr"></span></span><span class="st" data-f="lst"></span></div>
+        : `<div class="si" data-a="info"><span class="nm">${swatch(L)}${L.name}<span class="yr" data-f="lyr"></span></span><span class="st" data-f="lst"></span></div>
           ${shipTrouble(L).length ? `<button class="primary nudge" data-a="fixShip" aria-label="Repair the ship">🔧 Repair <small data-f="rCost"></small></button>` : ''}<button class="ic" data-a="addShip" aria-label="Add a ship">+${gi('iShip')}<small data-f="nShips"></small></button><button class="ic" data-a="rmShip" aria-label="Take a ship off">−${gi('iShip')}</button><button class="ic" data-a="addPod" aria-label="Add a cargo pod">+${gi('iPod')}<small data-f="nPods"></small></button>${L.loop ? `<button class="ic" data-a="unloop" aria-label="Open the loop">${gi('iLoop')}✕</button>` : ''}<button class="ic ghost" data-a="rmLine" aria-label="Remove line">${gi('iTrash')}</button><button class="x" data-a="close" aria-label="Close">×</button>`;
     }
     if (!confirmRm) {
@@ -3454,13 +3507,13 @@ function drawLook() {
     const sz = 27 + 4 * Math.sin(a * 5), c = 10;
     ctx.globalAlpha = fade; ctx.strokeStyle = col; ctx.lineWidth = 3;
     for (const [sx, sy] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) { ctx.beginPath(); ctx.moveTo(x + sx * sz, y + sy * (sz - c)); ctx.lineTo(x + sx * sz, y + sy * sz); ctx.lineTo(x + sx * (sz - c), y + sy * sz); ctx.stroke(); }
-    ctx.font = '600 12px "IBM Plex Mono", ui-monospace, monospace'; ctx.textAlign = 'center';
+    ctx.font = fnt(600, 12, FM); ctx.textAlign = 'center';
     // 5.40: labels of places close together stack instead of overlapping
     const w = ctx.measureText(n.why).width + 14; let ty = y - sz - 15;
-    for (let k = 0; k < 6 && placed.some(r => Math.abs(r.x - x) < (r.w + w) / 2 + 4 && Math.abs(r.y - ty) < 22); k++) ty -= 22;
+    for (let k = 0; k < 6 && placed.some(r => Math.abs(r.x - x) < (r.w + w) / 2 + 4 && Math.abs(r.y - ty) < 22 * TK); k++) ty -= 22 * TK;
     placed.push({ x, y: ty, w });
-    ctx.fillStyle = 'rgba(8,10,18,.92)'; ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(x - w / 2, ty - 12, w, 19, 9.5); else ctx.rect(x - w / 2, ty - 12, w, 19); ctx.fill();
-    ctx.lineWidth = 1.3; ctx.stroke(); ctx.fillStyle = col; ctx.fillText(n.why, x, ty + 2);
+    ctx.fillStyle = 'rgba(8,10,18,.92)'; ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(x - w / 2, ty - 12 * TK, w, 19 * TK, 9.5 * TK); else ctx.rect(x - w / 2, ty - 12 * TK, w, 19 * TK); ctx.fill();
+    ctx.lineWidth = 1.3; ctx.stroke(); ctx.fillStyle = col; ctx.fillText(n.why, x, ty + 2 * TK);
   }
   ctx.restore();
 }
@@ -3633,7 +3686,7 @@ const CTRL_TIP = {
   fit: () => 'Fit the whole map in view',
   play: () => `${S && S.paused ? 'Play' : 'Pause'} <span class="k">Space</span>`,
   speed: () => 'Game speed, and pausing for new places and talks <span class="k">1</span><span class="k">2</span><span class="k">3</span><span class="k">5</span>',
-  log: () => 'Timeline, log, how it works, and report a problem',
+  log: () => 'Timeline, log, how it works, report a problem, and ⚙ settings',
 };
 function tipText(el) {
   if (el.dataset.tip) return el.dataset.tip;
@@ -3678,7 +3731,7 @@ function mapTip(p) {
   if (pin) return { key: 'pin' + pin.i, cur: 'pointer', html: `${shp(S.shape[pin.i])} <b>${esc(placeName(pin.i))}</b> is off screen · tap to glide there` };
   let hb = null, hd = 24; for (const h of handles()) { const d = Math.hypot(h.x - p.x, h.y - p.y); if (d < hd || (h.L === selLine() && d < GRAB && (!hb || hb.L !== h.L))) { hd = d; hb = h; } }
   const pi = placeAt(p, 26), pd = pi >= 0 ? Math.hypot(X(PL[pi].x) - p.x, Y(PL[pi].y) - p.y) : Infinity;
-  if (hb && (hd < pd || hb.L === selLine()) && !(pi >= 0 && pd <= R(pi) + 4)) return { key: 'k' + hb.L.id + hb.end, cur: 'grab', html: `<span class="sw" style="background:${hb.L.color}"></span><b>${hb.L.name} line</b>, its end · drag to add stops, or back along the line to cut them` };
+  if (hb && (hd < pd || hb.L === selLine()) && !(pi >= 0 && pd <= R(pi) + 4)) return { key: 'k' + hb.L.id + hb.end, cur: 'grab', html: `${swatch(hb.L)}<b>${hb.L.name} line</b>, its end · drag to add stops, or back along the line to cut them` };
   if (pi >= 0) return { key: 'p' + pi, cur: 'pointer', html: tipPlace(pi) };
   const k = sensorAt(p);
   if (k >= 0) {
@@ -3686,7 +3739,7 @@ function mapTip(p) {
     return { key: 's' + k, cur: 'pointer', html: `${gi('iSensor')} <b>${esc(z.name)}</b> · ${down ? 'knocked out by a storm · tap to repair' : owned ? 'on' : soon ? `for sale from ${sensorFrom(k)}` : `${fmt(z.cost)} · tap to buy`}<br>${z.kind === 'signal' ? 'hears unknown signals' : 'storm warnings'} ${z.bonus}s sooner · it carries no freight` };
   }
   const L = lineAt(p);
-  if (L) return { key: 'L' + L.id, cur: 'pointer', html: `<span class="sw" style="background:${L.color}"></span><b>${L.name} line</b> · ${L.stops.map(i => esc(placeName(i))).join(' → ')}${L.loop ? ' → back' : ''}<br>${L.ships.length} ship${L.ships.length === 1 ? '' : 's'}${L.dry ? ` · <b>no ${shp('diamond')} fuel</b> (the crossed-out ${shp('diamond')}): ${Math.round((1 - FUEL_SLOW) * 100)}% slower${fuelNear(L) >= 0 ? `, add ${shp('diamond')} ${esc(placeName(fuelNear(L)))}` : ''}` : ''}${shipTrouble(L).length ? ' · 🔧 a ship breaking down' : ''} · tap to add ships or pods, or to remove it` };
+  if (L) return { key: 'L' + L.id, cur: 'pointer', html: `${swatch(L)}<b>${L.name} line</b> · ${L.stops.map(i => esc(placeName(i))).join(' → ')}${L.loop ? ' → back' : ''}<br>${L.ships.length} ship${L.ships.length === 1 ? '' : 's'}${L.dry ? ` · <b>no ${shp('diamond')} fuel</b> (the crossed-out ${shp('diamond')}): ${Math.round((1 - FUEL_SLOW) * 100)}% slower${fuelNear(L) >= 0 ? `, add ${shp('diamond')} ${esc(placeName(fuelNear(L)))}` : ''}` : ''}${shipTrouble(L).length ? ' · 🔧 a ship breaking down' : ''} · tap to add ships or pods, or to remove it` };
   return null;
 }
 function hoverMap(e) {
@@ -3771,7 +3824,7 @@ const M = $('modal'), MC = $('modalCard');
 MC.addEventListener('pointerdown', () => { if (!lostRaf) return; if (lostSpeed > 1) endLost(); else lostSpeed = 4; }, { passive: true });
 $('lostVeil').addEventListener('pointerdown', () => (lost ? showLost() : won ? showWin() : null), { passive: true });
 let modalKind = null, modalNext = null, wasPaused = false, backTo = null;
-function openModal(html, kind, next) { app.classList.add('modalopen'); MC.innerHTML = html; const win = /class="endc winc/.test(html); M.classList.toggle('lost', kind === 'lost'); M.classList.toggle('won', win); MC.classList.toggle('lostcard', kind === 'lost'); MC.classList.toggle('wincard', win); MC.classList.toggle('split', kind === 'log' || kind === 'meeting' || kind === 'talks'); M.hidden = false; MC.scrollTop = MC.querySelector('.endc.ready') ? MC.scrollHeight : 0; const lb = MC.querySelector('.lbody'); if (lb) lb.scrollTop = 0; modalKind = kind; modalNext = next || null; }
+function openModal(html, kind, next) { app.classList.add('modalopen'); MC.innerHTML = html; const win = /class="endc winc/.test(html); M.classList.toggle('lost', kind === 'lost'); M.classList.toggle('won', win); MC.classList.toggle('lostcard', kind === 'lost'); MC.classList.toggle('wincard', win); MC.classList.toggle('split', kind === 'log' || kind === 'meeting' || kind === 'talks' || kind === 'set'); M.hidden = false; MC.scrollTop = MC.querySelector('.endc.ready') ? MC.scrollHeight : 0; const lb = MC.querySelector('.lbody'); if (lb) lb.scrollTop = 0; modalKind = kind; modalNext = next || null; }
 const modalAct = (a, el) => {
   if (a === 'buyUp') {
     const k = el.dataset.o, c = price(k), r = buyOffer(k);
@@ -3823,6 +3876,9 @@ const modalAct = (a, el) => {
   else if (a === 'sandbox') { S.sandbox = true; S.over = false; saveSoon = true; S.of = S.of.map(v => Math.min(v, .99)); M.hidden = true; modalKind = null; S.paused = false; lastPlay = null; log('Sandbox: freight can pile up without ending the run.', ''); }
   else if (a === 'log') { const html = MC.innerHTML, k = modalKind, n = modalNext; showLog(() => openModal(html, k, n), 'timeline'); }
   else if (a === 'tab') showLog(null, el.dataset.t);
+  else if (a === 'setCB') { if ((el.dataset.v === '1') !== cbSafe) { setCB(el.dataset.v === '1'); setRedraw('setCB'); } }   // 5.55
+  else if (a === 'setText') { if (+el.dataset.v !== textIx) { setTextSize(+el.dataset.v); setRedraw('setText'); } }
+  else if (a === 'setClose') { M.hidden = true; modalKind = null; MC.classList.remove('split'); }
   else if (a === 'lostDiag') { const html = MC.innerHTML, k = modalKind, n = modalNext; showLog(() => openModal(html, k, n), 'diag'); if (inClaude()) { const t = diagText(); $('diagText').value = t; copyText(t, 'Diagnostics'); } }   // 5.26: one tap from the lost card · 5.49: opens Report (and still copies in Claude)
   else if (a === 'sendRep') { if (el.getAttribute('aria-disabled') !== 'true') sendReport(); }
   else if (a === 'repSave') { rep.save = !rep.save; el.classList.toggle('on', rep.save); el.setAttribute('aria-pressed', rep.save); el.textContent = `${rep.save ? '✓' : '○'} Include run`; const s = $('repSends'); if (s) s.textContent = repSends(); }
@@ -3836,7 +3892,7 @@ MC.addEventListener('input', e => { if (e.target.id === 'repMsg') rep.msg = e.ta
 MC.addEventListener('keydown', e => { if (e.target.id === 'repMail' && e.key === 'Enter') { e.preventDefault(); sendReport(); } });
 // 5.29: with a mouse, a click on the map around a panel closes it, as its own Close or Not now would. Panels that
 // need a choice (the Alliance Shop, the end of a run) stay; touch is unchanged, so a stray tap can't close one.
-const BG_CLOSE = { log: 'close', talks: 'close', five: 'no5' };
+const BG_CLOSE = { log: 'close', talks: 'close', five: 'no5', set: 'setClose' };
 function bgClose(ov, close) {
   let down = false;
   ov.addEventListener('pointerdown', e => { down = e.target === ov && e.pointerType === 'mouse'; });
@@ -3860,9 +3916,10 @@ function showLog(back, tab) {
   if (!back && modalKind !== 'log') pauseFor();
   if (modalKind !== 'log') backTo = back || null;
   logTab = tab || logTab;
-  const tabs = `<div class="tabs">${[['timeline', 'Timeline'], ['log', 'Log'], ['help', 'Help'], ['diag', 'Report']].map(([k, n]) => `<button data-a="tab" data-t="${k}" class="${logTab === k ? 'on' : ''}">${n}</button>`).join('')}</div>`;
+  const tabs = `<div class="tabs">${[['timeline', 'Timeline'], ['log', 'Log'], ['help', 'Help'], ['diag', 'Report'], ['set', ICON('iGear'), 'Settings']].map(([k, n, al]) => `<button data-a="tab" data-t="${k}" class="${logTab === k ? 'on' : ''}"${al ? ` aria-label="${al}"` : ''}>${n}</button>`).join('')}</div>`;
   let body;
-  if (logTab === 'help') body = helpBody();
+  if (logTab === 'set') body = setBody();
+  else if (logTab === 'help') body = helpBody();
   else if (logTab === 'diag') body = diagBody();
   else if (logTab === 'log') {
     const items = S.log.slice().reverse().map(e => `<li class="${e.kind || ''}"><span class="t">${qShort(e.t)}</span><span>${logHTML(e.text)}</span></li>`).join('');
@@ -3881,7 +3938,43 @@ function showLog(back, tab) {
       <div class="eyebrow" style="margin-top:12px">Places</div><ul class="ledger tl">${places}</ul>
       <div class="eyebrow" style="margin-top:12px">Storm sensors · bought, not connected</div><ul class="ledger tl">${SENSORS.map((z, k) => !SCEN[S.scen].sensors.includes(z.id) ? '' : `<li class="${S.sensor[k] ? '' : 'later'}"><span class="t">${z.st === 'now' ? 'now' : sensorFrom(k)}</span><span><b>${z.name}</b> <span class="st st-${z.st}">${STATUS[z.st]}</span> <span class="when">${S.sensor[k] ? 'yours' : fmt(z.cost)}</span><br>${esc(z.note)}</span></li>`).join('')}</ul>`;
   }
-  openModal(`<div class="lbody"><h2>${{ log: 'Log', help: 'How it works', timeline: 'Timeline', diag: 'Report a problem' }[logTab]}</h2>${body}</div><div class="foot">${tabs}<button class="ghost" data-a="home">Start screen</button><button class="primary" data-a="close">Close</button></div>`, 'log', modalKind === 'log' ? modalNext : null);
+  openModal(`<div class="lbody"><h2>${{ log: 'Log', help: 'How it works', timeline: 'Timeline', diag: 'Report a problem', set: 'Settings' }[logTab]}</h2>${body}</div><div class="foot">${tabs}<button class="ghost" data-a="home">Start screen</button><button class="primary" data-a="close">Close</button></div>`, 'log', modalKind === 'log' ? modalNext : null);
+}
+/* 5.55: Settings · Accessibility. ≡ → ⚙ during a run, or ⚙ on the start screen. Colour-blind safe swaps the line colours
+   for a set that stays apart with colour blindness, numbers every line (its knobs, a loop's tag, its swatch) and marks the
+   round freight that only colour told apart. Text size scales the words in the panels and on the map. Both are kept in
+   this browser and apply at once, so the map behind the panel shows the change. */
+function setBody() {
+  const opt = (a, v, on, html, al) => `<button data-a="${a}" data-v="${v}" class="${on ? 'on' : ''}" role="radio" aria-checked="${on}"${al ? ` aria-label="${al}"` : ''}>${html}</button>`;
+  const lines = LINE_COLORS.slice(0, MAX_LINES).map((c, k) => `<span class="ln" style="background:${c};color:${inkOn(c)}">${cbSafe ? k + 1 : ''}</span>`).join('');
+  const fr = ['earth', 'moon', 'mars', 'proxb', 'world'].map(s => `<span>${shp(s)}${SHAPES[s].short}</span>`).join('');
+  return `<div class="eyebrow" style="margin-top:6px">Accessibility</div>
+    <div class="setrow"><div class="sl"><b>Colour-blind safe</b><span>Colours that stay apart · numbered lines · marked round freight</span></div>
+      <div class="seg2" role="radiogroup" aria-label="Colour-blind safe">${opt('setCB', 0, !cbSafe, 'Off')}${opt('setCB', 1, cbSafe, 'On')}</div></div>
+    <div class="prev" aria-hidden="true"><span class="lns">${lines}</span><span class="fr">${fr}</span></div>
+    <div class="setrow"><div class="sl"><b>Text size</b><span>Panels, notes and the map</span></div>
+      <div class="seg2 ts" role="radiogroup" aria-label="Text size">${TEXT_SIZES.map((k, i) => opt('setText', i, i === textIx, `<span style="font-size:${Math.round(13 * k)}px;line-height:1">A</span><small>${Math.round(k * 100)}%</small>`, `${TEXT_NAMES[i]} text`)).join('')}</div></div>
+    <p class="credit" style="margin-top:14px">Kept in this browser.</p>`;
+}
+// apply the settings: the line colours and names (repainting lines already drawn), the text size for the page and the map
+function applyLook(redo) {
+  LINE_COLORS = cbSafe ? CB_COLORS : STD_COLORS; LINE_NAMES = cbSafe ? CB_NAMES : STD_NAMES;
+  const r = document.documentElement.style; r.setProperty('--ts', TK); r.setProperty('--tsc', 1 + (TK - 1) / 2);
+  app.classList.toggle('cb', cbSafe); canvasFonts();
+  if (!redo) return;
+  if (S) { S.lines.forEach(paintLine); traySig = ''; trayUI(); popSig = ''; refreshPop(true); sysSig = ''; hud(); }
+  layout(); if (!$('splash').hidden) splashUI();
+}
+function setCB(v) { cbSafe = !!v; setPref('lagrange-cb', cbSafe ? 1 : 0); applyLook(true); }
+function setTextSize(i) { textIx = Math.max(0, Math.min(TEXT_SIZES.length - 1, i | 0)); TK = TEXT_SIZES[textIx]; setPref('lagrange-text', textIx); applyLook(true); }
+// from the start screen: the same panel on its own
+function showSettings() { openModal(`<div class="lbody"><h2>Settings</h2>${setBody()}</div><div class="foot"><button class="primary" data-a="setClose">Close</button></div>`, 'set'); }
+function setRedraw(a) {
+  const lb = MC.querySelector('.lbody'), st = lb ? lb.scrollTop : 0;
+  if (modalKind === 'log') showLog(null, 'set'); else showSettings();
+  const nb = MC.querySelector('.lbody'); if (nb) nb.scrollTop = st;
+  // bigger text pushes things down: keep the row just tapped in view
+  const on = a && MC.querySelector(`[data-a=${a}].on`); if (on && nb) { const r = on.getBoundingClientRect(), b = nb.getBoundingClientRect(); if (r.bottom > b.bottom || r.top < b.top) on.scrollIntoView({ block: 'nearest' }); }
 }
 function helpBody() {
   return `<ul>
@@ -3919,6 +4012,7 @@ function helpBody() {
     <li><b>Saving.</b> Your run saves itself as you play, and when you close the page. Continue on the start screen picks it up where you left off. A run that ends is not kept.</li>
     <li><b>Other system’s storms.</b> When a storm or flare is coming on the map you’re not looking at and a shield there would help, a message says so and the ⇄ button turns amber.</li>
     <li><b>Alliance Shop.</b> The shop opens once a period (the countdown is at the top right). The Alliance sends a ship each time, and every third time a line too. Buy what you like from the budget, then pick one free upgrade, or skip it and bank the interest, to close the shop.</li>
+    <li><b>Settings.</b> ≡ menu → ${gi('iGear')} (or ${gi('iGear')} on the start screen). <b>Colour-blind safe</b> swaps the line colours for a set that stays apart with red–green or blue–yellow colour blindness, writes each line’s number on its knobs (on a loop, a numbered disc), its swatch and the new-line tag, marks the round freight colour alone told apart (${shp('moon')} the Moon a crescent, ${shp('mars')} Mars a band across, ${shp('world')} a colony a band down; ${shp('earth')} Earth stays plain, ${shp('proxb')} Proxima b has its ring), and gives a crowded place’s edge arrow a second ring. <b>Text size</b> makes the words in panels, notes and on the map 120% or 140%. Both are kept in this browser.</li>
     <li><b>Report a problem.</b> Something odd? ≡ menu → Report (or ⚑ Report on the Network Lost card): say what happened and Send. It goes to the developer with the game’s state, and with Include run on, the run itself, so it can be loaded exactly as it was. What gets sent · copy shows all of it, with Copy diagnostics and Copy save.</li>
     <li><b>Keyboard.</b> On a computer: Space plays or pauses, 1, 2, 3 and 5 set the speed, Esc closes the bar along the bottom. While you draw or reshape a line, Esc or the right mouse button cancels it. Scroll to zoom; drag empty space, or hold the middle or right button anywhere, to pan.</li>
     <li><b>Speed.</b> Tap the speed button for 0.1× and 0.5× slow motion or 2×, 3× and 5× (5× asks first). When a new place opens, or a restless place votes on a demand or declares independence, the game pauses so you don’t miss it: white rings spread from any place that isn’t on a line yet, amber rings from a place that wants to talk, the play button pulses, and ▶ carries on. Turn the pause off with the “❚❚ new place · talks” switch in the same menu.</li>
@@ -3934,8 +4028,10 @@ function showHelp() { showLog(null, 'help'); }
 
 /* ================= Rendering ================= */
 let clock = 0, wclock = 0;   // clock: real time, for warnings and cues; wclock (5.28): the world's own motion, still while the game is paused
-const F_LBL = '600 12.5px "Saira Condensed", "Arial Narrow", sans-serif';
-const F_NUM = '600 11.5px "IBM Plex Mono", ui-monospace, monospace';
+// 5.55: map text follows the text size setting (TK); fnt() builds a canvas font at that size
+let F_LBL = '', F_NUM = '';
+function canvasFonts() { F_LBL = fnt(600, 12.5, FD); F_NUM = fnt(600, 11.5, FM); }
+canvasFonts();
 function shapePath(s, x, y, r) {
   ctx.beginPath();
   if (s === 'earth' || s === 'moon' || s === 'mars' || s === 'proxb' || s === 'worm' || s === 'world') ctx.arc(x, y, r, 0, Math.PI * 2);
@@ -3957,7 +4053,17 @@ function ringHalf(x, y, d, front, col, w, edge) {
 // one piece of waiting freight: its destination's shape in its destination's colour, with a thin dark edge
 function drawFreight(want, x, y, r, col) {
   ctx.fillStyle = col; ctx.strokeStyle = 'rgba(4,6,11,.8)'; ctx.lineWidth = 1.3 * uk; ctx.lineJoin = 'round';
-  if (want !== 'proxb') { shapePath(want, x, y, r); ctx.stroke(); ctx.fill(); return; }
+  if (cbSafe && want === 'moon') {   // 5.55: a crescent (the same cut as CB_PATH.moon, scaled to r)
+    const k = r / 7, D = Math.PI / 180; ctx.beginPath(); ctx.arc(x, y, r, 12.8 * D, 269.3 * D, false); ctx.arc(x + 4.2 * k, y - 3.4 * k, 5.6 * k, -140 * D, 62 * D, true); ctx.closePath(); ctx.stroke(); ctx.fill(); return;
+  }
+  if (want !== 'proxb') {
+    shapePath(want, x, y, r); ctx.stroke(); ctx.fill();
+    if (cbSafe && (want === 'mars' || want === 'world')) {   // 5.55: a dark band, across for Mars, down for a colony world
+      const v = want === 'world'; ctx.beginPath(); ctx.moveTo(x - (v ? 0 : r * .86), y - (v ? r * .86 : 0)); ctx.lineTo(x + (v ? 0 : r * .86), y + (v ? r * .86 : 0));
+      ctx.lineWidth = r * .46; ctx.lineCap = 'butt'; ctx.strokeStyle = 'rgba(4,6,11,.92)'; ctx.stroke(); ctx.lineCap = 'round';
+    }
+    return;
+  }
   const d = r * .82, w = 1.05 * uk, e = 1.3 * uk;
   ringHalf(x, y, d, false, col, w, e);
   ctx.fillStyle = col; ctx.strokeStyle = 'rgba(4,6,11,.8)'; ctx.lineWidth = e; shapePath(want, x, y, d); ctx.stroke(); ctx.fill();
@@ -4001,16 +4107,31 @@ function label(text, x, y, color) {
 // A line's pull knob: a round grip in its colour, outlined dark, with a white chevron pointing the way
 // the line would grow, on a thin stub back to the last stop. Unlike a place (white-rimmed shapes) or
 // a line (a thick stroke), so it reads as "the thing you pull".
-function drawKnob(x, y, ux, uy, color, sx, sy) {
-  const r = 9.5 * uk;
+function drawKnob(x, y, ux, uy, color, sx, sy, num) {
+  const r = (cbSafe && num != null ? Math.max(9.5, 7 + 4 * TK) : 9.5) * uk;
   if (sx != null) { ctx.strokeStyle = color; ctx.lineWidth = 3 * uk; ctx.lineCap = 'round'; ctx.setLineDash([2.5 * uk, 3.5 * uk]); ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(x - ux * r, y - uy * r); ctx.stroke(); ctx.setLineDash([]); }
   ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fillStyle = color; ctx.fill(); ctx.lineWidth = 2.4; ctx.strokeStyle = '#04060b'; ctx.stroke();
   ctx.beginPath(); ctx.arc(x, y, r + 2.6, 0, Math.PI * 2); ctx.lineWidth = 1.2; ctx.strokeStyle = 'rgba(233,237,244,.55)'; ctx.stroke();
+  // 5.55: colour-blind safe: the line's number takes the chevron's place (the stub still shows which way it grows)
+  if (cbSafe && num != null) { lineNum(num, x, y, color); return; }
   const a = 3.6 * uk, b = 3 * uk, px = -uy, py = ux;
   ctx.beginPath(); ctx.moveTo(x - ux * b + px * a, y - uy * b + py * a); ctx.lineTo(x + ux * a, y + uy * a); ctx.lineTo(x - ux * b - px * a, y - uy * b - py * a);
   ctx.lineWidth = 2.2 * uk; ctx.strokeStyle = '#fff'; ctx.lineJoin = 'round'; ctx.lineCap = 'round'; ctx.stroke();
 }
-function previewPath(stops, color, fingerP, loop, isNew, who) {
+// 5.55: a line's number, written on its colour in whichever of dark or white reads better
+function lineNum(num, x, y, color) {
+  ctx.font = fnt(700, (num > 9 ? 9.5 : 11) * uk, FM); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillStyle = inkOn(color); ctx.fillText(String(num), x, y + .5); ctx.textBaseline = 'alphabetic';
+}
+// and on a loop, which has no knobs: a numbered disc on its first stretch
+function loopTag(L, alpha) {
+  const sg = L.segs[0]; if (!sg || !sg.pts[12]) return;
+  const m = sg.pts[12], x = X(m.x), y = Y(m.y), r = Math.max(8.5, 6 + 4 * TK) * uk;
+  ctx.save(); ctx.globalAlpha = alpha;
+  ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fillStyle = L.color; ctx.fill(); ctx.lineWidth = 2.2; ctx.strokeStyle = '#04060b'; ctx.stroke();
+  lineNum(L.slot + 1, x, y, L.color); ctx.restore();
+}
+function previewPath(stops, color, fingerP, loop, isNew, who, num) {
   ctx.strokeStyle = color; ctx.lineWidth = 6 * uk; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.globalAlpha = .8;
   const segs = []; for (let s = 0; s < stops.length - 1; s++) segs.push([stops[s], stops[s + 1]]);
   if (loop) segs.push([stops[stops.length - 1], stops[0]]);
@@ -4031,7 +4152,7 @@ function previewPath(stops, color, fingerP, loop, isNew, who) {
   // which line this is (a new one, or the one you're pulling), and the real-world year it could run
   if (stops.length >= 2 || !isNew) fingerTag = { t: `${who ? who + ' · ' : ''}${stops.length >= 2 ? yrTag(stops) : ''}`.replace(/ · $/, ''), x: Math.max(80, Math.min(W - 80, fingerP.x)), y: fingerP.y > 120 ? fingerP.y - 46 : fingerP.y + 50 };
   // pulling a line: its knob comes with the finger
-  if (!isNew && !loop) { const dx = fingerP.x - X(last.x), dy = fingerP.y - Y(last.y), l = Math.hypot(dx, dy) || 1; drawKnob(fingerP.x, fingerP.y, dx / l, dy / l, color); }
+  if (!isNew && !loop) { const dx = fingerP.x - X(last.x), dy = fingerP.y - Y(last.y), l = Math.hypot(dx, dy) || 1; drawKnob(fingerP.x, fingerP.y, dx / l, dy / l, color, null, null, num); }
 }
 // A small shield on a stretch of line that keeps running.
 function shieldGlyph(x, y, col) {
@@ -4046,7 +4167,7 @@ function drawFingerTag() {
   const { t, x, y } = fingerTag;
   ctx.font = F_LBL; const w = ctx.measureText(t).width + 16;
   ctx.fillStyle = 'rgba(12,16,27,.96)'; ctx.strokeStyle = 'rgba(242,166,90,.75)'; ctx.lineWidth = 1;
-  ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(x - w / 2, y - 15, w, 21, 6); else ctx.rect(x - w / 2, y - 15, w, 21); ctx.fill(); ctx.stroke();
+  ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(x - w / 2, y - 15 * TK, w, 21 * TK, 6); else ctx.rect(x - w / 2, y - 15 * TK, w, 21 * TK); ctx.fill(); ctx.stroke();
   ctx.fillStyle = '#ffd8a8'; ctx.textAlign = 'center'; ctx.fillText(t, x, y);
 }
 /* ================= Backdrop with depth =================
@@ -4129,7 +4250,7 @@ function draw(rdt) {
   if (!S) return;
   // orbits around the Sun, far off to the left; they show up as the map widens
   const orbitLabels = [], sol = S.view === 'sol';
-  ctx.font = '600 11px "Saira Condensed", "Arial Narrow", sans-serif'; ctx.textAlign = 'center';
+  ctx.font = fnt(600, 11, FD); ctx.textAlign = 'center';
   if (S.view === 'far') drawProxima(orbitLabels);
   else if (S.view === 'rnd') drawUncharted(orbitLabels);
   else for (const o of SUN_ORBITS) {
@@ -4151,7 +4272,7 @@ function draw(rdt) {
   ctx.strokeStyle = 'rgba(242,201,76,.26)'; ctx.beginPath(); ctx.arc(X(E.x), Y(E.y), d2(E, PL[IDX.GEO]) * sc, 0, Math.PI * 2); ctx.stroke();
   ctx.setLineDash([]);
   // name the rings so the dots read as orbits
-  ctx.font = '500 10px "Saira Condensed", "Arial Narrow", sans-serif'; ctx.textAlign = 'center';
+  ctx.font = fnt(500, 10, FD); ctx.textAlign = 'center';
   if (sc >= sc0 * 1.25) for (const [id, a, col] of [['LEO', 2.75, 'rgba(90,209,230,.55)'], ['GEO', 2.5, 'rgba(242,201,76,.5)']]) {
     const r = d2(E, PL[IDX[id]]) * sc, lx = X(E.x) + Math.cos(a) * r, ly = Y(E.y) + Math.sin(a) * r;
     ctx.fillStyle = col; ctx.fillText(id === 'LEO' ? 'low Earth orbit' : 'geostationary orbit', lx, ly + 12);
@@ -4159,7 +4280,7 @@ function draw(rdt) {
   }
   // fog over the parts of the map that haven't opened yet; names drawn on top stay readable
   drawFog();
-  ctx.font = '600 11px "Saira Condensed", "Arial Narrow", sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(190,200,222,.5)';
+  ctx.font = fnt(600, 11, FD); ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(190,200,222,.5)';
   for (const [t, x, y] of orbitLabels) ctx.fillText(t, x, y);
   drawSensors();
   // hazards under everything else
@@ -4235,6 +4356,7 @@ function draw(rdt) {
     ctx.beginPath(); ctx.moveTo(x, y - r); ctx.lineTo(x + r, y); ctx.lineTo(x, y + r); ctx.lineTo(x - r, y); ctx.closePath(); ctx.fillStyle = '#04060b'; ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = L.color; ctx.stroke();
     ctx.beginPath(); ctx.moveTo(x - r * .8, y + r * .8); ctx.lineTo(x + r * .8, y - r * .8); ctx.strokeStyle = '#ff8a7a'; ctx.lineWidth = 2; ctx.stroke(); ctx.restore();
   }
+  if (cbSafe) for (const L of shown) if (L.loop) loopTag(L, selId != null && L.id !== selId ? .3 : 1);   // 5.55
   // during a storm or debris warning, show which stretches of line are protected and which will stop or slow
   const hz = S.haz;
   if (hz && (hz.type === 'storm' || hz.type === 'debris')) {
@@ -4259,7 +4381,7 @@ function draw(rdt) {
     if (drag && drag.mode === 'extend' && drag.moved && drag.L === t.L && drag.end === t.end) continue;   // it's under the finger
     ctx.globalAlpha = selId != null && t.L.id !== selId ? .3 : 1;
     if (t.L.id === selId && !S.tut) { ctx.save(); ctx.beginPath(); ctx.arc(t.x, t.y, 20 * uk + 2 * Math.sin(clock * 4), 0, Math.PI * 2); ctx.fillStyle = t.L.color; ctx.globalAlpha = .16; ctx.fill(); ctx.globalAlpha = .55; ctx.lineWidth = 1.5; ctx.strokeStyle = t.L.color; ctx.setLineDash([3, 4]); ctx.stroke(); ctx.restore(); }
-    drawKnob(t.x, t.y, t.ux, t.uy, t.L.color, t.bx + t.ux * 8, t.by + t.uy * 8);
+    drawKnob(t.x, t.y, t.ux, t.uy, t.L.color, t.bx + t.ux * 8, t.by + t.uy * 8, t.L.slot + 1);
     // a ring around the end, the thing to grab to extend the line
     if (S.tut) { const a0 = ctx.globalAlpha; ctx.beginPath(); ctx.arc(t.x, t.y, 13 * uk, 0, Math.PI * 2);
       ctx.globalAlpha = a0 * .16; ctx.fillStyle = t.L.color; ctx.fill(); ctx.globalAlpha = a0 * .7; ctx.lineWidth = 1.6; ctx.stroke(); }
@@ -4269,9 +4391,9 @@ function draw(rdt) {
   if (drag && drag.moved) {
     if (drag.mode === 'new') {
       const free = LINE_COLORS.findIndex((c, s) => !S.lines.some(L => L.slot === s));
-      previewPath(drag.stops, S.lines.length < S.inv.lines ? LINE_COLORS[free] : '#7a8296', drag.p, drag.loop && drag.stops.length >= 3, true, S.lines.length < S.inv.lines ? 'New line' : 'No free line');
+      previewPath(drag.stops, S.lines.length < S.inv.lines ? LINE_COLORS[free] : '#7a8296', drag.p, drag.loop && drag.stops.length >= 3, true, S.lines.length < S.inv.lines ? (cbSafe ? `New line ${free + 1}` : 'New line') : 'No free line');
     }
-    if (drag.mode === 'extend') previewPath(drag.stops, drag.L.color, drag.p, drag.loop && drag.stops.length >= 3, false, `${drag.L.name} line${redrawFee() ? ' · −' + fmt(redrawFee()) : ''}`);
+    if (drag.mode === 'extend') previewPath(drag.stops, drag.L.color, drag.p, drag.loop && drag.stops.length >= 3, false, `${drag.L.name} line${redrawFee() ? ' · −' + fmt(redrawFee()) : ''}`, drag.L.slot + 1);
   }
   // ships (the selected line's last, bigger, outlined and numbered). 5.51: the ship you picked waits until after the
   // places, so it is on top of everything, even docked under a place or stacked with its line's other ships, and
@@ -4308,11 +4430,11 @@ function draw(rdt) {
       ctx.fillStyle = '#0a0f1c'; const cb = 2.6 * zk;
       for (let k = 0; k < n; k++) ctx.fillRect(-len / 2 + 3 * zk + (k % cols) * cw + (cw - cb) / 2, -wid / 2 + 2.2 * zk + Math.floor(k / cols) * 3.8 * zk, cb, cb);
       ctx.restore();
-      if (sh.fix) { ctx.font = `${Math.round(12 * uk)}px system-ui, sans-serif`; ctx.textAlign = 'center'; ctx.fillText('🔧', x, y - hl - (chosen ? 20 : 6)); }
+      if (sh.fix) { ctx.font = `${Math.round(12 * uk * TK)}px system-ui, sans-serif`; ctx.textAlign = 'center'; ctx.fillText('🔧', x, y - hl - (chosen ? 20 : 6)); }
       if (chosen && L.ships.length > 0) {
         // number badge, kept upright
-        const by = y - hl - 9; ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(x, by, 8, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = '#0a0f1c'; ctx.font = '700 11px "IBM Plex Mono", ui-monospace, monospace'; ctx.textAlign = 'center'; ctx.fillText(String(si + 1), x, by + 4);
+        const by = y - hl - 9; ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(x, by, 8 * TK, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#0a0f1c'; ctx.font = fnt(700, 11, FM); ctx.textAlign = 'center'; ctx.fillText(String(si + 1), x, by + 4 * TK);
       }
     };
     if (sel && sel.ship === sh) picked = () => { paint(); drawLoad(L, sh, x, y, hl); }; else paint();
@@ -4329,7 +4451,7 @@ function draw(rdt) {
   drawPins();
   if (fingerTag) drawFingerTag(); fingerTag = null;
   // version watermark, just above the bottom bar
-  ctx.font = '500 10px "IBM Plex Mono", ui-monospace, monospace'; ctx.textAlign = 'right'; ctx.fillStyle = 'rgba(160,175,200,.42)';
+  ctx.font = fnt(500, 10, FM); ctx.textAlign = 'right'; ctx.fillStyle = 'rgba(160,175,200,.42)';
   ctx.fillText(`Astrobara Lines v${VERSION}`, W - 16, barTop - 6);
 }
 // The Proxima Centauri map: a red dwarf with two planets' orbits, and Alpha Centauri A and B off to the right.
@@ -4392,6 +4514,7 @@ function drawPins() {
     ctx.save(); ctx.translate(px, py);
     ctx.fillStyle = hot ? (Math.sin(clock * 8) > 0 ? '#ff5c5c' : '#b83a3a') : fresh ? (Math.sin(clock * 6) > 0 ? '#f2a65a' : '#9a6634') : 'rgba(12,16,27,.92)'; ctx.strokeStyle = hot ? '#ffd0d0' : fresh ? '#ffd8a8' : 'rgba(233,237,244,.7)'; ctx.lineWidth = 1.5;
     ctx.beginPath(); ctx.arc(0, 0, 11, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    if (cbSafe && hot) { ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, 0, 15, 0, Math.PI * 2); ctx.stroke(); ctx.lineWidth = 1.5; }   // 5.55: crowding gets a second ring, not just red
     ctx.fillStyle = '#e9edf4'; shapePath(S.shape[i], 0, 0, 4.5); ctx.fill();
     ctx.rotate(a); ctx.beginPath(); ctx.moveTo(19, 0); ctx.lineTo(13, -5); ctx.lineTo(13, 5); ctx.closePath(); ctx.fillStyle = hot ? '#ff8a8a' : 'rgba(233,237,244,.8)'; ctx.fill();
     ctx.restore();
@@ -4438,8 +4561,8 @@ function drawSensors() {
     ctx.globalAlpha = 1;
     label(z.short, x, y + r + 14, owned ? '#a8e6ff' : down ? '#ff9a9a' : '#aab3c4');
     const sub = down ? `off ${Math.ceil(S.sensorOff[k] - S.t)}s` : owned ? 'on' : soon ? String(sensorFrom(k)) : fmt(z.cost);
-    ctx.font = F_NUM; ctx.textAlign = 'center'; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(4,6,11,.88)'; ctx.strokeText(sub, x, y + r + 27);
-    ctx.fillStyle = owned ? '#8fd8f5' : down ? '#ff9a9a' : S.fund >= z.cost && !soon ? '#ffd8a8' : '#8e97ab'; ctx.fillText(sub, x, y + r + 27);
+    ctx.font = F_NUM; ctx.textAlign = 'center'; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(4,6,11,.88)'; ctx.strokeText(sub, x, y + r + 27 + lift());
+    ctx.fillStyle = owned ? '#8fd8f5' : down ? '#ff9a9a' : S.fund >= z.cost && !soon ? '#ffd8a8' : '#8e97ab'; ctx.fillText(sub, x, y + r + 27 + lift());
     if (sel && sel.type === 'sensor' && sel.id === k) { ctx.strokeStyle = '#fff'; ctx.globalAlpha = .6; ctx.lineWidth = 1.2; ctx.setLineDash([3, 3]); ctx.beginPath(); ctx.arc(x, y, r + 13, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha = 1; }
   });
 }
@@ -4465,7 +4588,7 @@ function drawPlace(i) {
     // places further off show as a faint dot and their year, once the camera has room for them
     if (p.x > VX1 && (p.x > cam.x1 - 50 || p.y < cam.y0 + 10 || p.y > cam.y1 - 20)) return;
     ctx.fillStyle = 'rgba(140,160,200,.35)'; ctx.beginPath(); ctx.arc(x, y, 3.5, 0, Math.PI * 2); ctx.fill();
-    ctx.font = '500 10.5px "Saira Condensed", "Arial Narrow", sans-serif'; ctx.textAlign = 'center'; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(4,6,11,.85)';
+    ctx.font = fnt(500, 10.5, FD); ctx.textAlign = 'center'; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(4,6,11,.85)';
     const tl = `${/^L\d$/.test(p.id) ? p.id : p.name} ${S.irl[i] ? S.irl[i].y : ''}`; ctx.strokeText(tl, x, y + 15); ctx.fillStyle = 'rgba(150,160,182,.8)'; ctx.fillText(tl, x, y + 15);
     return;
   }
@@ -4481,9 +4604,9 @@ function drawPlace(i) {
     for (let n = 0; n < 3; n++) { const f = (clock * .65 + n / 3) % 1; ctx.globalAlpha = (1 - f) * .95; ctx.beginPath(); ctx.arc(x, y, r + 6 + f * 52, 0, Math.PI * 2); ctx.stroke(); }
     ctx.globalAlpha = 1;
     if (S.clock - S.openedAt[i] < 25) {
-      ctx.font = '700 11px "Saira Condensed", "Arial Narrow", sans-serif'; const w = ctx.measureText('NEW').width + 10, ty = y - r - 22;
-      ctx.fillStyle = '#f2a65a'; ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(x - w / 2, ty - 10, w, 15, 4); else ctx.rect(x - w / 2, ty - 10, w, 15); ctx.fill();
-      ctx.fillStyle = '#1d1206'; ctx.textAlign = 'center'; ctx.fillText('NEW', x, ty + 1);
+      ctx.font = fnt(700, 11, FD); const w = ctx.measureText('NEW').width + 10, ty = y - r - 22 - lift();
+      ctx.fillStyle = '#f2a65a'; ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(x - w / 2, ty - 10 * TK, w, 15 * TK, 4); else ctx.rect(x - w / 2, ty - 10 * TK, w, 15 * TK); ctx.fill();
+      ctx.fillStyle = '#1d1206'; ctx.textAlign = 'center'; ctx.fillText('NEW', x, ty + TK);
     }
   }
   if (S.flash[i] > 0) { ctx.strokeStyle = '#fff'; ctx.globalAlpha = S.flash[i]; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y, r + 6 + (1 - S.flash[i]) * 26, 0, Math.PI * 2); ctx.stroke(); ctx.globalAlpha = 1; }
@@ -4533,7 +4656,7 @@ function drawPlace(i) {
     const col = k % cols, row = Math.floor(k / cols); let fx, fy;
     if (p.q === 'left') { fx = x - r - a - col * gp; fy = y - r + 3 + row * gp; }
     else if (p.q === 'up') { fx = x + (col - 2) * gp; fy = y - r - b - row * gp; }
-    else if (p.q === 'down') { fx = x + (col - 2) * gp; fy = y + r + (S.depot[i] ? 39 : 26) + row * gp; }
+    else if (p.q === 'down') { fx = x + (col - 2) * gp; fy = y + r + (S.depot[i] ? 39 + lift() : 26) + row * gp; }
     else { fx = x + r + a + col * gp; fy = y - r + 3 + row * gp; }
     spots.push([fx, fy]);
     qb.x0 = Math.min(qb.x0, fx); qb.x1 = Math.max(qb.x1, fx); qb.y0 = Math.min(qb.y0, fy); qb.y1 = Math.max(qb.y1, fy);
@@ -4554,12 +4677,12 @@ function drawPlace(i) {
     ctx.font = F_NUM; ctx.fillStyle = '#ff8a8a'; ctx.textAlign = p.q === 'left' ? 'right' : 'left';
     const rows = Math.ceil(shown / cols);
     const lx = p.q === 'left' ? x - r - a + 4 - cols * gp : p.q === 'up' || p.q === 'down' ? x + 3 * gp : x + r + a - 4 + cols * gp;
-    const ly = p.q === 'up' ? y - r - b - (rows - 1) * gp + 4 : p.q === 'down' ? y + r + (S.depot[i] ? 39 : 26) + (rows - 1) * gp + 4 : y - r + 3 + (rows - 1) * gp + 4;
+    const ly = p.q === 'up' ? y - r - b - (rows - 1) * gp + 4 : p.q === 'down' ? y + r + (S.depot[i] ? 39 + lift() : 26) + (rows - 1) * gp + 4 : y - r + 3 + (rows - 1) * gp + 4;
     ctx.fillText('+' + (q.length - shown), lx, ly);
   }
   if (sel && sel.type === 'place' && sel.id === i) { ctx.strokeStyle = '#fff'; ctx.globalAlpha = .6; ctx.lineWidth = 1.2; ctx.setLineDash([3, 3]); ctx.beginPath(); ctx.arc(x, y, r + 15, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha = 1; }
   label(placeName(i), x, y + r + 16, p.body === 'worm' || p.body === 'alien' ? '#d9ccff' : '#d5dbe7');
-  if (p.body === 'worm' && !S.depot[i]) { ctx.font = F_NUM; ctx.textAlign = 'center'; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(4,6,11,.88)'; const t = `to ${sysName(sysOf(mouthOther(i)))}`; ctx.strokeText(t, x, y + r + 29); ctx.fillStyle = '#a99be0'; ctx.fillText(t, x, y + r + 29); }
+  if (p.body === 'worm' && !S.depot[i]) { ctx.font = F_NUM; ctx.textAlign = 'center'; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(4,6,11,.88)'; const t = `to ${sysName(sysOf(mouthOther(i)))}`, ty = y + r + 29 + lift(); ctx.strokeText(t, x, ty); ctx.fillStyle = '#a99be0'; ctx.fillText(t, x, ty); }
   if (S.fastDock && S.fastDock[i]) {
     const bx = x + r * .95, by = y + r * .95; ctx.strokeStyle = '#7fd3ff'; ctx.lineWidth = 2; ctx.lineCap = 'round';
     for (const o of [0, 5]) { ctx.beginPath(); ctx.moveTo(bx + o - 2, by - 4); ctx.lineTo(bx + o + 2, by); ctx.lineTo(bx + o - 2, by + 4); ctx.stroke(); }
@@ -4572,7 +4695,7 @@ function drawPlace(i) {
     ctx.beginPath(); ctx.moveTo(fx + 1, fy - hgt); ctx.lineTo(fx + 1 + w, fy - hgt + 3); ctx.lineTo(fx + 1, fy - hgt + 7); ctx.closePath(); ctx.fill(); ctx.globalAlpha = 1;
     if (reb) {
       ctx.strokeStyle = '#ff7a45'; ctx.lineWidth = 2.5; ctx.setLineDash([5, 4]); ctx.lineDashOffset = -clock * 10; shapePath(s, x, y, r + 5); ctx.stroke(); ctx.setLineDash([]); ctx.lineDashOffset = 0;
-      label(`independent · ${Math.ceil(S.rebel[i] - S.t)}s`, x, y + r + 31, '#ffb27a');
+      label(`independent · ${Math.ceil(S.rebel[i] - S.t)}s`, x, y + r + 31 + lift(), '#ffb27a');
     }
   }
   if (S.dmg[i]) {
@@ -4581,7 +4704,7 @@ function drawPlace(i) {
   }
   if (S.depot[i]) {
     // depot tag: a small ring glyph and the new capacity
-    const ty = y + r + 29, t = String(room(i)); ctx.font = F_NUM; const w = ctx.measureText(t).width, gx = x - (w + 11) / 2 + 4;
+    const ty = y + r + 29 + lift(), t = String(room(i)); ctx.font = F_NUM; const w = ctx.measureText(t).width, gx = x - (w + 11) / 2 + 4;
     ctx.strokeStyle = '#b9c4d8'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.arc(gx, ty - 4, 4, 0, Math.PI * 2); ctx.stroke(); ctx.beginPath(); ctx.arc(gx, ty - 4, 1.6, 0, Math.PI * 2); ctx.stroke();
     ctx.textAlign = 'left'; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(4,6,11,.88)'; ctx.strokeText(t, gx + 7, ty); ctx.fillStyle = '#b9c4d8'; ctx.fillText(t, gx + 7, ty);
   }
@@ -4874,6 +4997,7 @@ const splashAct = (a, el) => {
   if (a === 'cont') { splashGo(() => { const sv = bestSave(); if (sv && resumeRun(sv)) $('splash').hidden = true; else splashUI(); }); return; }
   if (a === 'code') { if (parseCode($('codeIn').value, pickScen)) splashGo(startCode); else startCode(); return; }
   if (a === 'board') { openBoard(pickScen); return; }
+  if (a === 'settings') { showSettings(); return; }   // 5.55
   if (a === 'start' || a === 'startTut') splashGo(() => { begin(undefined, pickScen, a === 'startTut', false); if (S.scen === 'rand') toast(runToast(), 4000); });
   else if (a === 'relaxed') splashGo(() => begin(undefined, pickScen, pickScen === 'sol' && !tutDone(), true));
 };
@@ -4964,6 +5088,7 @@ function resumeRun(sv) {
       if (keep.length !== stops.length) { c.loop = c.loop && keep.length >= 3; c.ships.forEach(sh => Object.assign(sh, { k: 0, dir: 1, d: 0, state: 'stop', dwell: .3 })); }
       return c;
     }).filter(L => L.stops.length >= 2);
+    S.lines.forEach(paintLine);   // 5.55: in this browser's colours (colour-blind safe or not)
     if (S.fail != null) S.fail = map[S.fail] ?? null;
     if (S.surgeAt >= 0) S.surgeAt = map[S.surgeAt] ?? -1;
     if (S.haz && S.haz.i != null) { S.haz.i = map[S.haz.i] ?? -1; if (S.haz.i < 0) S.haz = null; }
@@ -5009,13 +5134,13 @@ function updateUI() {
 function reloadNew() { try { if (S && S.started && !S.over) saveAll(); } catch (_) {} location.replace(location.pathname + '?v=' + encodeURIComponent(newer || String(Date.now()))); }
 document.addEventListener('visibilitychange', () => { if (!document.hidden) checkUpdate(); });
 setInterval(checkUpdate, 600000);
-layout(); newRun(); hud(); trayUI(); splashUI(); cloudInit(); checkUpdate();
+applyLook(); layout(); newRun(); hud(); trayUI(); splashUI(); cloudInit(); checkUpdate();
 requestAnimationFrame(frame);
 
 // Hooks for headless balancing and input tests.
 window.LC = {
   get S() { return S; }, get GEN() { return GEN; }, plx: () => PLX.map(L => ({ ux: L.ux, uy: L.uy, k: L.k, ls: Math.pow(sc / sc0, L.d) })), IDX, PL, YEAR, startRun, step, tutGo, tutEnd, createLine, setStops, removeLine, addShip, removeShip, addPod, shieldPlace, buildDepot, select, room, setLine, openLoop, undo,
-  snapCam, cal, calOf, perOf, lineYear, showLog, buySensor, SENSORS, setSys, setAutoPause, inScen, trayUI, recordRun, readBoard, openBoard, showLost, endLost, showWin, award, readAch, needList, lookAt, ACH, ask5, qmTip, diagText, saveText, loadSaveText, perf, get capyImg() { return capyImg; }, get won() { return won; }, get lost() { return lost; }, get boardAll() { return boardAll; }, scrap, scrapVal, repairCost, negotiateCost, voteDemand, sysNeeds, get fxs() { return fxs; }, negotiate, startRebel, tunnelEnds, saveAll, readLocal, resumeRun, bestSave, parseCode, runCode, codeOf, splashUI, SCEN, repairPlace, repairSensor, buyOffer, price, sysOf, tunnelOpen, hud, get sc() { return sc; }, UPKEEP, upkeepShare, ovT, BRK_GAP, openPlace, fuelNear, crowdAt, warnRoom, shipSpots: () => shipSpots, get wclock() { return wclock; }, pins: () => pins.map(q => ({ x: rot ? window.innerWidth - q.y : q.x, y: rot ? q.x : q.y, i: q.i })),
+  snapCam, cal, calOf, perOf, lineYear, showLog, setCB, setTextSize, showSettings, get cbSafe() { return cbSafe; }, get TK() { return TK; }, buySensor, SENSORS, setSys, setAutoPause, inScen, trayUI, recordRun, readBoard, openBoard, showLost, endLost, showWin, award, readAch, needList, lookAt, ACH, ask5, qmTip, diagText, saveText, loadSaveText, perf, get capyImg() { return capyImg; }, get won() { return won; }, get lost() { return lost; }, get boardAll() { return boardAll; }, scrap, scrapVal, repairCost, negotiateCost, voteDemand, sysNeeds, get fxs() { return fxs; }, negotiate, startRebel, tunnelEnds, saveAll, readLocal, resumeRun, bestSave, parseCode, runCode, codeOf, splashUI, SCEN, repairPlace, repairSensor, buyOffer, price, sysOf, tunnelOpen, hud, get sc() { return sc; }, UPKEEP, upkeepShare, ovT, BRK_GAP, openPlace, fuelNear, crowdAt, warnRoom, shipSpots: () => shipSpots, get wclock() { return wclock; }, pins: () => pins.map(q => ({ x: rot ? window.innerWidth - q.y : q.x, y: rot ? q.x : q.y, i: q.i })),
   redrawFee, chargeRedraw, fixShips, whyCrowded, worstTrouble, selLine, checkUpdate, verNum, get newer() { return newer; }, upkeepDue, berths, docked, queueAt, stuckAt, stuckNote, startSwing, breakdowns, lateGame, ovT, crowdFix,
   toast, toastMs, hideToast, get toastT() { return toastT; },
   fast(sec) { const n = Math.round(sec / STEP); for (let i = 0; i < n && !S.over; i++) step(STEP); },

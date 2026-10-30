@@ -1,5 +1,16 @@
 # Changelog
 
+## 5.55
+- **Settings.** ≡ menu → ⚙, or ⚙ on the start screen. Both settings below are kept in this browser and apply at once, so the map behind the panel shows the change.
+- **Colour-blind safe colours.** On, it:
+  - swaps the line colours for a set searched for by computer to stay apart under simulated red–green (deutan, protan) and blue–yellow (tritan) colour blindness as well as normal sight, the first nine (one system's lines) most of all: Orange, Violet, Sky, Rose, Cream, Blue, Sage, Red, Gold, then Pink, Mint, Purple, Iris, Lime, Pear. Line names follow the colours;
+  - numbers every line, since nine hues can't all stay apart for everyone: the number replaces the chevron on a line's knobs, a loop gets a numbered disc on its first stretch, and the line's swatch in its bar and in notes becomes a numbered pill. The tag while drawing says which, e.g. New line 3;
+  - marks the round freight that only colour told apart: the Moon is a crescent, Mars has a band across, a colony world a band down. Earth stays a plain disc, Proxima b keeps its ring;
+  - gives a crowded place's edge arrow a second ring, so it isn't told from a new place by red against orange alone.
+  Lines already drawn, and saved runs, are repainted in whichever colours are on.
+- **Text size.** 100%, 120% or 140%, for the words in panels, notes, tips and on the map (place names, tags and labels; the second line under a place moves down to make room). The strips along the top and bottom, the speed menu and a panel's tab row grow half as much, so they still fit on a phone.
+- Reports include the two settings.
+
 ## 5.54
 - **Notes at the top right stay long enough to read.** How long depends on how much they say: about 2 seconds plus a little per word, up to 12 seconds. A breakdown or independence note now stays around 6 seconds instead of 3 to 5. Quick ones like "Undone" or a speed change are as before. They also fade out more slowly, so you can still catch the end.
 - **Hold a note to pause and read it.** The game pauses while your finger (or the mouse button) is on it, and its border turns orange. Let go and the game carries on, with the note staying a couple more seconds. If the game was already paused, it stays paused.
