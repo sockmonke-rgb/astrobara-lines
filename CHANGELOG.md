@@ -1,5 +1,11 @@
 # Changelog
 
+## 5.54
+- **Notes at the top right stay long enough to read.** How long depends on how much they say: about 2 seconds plus a little per word, up to 12 seconds. A breakdown or independence note now stays around 6 seconds instead of 3 to 5. Quick ones like "Undone" or a speed change are as before. They also fade out more slowly, so you can still catch the end.
+- **Hold a note to pause and read it.** The game pauses while your finger (or the mouse button) is on it, and its border turns orange. Let go and the game carries on, with the note staying a couple more seconds. If the game was already paused, it stays paused.
+- **Tap a note to put it away.** A drag that starts on a note puts it away too, rather than pausing.
+- A thin line along the bottom of a note shows how long it has left. It stops while you hold the note, and with a mouse, while you rest on it.
+
 ## 5.53
 - **The overflow note can be put away while paused.** Its **×** hides it so whatever note it was covering (a breakdown to repair, a storm, a tip) shows again. It comes back as soon as you press Play, or straight away if a different place starts overflowing. The red ring on the map stays either way. While the game is running there's no ×, since the clock is ticking.
 

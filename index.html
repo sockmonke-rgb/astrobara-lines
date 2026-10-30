@@ -190,8 +190,17 @@ button.undo{border-color:var(--capy);color:#ffd2a8}
 /* Toast */
 #toast{position:absolute;right:calc(14px + var(--sr));top:54px;z-index:25;max-width:min(270px,36%);box-sizing:border-box;
   padding:7px 11px;border-radius:9px;background:var(--glass);border:1px solid var(--rule);font:500 12.5px/1.35 var(--f-body);
-  pointer-events:none;transition:opacity .25s}
-#toast.out{opacity:0}
+  pointer-events:auto;cursor:default;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;transition:opacity .25s,border-color .15s}
+/* 5.54: a note fades slowly so its tail can still be caught; a tap puts it away at once */
+#toast.out{opacity:0;pointer-events:none;transition:opacity .6s}
+#toast.out.quick{transition:opacity .15s}
+#app.drawing #toast{pointer-events:none}
+/* the line along the bottom is the time the note has left; it stops while a finger or the mouse is on the note */
+#toast .tl{position:absolute;left:9px;right:9px;bottom:2px;height:2px;border-radius:1px;background:currentColor;opacity:.3;
+  transform-origin:left;animation:toastLeft linear forwards}
+#toast.held{border-color:var(--capy)}
+#toast.held .tl{background:var(--capy);opacity:.85}
+@keyframes toastLeft{from{transform:scaleX(1)}to{transform:scaleX(0)}}
 /* over a card (the shop, reviews), messages sit top-centre, clear of the card's corners */
 #app.modalopen #toast{left:0;right:0;top:78px;margin:0 auto;width:max-content;max-width:min(380px,52%)}
 #banner{transition:opacity .2s}
@@ -528,7 +537,7 @@ button.link{height:auto;min-height:0;padding:2px 0;border:none;background:none;c
       <svg class="lines" id="splashLines" aria-hidden="true"></svg>
       <div class="big" aria-hidden="true"><svg viewBox="0 0 64 64"><use href="#capy"/></svg></div>
       <div class="txt">
-        <div class="eyebrow" id="splashEyebrow">Prototype 5.53</div>
+        <div class="eyebrow" id="splashEyebrow">Prototype 5.54</div>
         <h1>Astrobara Lines</h1>
         <p>Capybaras run the Lagrange Alliance’s freight. <b>Drag through places</b> to draw a shipping line. Freight shape = where it’s going. Too much waiting fills a red ring; a full ring ends the run.</p>
         <div class="scen" role="radiogroup" aria-label="Start in">
@@ -607,7 +616,7 @@ const $ = id => document.getElementById(id);
 const app = $('app'), cv = $('cv'), ctx = cv.getContext('2d');
 
 /* ================= Tuning ================= */
-const VERSION = '5.53';
+const VERSION = '5.54';
 // 5.49: where ≡ → Report sends reports: a Cloudflare Worker that files each one as an issue in a private repo
 // (report-worker/ has its code and setup). While it's empty, Report copies the report and offers a GitHub issue.
 const REPORT_URL = '';
@@ -2709,8 +2718,68 @@ function hint(id, arg) {
   S.hints[id] = true; S.hint = { id, html: HINTS[id](arg), t: S.clock, to: toOf(arg) };
 }
 function clearHint(id) { if (S.hint && (!id || S.hint.id === id)) S.hint = null; }
-let toastT = 0;
-function toast(text, ms) { const el = $('toast'); el.innerHTML = text; el.classList.remove('out', 'gold'); toastT = performance.now() + (ms || 2800); }
+// 5.54: notes stay long enough to read (about 1.8s to notice plus 70ms a character, up to 12s; quick blips under 2s
+// stay quick). Hold one to pause the game and read it; letting go carries on. A tap puts it away. With a mouse,
+// resting on it keeps it. toastT is when it fades: Infinity while held, 0 when there's none.
+let toastT = 0, toastLeft = 0, toastHold = null, toastHover = false;
+const TOAST_HOLD = 280;
+function toastMs(html, ms) {
+  if (ms && ms < 2000) return ms;
+  const n = html.replace(/<svg[\s\S]*?<\/svg>/g, '··').replace(/<[^>]*>/g, '').replace(/&[#\w]+;/g, '·').length;
+  return Math.min(12000, Math.max(ms || 2800, 1800 + n * 70));
+}
+function toastBar(ms, run) {
+  const el = $('toast'), old = el.querySelector('.tl'); if (old) old.remove();
+  const b = document.createElement('i'); b.className = 'tl'; b.style.animationDuration = ms + 'ms'; if (!run) b.style.animationPlayState = 'paused';
+  el.appendChild(b);
+}
+function toast(text, ms) {
+  const el = $('toast'), d = toastMs(String(text), ms), still = !!toastHold || toastHover;
+  el.innerHTML = text; el.classList.remove('out', 'gold', 'quick');
+  toastBar(d, !still);
+  if (still) { toastT = Infinity; toastLeft = d; } else toastT = performance.now() + d;
+}
+function hideToast(quick) { const el = $('toast'); el.classList.toggle('quick', !!quick); el.classList.add('out'); el.classList.remove('held'); toastT = 0; toastHover = false; }
+function freezeToast() {
+  if (!toastT || toastT === Infinity) return;
+  toastLeft = Math.max(0, toastT - performance.now()); toastT = Infinity;
+  const b = $('toast').querySelector('.tl'); if (b) b.style.animationPlayState = 'paused';
+}
+function thawToast(min) {
+  if (toastHold || toastHover || toastT !== Infinity) return;
+  const b = $('toast').querySelector('.tl');
+  if (toastLeft >= min && b) { b.style.animationPlayState = 'running'; toastT = performance.now() + toastLeft; }
+  else { toastBar(min, true); toastT = performance.now() + min; }   // the line fills again: a little more time to finish reading
+}
+{
+  const T = $('toast');
+  T.addEventListener('pointerdown', e => {
+    if (toastHold || T.classList.contains('out') || (e.pointerType === 'mouse' && e.button !== 0)) return;
+    e.preventDefault();
+    try { T.setPointerCapture(e.pointerId); } catch (_) {}
+    freezeToast();
+    const h = toastHold = { id: e.pointerId, x: e.clientX, y: e.clientY, held: false, moved: false, paused: false };
+    h.timer = setTimeout(() => {
+      if (toastHold !== h || h.moved) return;
+      h.held = true; T.classList.add('held');
+      if (S && S.started && !S.paused && !S.over) { S.paused = true; lastPlay = null; h.paused = true; hud(); }
+    }, TOAST_HOLD);
+  });
+  // a drag that starts on the note isn't a hold: it puts the note away, so the map is clear for the next one
+  T.addEventListener('pointermove', e => { const h = toastHold; if (h && e.pointerId === h.id && !h.held && Math.hypot(e.clientX - h.x, e.clientY - h.y) > 12) h.moved = true; });
+  const end = (e, cancel) => {
+    const h = toastHold; if (!h || e.pointerId !== h.id) return;
+    toastHold = null; clearTimeout(h.timer); T.classList.remove('held');
+    if (h.paused && S && S.paused && !S.over) { S.paused = false; lastPlay = null; hud(); }   // only if the hold is still why it's paused
+    if (!h.held && !cancel) { hideToast(true); return; }
+    thawToast(2500);
+  };
+  T.addEventListener('pointerup', e => end(e, false));
+  T.addEventListener('pointercancel', e => end(e, true));
+  T.addEventListener('contextmenu', e => e.preventDefault());
+  T.addEventListener('pointerenter', e => { if (e.pointerType === 'mouse' && !T.classList.contains('out')) { toastHover = true; freezeToast(); } });
+  T.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse' && toastHover) { toastHover = false; thawToast(1500); } });
+}
 
 /* ================= Taps =================
    Controls react on pointerup over the same element they were pressed on. iOS can swallow
@@ -3308,7 +3377,7 @@ function hud() {
   sysBtn();
   banner();
   if (newer && !toldNewer) updateUI();   // 5.23: found on the start screen, mentioned once the run is under way
-  if (toastT && performance.now() > toastT) { $('toast').classList.add('out'); toastT = 0; }
+  if (toastT && performance.now() > toastT) hideToast();
 }
 // Message boxes go see-through when a place or a line end sits under them, and nearly vanish while you draw.
 function appRect(el) {
@@ -3835,6 +3904,7 @@ function helpBody() {
     <li><b>Budget.</b> Deliveries earn budget. Spend it in the Alliance Shop to buy more of anything (prices rise each time), on storm sensors, and on repairs: a storm damages the place it’s named after unless it’s protected, and a damaged place holds 4 less until you repair it. Storms also knock sensors out for a minute.</li>
     <li><b>Upgrades.</b> Each Alliance Shop visit offers two free ones, or skip them to bank ${Math.round(BANK_RATE * 100)}% interest on your budget (never more than half what the cheaper upgrade would cost). Some you place: lines, ships and pods on lines; storage (more room), fast docks (twice-as-fast loading) and shields on places. Others improve the whole network at once and stack a few levels: faster ships, bigger holds, bigger stops. Each card shows how many you already have.</li>
     <li><b>Crowding.</b> A place holds ${ROOM} loads; storage raises that to ${ROOM + DEPOT_ROOM}. Past the limit a red ring starts to close. If it closes, the run ends. It takes ${OVERFLOW} seconds, and ${OVERFLOW_LATE} late in a run (from 2070 in Earth–Moon runs, six periods in elsewhere).</li>
+    <li><b>Notes.</b> Short notes pop up at the top right and fade on their own; longer ones stay longer, and the line along the bottom shows the time left. Hold a note to pause the game and read it; let go and the game carries on. Tap it to put it away. With a mouse, resting on a note keeps it.</li>
     <li><b>Stuck freight.</b> If loads at a place can’t board anything (no line reaches their kind of place, or no ship goes their way), a note says where and why, with Show.</li>
     <li><b>Storms, debris and shields.</b> A stretch of line between two places keeps running if <i>either</i> end is protected; during a warning, protected stretches show a small shield and the ones that will stop flash amber. Solar storms stop lines inside their zone for a while; a debris cascade slows ships at Low Orbit. A shielded place keeps its lines running through storms, and a shield at Low Orbit keeps ships at full speed through debris. You start with one shield; when a warning comes, tap the place it points at, then Shield (or Move shield to pull yours over).</li>
     <li><b>Storm sensors.</b> The two little satellites at the bottom left sit at the Sun–Earth Lagrange points. They carry no freight, so they need no line: tap one and buy it from the budget. Sun–Earth L1 (now) makes solar storm warnings come 15 seconds earlier; Sun–Earth L5 (from 2031) adds 20 more.</li>
@@ -4947,6 +5017,7 @@ window.LC = {
   get S() { return S; }, get GEN() { return GEN; }, plx: () => PLX.map(L => ({ ux: L.ux, uy: L.uy, k: L.k, ls: Math.pow(sc / sc0, L.d) })), IDX, PL, YEAR, startRun, step, tutGo, tutEnd, createLine, setStops, removeLine, addShip, removeShip, addPod, shieldPlace, buildDepot, select, room, setLine, openLoop, undo,
   snapCam, cal, calOf, perOf, lineYear, showLog, buySensor, SENSORS, setSys, setAutoPause, inScen, trayUI, recordRun, readBoard, openBoard, showLost, endLost, showWin, award, readAch, needList, lookAt, ACH, ask5, qmTip, diagText, saveText, loadSaveText, perf, get capyImg() { return capyImg; }, get won() { return won; }, get lost() { return lost; }, get boardAll() { return boardAll; }, scrap, scrapVal, repairCost, negotiateCost, voteDemand, sysNeeds, get fxs() { return fxs; }, negotiate, startRebel, tunnelEnds, saveAll, readLocal, resumeRun, bestSave, parseCode, runCode, codeOf, splashUI, SCEN, repairPlace, repairSensor, buyOffer, price, sysOf, tunnelOpen, hud, get sc() { return sc; }, UPKEEP, upkeepShare, ovT, BRK_GAP, openPlace, fuelNear, crowdAt, warnRoom, shipSpots: () => shipSpots, get wclock() { return wclock; }, pins: () => pins.map(q => ({ x: rot ? window.innerWidth - q.y : q.x, y: rot ? q.x : q.y, i: q.i })),
   redrawFee, chargeRedraw, fixShips, whyCrowded, worstTrouble, selLine, checkUpdate, verNum, get newer() { return newer; }, upkeepDue, berths, docked, queueAt, stuckAt, stuckNote, startSwing, breakdowns, lateGame, ovT, crowdFix,
+  toast, toastMs, hideToast, get toastT() { return toastT; },
   fast(sec) { const n = Math.round(sec / STEP); for (let i = 0; i < n && !S.over; i++) step(STEP); },
   screen(id) { const n = PL[IDX[id]], x = X(n.x), y = Y(n.y); return rot ? { x: window.innerWidth - y, y: x } : { x, y }; },
   linePoint(i) { const p = S.lines[i].segs[0].pts[12], x = X(p.x), y = Y(p.y); return rot ? { x: window.innerWidth - y, y: x } : { x, y }; },

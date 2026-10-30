@@ -41,6 +41,7 @@ Every run has a code like `SOL-HALO-417`. Type it on the start screen to play th
   - <kbd>Space</kbd> plays or pauses.
   - <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> <kbd>5</kbd> set the speed (5× asks first).
   - <kbd>Esc</kbd> closes the bar along the bottom.
+- **Notes:** the notes that pop up at the top right fade on their own. Hold one to pause the game and read it; tap it to put it away.
 - **Pauses:** by default the game pauses when a new place opens or a place wants to talk. Turn this off in the speed menu.
 
 ## Saving, leaderboard, awards
