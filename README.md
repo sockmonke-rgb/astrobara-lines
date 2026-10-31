@@ -4,7 +4,7 @@
 
 ### [▶ Play Astrobara Lines](https://sockmonke-rgb.github.io/astrobara-lines/)
 
-A capybara-run freight network in the style of Mini Metro. Start in Earth–Moon space in 2027 and build shipping lines outward. Places open in the years real-world plans expect them, out past Saturn, then through a wormhole to Proxima Centauri, and from 2200 on through a second one to an uncharted star system.
+A capybara-run freight network in the style of Mini Metro. Start in Earth–Moon space in 2027 and build shipping lines outward. Places open in the years real-world plans expect them, out past Saturn, then through a wormhole to Proxima Centauri, and from 2200 on through a chain of Rifts to one uncharted star system after another.
 
 It's one HTML file with no build step and no dependencies. It plays in a phone or desktop browser.
 
@@ -28,9 +28,11 @@ It's one HTML file with no build step and no dependencies. It plays in a phone o
 
 ## Starts
 
-- **Earth–Moon (2027):** each place opens in the year real-world plans expect it. The timeline notes what's real and what's speculative. A wormhole opens past Saturn in 2100 to Proxima Centauri, and in 2200 a second, the Rift, opens from Proxima to a random uncharted system. Each brings three more lines, up to 15.
+- **Earth–Moon (2027):** each place opens in the year real-world plans expect it. The timeline notes what's real and what's speculative. A wormhole opens past Saturn in 2100 to Proxima Centauri, and in 2200 a second, the Rift, opens from Proxima to a random uncharted system. Each brings three more lines.
 - **Proxima (2100):** science fiction.
 - **Uncharted:** a random star system. It's harder, and not everything in it is built by us.
+
+In every start, a few periods after the newest system's last place opens, a Rift opens from it to a new uncharted system, with three more lines. The chain goes on for as long as the run does.
 
 Every run has a code like `SOL-HALO-417`. Type it on the start screen to play the same map again.
 

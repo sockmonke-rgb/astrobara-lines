@@ -1,5 +1,14 @@
 # Changelog
 
+## 5.61
+- **A chain of wormholes.** A few periods after the newest system's last place opens, a Rift opens there to a new uncharted system, then another from that one, for as long as the run lasts. Before, an Uncharted run stopped growing once Proxima filled, and a Proxima run once its uncharted system did.
+  - Each new system is made from the run's code and its place in the chain: its own star, a dozen places, a Visitor Gate, and a wormhole back. A name already on the map gets a numeral (Brine II).
+  - The Rift sits at the edge of the system it opens from, clear of everything there. Each one adds three lines to the cap, and the Alliance sends 2 lines and 2 ships when it opens, as with the first wormhole.
+  - Freight in a new system starts calm and ramps up from when it opens (5.60).
+  - A run continued from an older version that's already past due gets its first Rift about 40 seconds after you press ▶.
+- **Line colours are per system.** Each system gets its own fifteen, so a long chain never runs out. The lines chip shows this system's lines and the free ones in the colours they'd get here, and lines in other systems as a count (+9).
+- Two awards: **Daisy Chain** (freight through a chained Rift) and **Five Stars** (lines running in five systems at once).
+
 ## 5.60
 - **Each star system keeps its own clock for freight.** Freight used to speed up with the calendar everywhere at once, so places kept getting busier for as long as a run lasted, and a system that opened late (Proxima in an Uncharted run, say) arrived already at late-game pace. Now:
   - a system starts calm when it opens and gets busier through its first ten periods, the way a new run does;
