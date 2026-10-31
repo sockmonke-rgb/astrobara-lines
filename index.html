@@ -558,7 +558,7 @@ button.link{height:auto;min-height:0;padding:2px 0;border:none;background:none;c
       <svg class="lines" id="splashLines" aria-hidden="true"></svg>
       <div class="big" aria-hidden="true"><svg viewBox="0 0 64 64"><use href="#capy"/></svg></div>
       <div class="txt">
-        <div class="eyebrow" id="splashEyebrow">Prototype 5.63</div>
+        <div class="eyebrow" id="splashEyebrow">Prototype 5.64</div>
         <h1>Astrobara Lines</h1>
         <p>Capybaras run the Lagrange Alliance’s freight. <b>Drag through places</b> to draw a shipping line. Freight shape = where it’s going. Too much waiting fills a red ring; a full ring ends the run.</p>
         <div class="scen" role="radiogroup" aria-label="Start in">
@@ -638,7 +638,7 @@ const $ = id => document.getElementById(id);
 const app = $('app'), cv = $('cv'), ctx = cv.getContext('2d');
 
 /* ================= Tuning ================= */
-const VERSION = '5.63';
+const VERSION = '5.64';
 // 5.49: where ≡ → Report sends reports: a Cloudflare Worker that files each one as an issue in a private repo
 // (report-worker/ has its code and setup). While it's empty, Report copies the report and offers a GitHub issue.
 const REPORT_URL = '';
@@ -3146,6 +3146,15 @@ function zoomTo(i) {
   const { side, top, rw, rh } = mapBox();
   jump = { a: worldAt({ x: side + rw / 2, y: top + rh / 2 }), b: { x: PL[i].x, y: PL[i].y }, t: 0, s0: sc, s1: Math.max(sc, sc0 * 1.9) };
 }
+// 5.64: picking a ship by its number glides the view to it, at the zoom you're at, then keeps it in the middle as it
+// flies, for as long as it stays picked. Touching the map, the wheel, Fit, or letting go of the ship hands the view back.
+// It aims at where the ship is now; a ship queued for a berth sits back along the line, so for that, where it was drawn.
+function shipSpot(L, sh) { const q = sh.queued != null && shipSpots.find(o => o.sh === sh); return q ? { x: q.wx, y: q.wy } : shipAt(L, sh); }
+function seeShip(L, sh) {
+  if (!lineView(L) || !L.ships.includes(sh)) return;
+  const { side, top, rw, rh } = mapBox();
+  jump = { a: worldAt({ x: side + rw / 2, y: top + rh / 2 }), b: shipSpot(L, sh), t: 0, L, sh };
+}
 // Is place i on the map you're looking at?
 const inView = i => sysOf(i) === S.view;
 const lineView = L => sysOf(L.stops[0]) === S.view;
@@ -3307,6 +3316,7 @@ cv.addEventListener('mousedown', e => { if (e.button === 1) e.preventDefault(); 
 cv.addEventListener('auxclick', e => { if (e.button === 1) e.preventDefault(); });
 cv.addEventListener('pointerdown', e => {
   if (!S || (S.over && !S.sandbox) || !$('modal').hidden || !$('splash').hidden) return;
+  if (jump && jump.sh) jump = null;   // 5.64: a finger (or any button) on the map stops following a ship
   // 5.34: the middle button pans from anywhere, over places and lines too; 5.35: so does the right button. The left
   // button draws; the right button pressed while drawing cancels it.
   if (e.pointerType === 'mouse' && (e.button === 1 || e.button === 2) && !drag) { e.preventDefault(); try { cv.setPointerCapture(e.pointerId); } catch (_) {} const p = lp(e); drag = { mode: 'none', mid: true, grab: worldAt(p), id: e.pointerId, p, x0: p.x, y0: p.y, moved: false, startPlace: -1 }; cv.style.cursor = 'grabbing'; return; }
@@ -3423,7 +3433,7 @@ cv.addEventListener('pointercancel', e => { touches.delete(e.pointerId); if (tou
 cv.addEventListener('lostpointercapture', e => { if (touches.delete(e.pointerId) && touches.size < 2) pinch = null; });
 cv.addEventListener('wheel', e => {
   if (!S || !$('modal').hidden || !$('splash').hidden) return;
-  e.preventDefault(); const p = lp(e);
+  e.preventDefault(); const p = lp(e); if (jump && jump.sh) jump = null;
   setView(sc * Math.exp(-e.deltaY * 0.0015), p, worldAt(p));
 }, { passive: false });
 
@@ -3627,7 +3637,7 @@ onTap(P, (a, el) => {
     else if (a === 'cancelPick') { sel.pickShip = false; refreshPop(true); return; }
     else if (a === 'fixShip') { const r = fixShips(L); if (r) { why(r); noFx(el); } else { const sh = L.ships[0], p = sh ? shipAt(L, sh) : PL[L.stops[0]]; burst(p.x, p.y, sysOf(L.stops[0]), 'repaired', L.color); deployFx(el, `🔧 ${esc(L.name)} running`); refreshPop(true); return; } }
     else if (a === 'rmShip') { const r = removeShip(L, sel.ship); if (r) { why(r); noFx(el); } else { sel.ship = null; deployFx(el, `${gi('iShip')} back to spare · ${S.inv.ships}`, true); } }
-    else if (a === 'pickHull') { const sh = L.ships[+el.dataset.k]; sel.ship = sel.ship === sh ? null : sh; refreshPop(); return; }
+    else if (a === 'pickHull') { const sh = L.ships[+el.dataset.k]; sel.ship = sel.ship === sh ? null : sh; if (sel.ship) seeShip(L, sel.ship); refreshPop(); return; }
     else if (a === 'addPod') {
       const pick = sel.ship && L.ships.includes(sel.ship) ? sel.ship : null, tgt = pick || (L.ships.length ? L.ships.reduce((x, y) => (y.pods < x.pods ? y : x)) : null), r = addPod(L, pick);
       if (r) { why(r); noFx(el); }
@@ -4684,7 +4694,7 @@ function draw(rdt) {
     }
     const bt = bornAt.has(sh) ? (performance.now() - bornAt.get(sh)) / 1000 : 9, pop = bt < .45 ? 1 + .55 * Math.sin(bt / .45 * Math.PI) : 1;
     const zk = uk * (chosen ? 1.3 : 1) * pop, x = X(pos.x), y = Y(pos.y), len = (22 + 8 * sh.pods) * zk, wid = 11 * zk, hl = len / 2, hw = wid / 2, nose = 6 * zk, rr = 3 * zk;
-    shipSpots.push({ L, sh, x, y, r: hl });
+    shipSpots.push({ L, sh, x, y, r: hl, wx: pos.x, wy: pos.y });
     const paint = () => {
       if (chosen) { ctx.fillStyle = 'rgba(255,255,255,.1)'; ctx.beginPath(); ctx.arc(x, y, hl + 4, 0, Math.PI * 2); ctx.fill(); }
       if (sel && sel.ship === sh) { ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2.5; ctx.globalAlpha = .7 + .25 * Math.sin(clock * 5); ctx.beginPath(); ctx.arc(x, y, hl + 6, 0, Math.PI * 2); ctx.stroke(); ctx.globalAlpha = 1; }   // 5.38: the ship you picked
@@ -5124,9 +5134,13 @@ function frame(ts) {
   }
   // tapping an edge arrow glides the view over to that place
   if (jump && S) {
+    // 5.64: following a picked ship, until it's let go of, leaves the line or the system, or the run ends
+    if (jump.sh) { if (!S.over && sel && sel.type === 'line' && sel.id === jump.L.id && sel.ship === jump.sh && jump.L.ships.includes(jump.sh) && lineView(jump.L)) { const p = shipSpot(jump.L, jump.sh); jump.b = { x: p.x, y: p.y }; } else jump = null; }
+  }
+  if (jump && S) {
     jump.t = Math.min(1, jump.t + rdt / 0.4); const e = 1 - Math.pow(1 - jump.t, 3), { side, top, rw, rh } = mapBox();
     setView(jump.s1 ? jump.s0 + (jump.s1 - jump.s0) * e : sc, { x: side + rw / 2, y: top + rh / 2 }, { x: jump.a.x + (jump.b.x - jump.a.x) * e, y: jump.a.y + (jump.b.y - jump.a.y) * e });
-    if (jump.t >= 1) jump = null;
+    if (jump.t >= 1 && !jump.sh) jump = null;
   }
   // ease the camera toward its target, but never while a finger is drawing or after you zoomed by hand
   if (S && !drag && !camManual) {

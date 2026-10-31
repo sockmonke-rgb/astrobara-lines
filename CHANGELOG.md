@@ -1,5 +1,10 @@
 # Changelog
 
+## 5.64
+- **Picking a ship by its number now centres the map on it, and keeps it there.** Tap a number in a line's bar and the view glides to that ship at the zoom you're at, then follows it as it flies, so it doesn't slide off screen at 5×. Before, the ship was only ringed wherever it was, often off screen.
+  - Touching the map (a tap, a drag, a pinch, the wheel), Fit, tapping the number again, picking another line or closing the bar hands the view back. Picking another number moves to that ship.
+  - A new place opening, or Show on a note, still glides there and stops the following.
+
 ## 5.63
 - The start screen's **made with Claude** credit moves from the header to the footer line, after the copyright and licence.
 
