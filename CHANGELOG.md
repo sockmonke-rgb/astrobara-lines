@@ -1,5 +1,8 @@
 # Changelog
 
+## 5.63
+- The start screen's **made with Claude** credit moves from the header to the footer line, after the copyright and licence.
+
 ## 5.62
 - **Quieter overflows.** A place that goes over its room now just fills its red ring on the map for the first quarter of the ring, and after that for as long as ships already on their way will clear it. No note at the top, no log line, no red ⇄ button, and the arrival brackets say "over 23/22 · ships coming" in yellow. It's flagged, once, when those ships won't be enough (one breaks down, a storm closes the stretch, more piles up) or the ring is half full. It stays flagged until the ring empties, so the note doesn't flicker on and off. The log line now gives the seconds actually left.
   - In a long Uncharted run, overflow notes for places on your lines fell from 48 to 29 over 800 seconds, and the ones a single load over room from 40 to 2. The ones left are real trouble.

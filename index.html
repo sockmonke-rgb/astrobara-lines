@@ -558,7 +558,7 @@ button.link{height:auto;min-height:0;padding:2px 0;border:none;background:none;c
       <svg class="lines" id="splashLines" aria-hidden="true"></svg>
       <div class="big" aria-hidden="true"><svg viewBox="0 0 64 64"><use href="#capy"/></svg></div>
       <div class="txt">
-        <div class="eyebrow" id="splashEyebrow">Prototype 5.62 · made with Claude</div>
+        <div class="eyebrow" id="splashEyebrow">Prototype 5.63</div>
         <h1>Astrobara Lines</h1>
         <p>Capybaras run the Lagrange Alliance’s freight. <b>Drag through places</b> to draw a shipping line. Freight shape = where it’s going. Too much waiting fills a red ring; a full ring ends the run.</p>
         <div class="scen" role="radiogroup" aria-label="Start in">
@@ -569,7 +569,7 @@ button.link{height:auto;min-height:0;padding:2px 0;border:none;background:none;c
         </div>
         <div class="scen mode" role="radiogroup" aria-label="Difficulty"><button data-a="mode" data-k="0" role="radio" aria-checked="true" class="on">Normal<small>gentler</small></button><button data-a="mode" data-k="1" role="radio" aria-checked="false">Hard<small>tight money · fuel · breakdowns</small></button></div>
         <div class="row"><button class="primary" data-a="update" id="bUpdate" hidden>Update</button><button class="primary" data-a="cont" id="bCont" hidden>Continue</button><button data-a="start" id="bNow">Play</button><button data-a="startTut" id="bTut">Walkthrough</button><button data-a="relaxed" id="bRelax">Relaxed</button></div>
-        <div class="row code"><input id="codeIn" type="text" placeholder="Run code" autocapitalize="characters" autocomplete="off" autocorrect="off" spellcheck="false" aria-label="Run code" enterkeyhint="go"><button data-a="code">Go</button><button data-a="board" id="bBoard">Leaderboard</button><button data-a="settings" id="bSet" aria-label="Settings · colour-blind safe, text size"><svg viewBox="0 0 24 24"><use href="#iGear"/></svg></button><span class="credit">© 2026 Mark Florentino LLC · MIT License</span></div>
+        <div class="row code"><input id="codeIn" type="text" placeholder="Run code" autocapitalize="characters" autocomplete="off" autocorrect="off" spellcheck="false" aria-label="Run code" enterkeyhint="go"><button data-a="code">Go</button><button data-a="board" id="bBoard">Leaderboard</button><button data-a="settings" id="bSet" aria-label="Settings · colour-blind safe, text size"><svg viewBox="0 0 24 24"><use href="#iGear"/></svg></button><span class="credit">© 2026 Mark Florentino LLC · MIT License · made with Claude</span></div>
       </div>
     </div>
   </div>
@@ -638,7 +638,7 @@ const $ = id => document.getElementById(id);
 const app = $('app'), cv = $('cv'), ctx = cv.getContext('2d');
 
 /* ================= Tuning ================= */
-const VERSION = '5.62';
+const VERSION = '5.63';
 // 5.49: where ≡ → Report sends reports: a Cloudflare Worker that files each one as an issue in a private repo
 // (report-worker/ has its code and setup). While it's empty, Report copies the report and offers a GitHub issue.
 const REPORT_URL = '';
@@ -5413,7 +5413,7 @@ function updateUI() {
 function reloadNew() { try { if (S && S.started && !S.over) saveAll(); } catch (_) {} location.replace(location.pathname + '?v=' + encodeURIComponent(newer || String(Date.now()))); }
 document.addEventListener('visibilitychange', () => { if (!document.hidden) checkUpdate(); });
 setInterval(checkUpdate, 600000);
-$('splashEyebrow').textContent = `Prototype ${VERSION} · made with Claude`;   // 5.62: (it said 5.59 for a while)
+$('splashEyebrow').textContent = `Prototype ${VERSION}`;   // 5.62: (it said 5.59 for a while)
 applyLook(); layout(); newRun(); hud(); trayUI(); splashUI(); cloudInit(); checkUpdate();
 requestAnimationFrame(frame);
 
