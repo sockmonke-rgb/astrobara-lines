@@ -79,4 +79,4 @@ Reports are filed privately through a small relay in [`report-worker/`](report-w
 
 ## Credits
 
-© 2026 Mark Florentino LLC, under the [MIT License](LICENSE). Set in the world of [Astrobara](https://github.com/sockmonke-rgb/astrobara).
+© 2026 Mark Florentino LLC, under the [MIT License](LICENSE). Set in the world of [Astrobara](https://github.com/sockmonke-rgb/astrobara). Made with [Claude](https://claude.ai) by Anthropic.

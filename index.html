@@ -558,7 +558,7 @@ button.link{height:auto;min-height:0;padding:2px 0;border:none;background:none;c
       <svg class="lines" id="splashLines" aria-hidden="true"></svg>
       <div class="big" aria-hidden="true"><svg viewBox="0 0 64 64"><use href="#capy"/></svg></div>
       <div class="txt">
-        <div class="eyebrow" id="splashEyebrow">Prototype 5.59</div>
+        <div class="eyebrow" id="splashEyebrow">Prototype 5.62 · made with Claude</div>
         <h1>Astrobara Lines</h1>
         <p>Capybaras run the Lagrange Alliance’s freight. <b>Drag through places</b> to draw a shipping line. Freight shape = where it’s going. Too much waiting fills a red ring; a full ring ends the run.</p>
         <div class="scen" role="radiogroup" aria-label="Start in">
@@ -638,7 +638,7 @@ const $ = id => document.getElementById(id);
 const app = $('app'), cv = $('cv'), ctx = cv.getContext('2d');
 
 /* ================= Tuning ================= */
-const VERSION = '5.61';
+const VERSION = '5.62';
 // 5.49: where ≡ → Report sends reports: a Cloudflare Worker that files each one as an issue in a private repo
 // (report-worker/ has its code and setup). While it's empty, Report copies the report and offers a GitHub issue.
 const REPORT_URL = '';
@@ -650,6 +650,7 @@ const CAP = 6, POD = 6, MAX_PODS = 2;
 const ROOM = 10, DEPOT_ROOM = 8;  // freight a place holds before it starts to overflow
 const OVERFLOW = 30;              // seconds a place may stay over capacity
 const OV_HOLD = 0.5;              // 5.56: an overflow ships on their way will clear doesn't pause, until its ring is this full
+const OV_GRACE = 0.25;            // 5.62: and no overflow is flagged (or pauses) before its ring is this full: most clear by then
 // 5.21: friction that bites but always leaves you a move
 const OVERFLOW_LATE = 20;         // ...late in a run the ring fills faster, and crowding warnings start earlier
 // 5.31: upkeep is a share of what the network earned since the last shop visit: `ship` per ship in service (a pod counts
@@ -1596,14 +1597,22 @@ function step(dt) {
       // true (a ship breaks down, a storm closes the line) or the ring gets half full anyway.
       const ovW = S.ovW || (S.ovW = {}), missable = !S.paused && willPause() && (!inView(i) || S.speed >= 3);
       if (!was) { if (missable) ovW[i] = 1; else delete ovW[i]; }
-      if (ovW[i] && missable && (S.of[i] >= OV_HOLD || !reliefFor(i))) { delete ovW[i]; S.paused = true; S.autoPaused = i; lastPlay = null; }
-      if (!was && !S.auto) log(`${placeName(i)} is overflowing: ${S.Q[i].length} loads waiting with room for ${room(i)}. Clear it within ${ovT()}s or the run ends.`, 'bad');
+      // 5.62: ...and stays quiet (just its ring on the map) for its first quarter, and after that while those ships will
+      // still clear it. It's flagged once they won't, or its ring is half full, and stays flagged until the ring
+      // empties: then the note, the log line, a red ⇄ button, and the pause if you could miss it.
+      const loud = S.ovLoud || (S.ovLoud = {}), turn = !loud[i] && (S.of[i] >= OV_HOLD || (S.of[i] >= OV_GRACE && !reliefFor(i)));
+      if (turn && ovW[i] && missable) { delete ovW[i]; S.paused = true; S.autoPaused = i; lastPlay = null; }
+      if (turn) {
+        loud[i] = 1;
+        if (!S.auto) log(`${placeName(i)} is overflowing: ${S.Q[i].length} loads waiting with room for ${room(i)}. Clear it within ${Math.max(1, Math.ceil((1 - S.of[i]) * ovT()))}s or the run ends.`, 'bad');
+      }
       if (S.stat && was < .6 && S.of[i] >= .6) S.stat.close++;
       if (S.stat && S.of[i] >= .9) (S.stat.hi || (S.stat.hi = {}))[i] = 1;
       if (S.of[i] >= 1) { if (S.sandbox) S.of[i] = 1; else { fail(i); return; } }
     } else if (S.of[i] > 0) {
       S.of[i] = Math.max(0, S.of[i] - dt / (ovT() * 1.5));
       if (!S.of[i] && S.ovW) delete S.ovW[i];
+      if (!S.of[i] && S.ovLoud) delete S.ovLoud[i];
       if (!S.of[i] && S.stat && S.stat.hi && S.stat.hi[i]) { delete S.stat.hi[i]; award('saved'); }
     }
   }
@@ -2527,7 +2536,7 @@ function winHTML() {
     <div class="fadein" id="lChart">${chart(S.hist)}</div>
     ${awardsRow()}
     <div class="fadein lrank" id="lRank">${rankLine(won.entry)}</div>
-    <p class="credit fadein" id="lCred">Run code <b style="color:#ffd8a8">${runCode()}</b> · ${SCEN[S.scen].name} start · Astrobara Lines ${VERSION}</p>
+    <p class="credit fadein" id="lCred">Run code <b style="color:#ffd8a8">${runCode()}</b> · ${SCEN[S.scen].name} start · Astrobara Lines ${VERSION} · made with Claude</p>
     <div class="row go"><button class="primary" data-a="keep">Keep playing</button><button data-a="board">Leaderboard</button><button data-a="log">Timeline</button><button data-a="new">${newRunLabel()}</button>${otherRuns()}</div>
   </div>`;
 }
@@ -2604,7 +2613,7 @@ function lostHTML() {
     <div class="fadein" id="lChart">${chart(S.hist)}</div>
     ${awardsRow()}
     <div class="fadein lrank" id="lRank">${rankLine(lost.entry)}</div>
-    <p class="credit fadein" id="lCred">Run code <b style="color:#ffd8a8">${runCode()}</b> · Astrobara Lines ${VERSION} · © 2026 Mark Florentino LLC · MIT</p>
+    <p class="credit fadein" id="lCred">Run code <b style="color:#ffd8a8">${runCode()}</b> · Astrobara Lines ${VERSION} · © 2026 Mark Florentino LLC · MIT · made with Claude</p>
     <div class="row go"><button class="primary" data-a="again">Same code again</button><button data-a="new">${newRunLabel()}</button><button data-a="board">Leaderboard</button><button data-a="sandbox">Keep playing without failing</button><button data-a="log">Timeline</button><button data-a="lostDiag">⚑ Report</button>${otherRuns()}</div>
   </div>`;
 }
@@ -2812,7 +2821,7 @@ function perfLine() {
 }
 function diagText() {
   const L = [];
-  L.push(`Astrobara Lines diagnostics · v${VERSION} · ${new Date().toISOString()}`);
+  L.push(`Astrobara Lines diagnostics · v${VERSION} · ${new Date().toISOString()} · made with Claude`);
   L.push(`device: ${navigator.userAgent}`);
   L.push(`screen: ${innerWidth}×${innerHeight} (laid out ${VW}×${VH}${IOS_APP ? ` · home-screen iPhone, screen ${screen.width}×${screen.height} ${(screen.orientation && screen.orientation.type) || window.orientation}${shrunk() ? ' · window SHRUNK' : ''} · shrinks healed ${heal.fixed}, not healed ${heal.gave}` : ''}) @${devicePixelRatio}x · ${rot ? 'turned (held upright)' : 'landscape'} · touch points ${navigator.maxTouchPoints || 0} · reduced motion ${reducedMotion()} · in Claude ${!!(window.claude && window.claude.use)} · cloud save ${!!cloud} · board ${!!boardRef}`);
   L.push(`perf: ${perfLine()}`);
@@ -3713,7 +3722,7 @@ function needList(sys) {
     const q = S.Q[i].length, rm = room(i);
     if (S.unrest && rebelNow(i)) out.push({ lvl: 'hot', i, icon: gi('iFlag'), why: 'independent · Negotiate' });
     // 5.24: only a place over its room is overflowing; one whose ring is still draining after it cleared just says so
-    else if (q > rm) out.push({ lvl: 'hot', i, icon: shp(S.shape[i]), why: `overflowing ${q}/${rm}` });
+    else if (q > rm) out.push(ovLoud(i) ? { lvl: 'hot', i, icon: shp(S.shape[i]), why: `overflowing ${q}/${rm}` } : { lvl: 'warn', i, icon: shp(S.shape[i]), why: `over ${q}/${rm} · ships coming` });
     else if (S.of[i] > .05 && q >= crowdAt(i)) out.push({ lvl: 'warn', i, icon: shp(S.shape[i]), why: `crowding ${q}/${rm} · ring ${Math.round(S.of[i] * 100)}%` });
     else if (S.of[i] > .05) out.push({ lvl: 'warn', i, icon: shp(S.shape[i]), why: `clearing ${q}/${rm}` });
     else if (q >= crowdAt(i) && PL[i].rate !== 0) out.push({ lvl: 'warn', i, icon: shp(S.shape[i]), why: `crowding ${q}/${rm}` });
@@ -3812,7 +3821,7 @@ function banner() {
   // while the game is paused for something (a new place, a vote), its note shows even over a storm warning
   const held = S.paused && S.autoPaused != null && S.hint && ['new', 'gate', 'worm', 'same', 'talks'].includes(S.hint.id);
   // 5.19: a place overflowing is how a run ends, so it outranks every other note: red, with the time left and Show
-  const ov = S.started && !S.tut && !S.over ? overflowing() : -1;
+  const ov = S.started && !S.tut && !S.over ? overflowing(true) : -1;
   if (ovSnooze >= 0 && (ov !== ovSnooze || !S.paused)) ovSnooze = -1;
   let kind = '';
   if (ov >= 0 && ov !== ovSnooze) {
@@ -3847,7 +3856,9 @@ function banner() {
 }
 function stuckWorst() { let w = -1; for (let i = 0; i < NP; i++) { const st = stuckNote(i); if (st && (w < 0 || st.n > stuckNote(w).n)) w = i; } return w; }
 // The place closest to ending the run: overflowing now, its red ring filling.
-function overflowing() { let w = -1; for (let i = 0; i < NP; i++) if (S.open[i] && S.of[i] > 0 && S.Q[i].length > room(i) && !rebelNow(i) && (w < 0 || S.of[i] > S.of[w])) w = i; return w; }
+// 5.62: loud, only the ones flagged (ships on the way won't clear them, or the ring is half full)
+const ovLoud = i => !!(S.ovLoud && S.ovLoud[i]);
+function overflowing(loud) { let w = -1; for (let i = 0; i < NP; i++) if (S.open[i] && S.of[i] > 0 && S.Q[i].length > room(i) && !rebelNow(i) && (!loud || ovLoud(i)) && (w < 0 || S.of[i] > S.of[w])) w = i; return w; }
 // What to do right now, in order of urgency; otherwise what's coming and when.
 function nextOpening() { let best = -1; for (let i = 0; i < NP; i++) if (!S.open[i] && (best < 0 || S.at[i] < S.at[best])) best = i; return best; }
 const via = i => (sysOf(i) !== S.view ? ` · ${sysLabel(sysOf(i))}` : '');
@@ -4062,7 +4073,7 @@ onTap($('speedMenu'), (a, el) => {
   S.speed = +el.dataset.v; toggleSpeedMenu(false); hud();
 });
 onTap($('banner'), a => {
-  if (a === 'dismiss') { if (bannerKind === 'ov') ovSnooze = overflowing(); else S.hint = null; bannerSig = ''; hud(); }
+  if (a === 'dismiss') { if (bannerKind === 'ov') ovSnooze = overflowing(true); else S.hint = null; bannerSig = ''; hud(); }
   if (a === 'bTo' && bannerTo) goTo(bannerTo);
   if (a === 'bGo' && bannerGo) {
     const g = bannerGo;
@@ -4281,7 +4292,7 @@ function helpBody() {
     <li><b>Scrap.</b> Short of a repair? Tap Repair anyway and scrap spares for cash: each sells for half its base price (a ship can come off your busiest line). Removing a line also offers to scrap its ships.</li>
   </ul>
   <div class="legend">${Object.keys(SHAPES).map(s => `<span>${shp(s)} ${SHAPES[s].role} · ${fmt(SHAPES[s].pay)}</span>`).join('')}</div>
-  <p class="credit" style="margin-top:12px">Astrobara Lines v${VERSION} · © 2026 Mark Florentino LLC · MIT License</p>`;
+  <p class="credit" style="margin-top:12px">Astrobara Lines v${VERSION} · © 2026 Mark Florentino LLC · MIT License · made with Claude by Anthropic</p>`;
 }
 function showHelp() { showLog(null, 'help'); }
 
@@ -4711,7 +4722,7 @@ function draw(rdt) {
   if (fingerTag) drawFingerTag(); fingerTag = null;
   // version watermark, just above the bottom bar
   ctx.font = fnt(500, 10, FM); ctx.textAlign = 'right'; ctx.fillStyle = 'rgba(160,175,200,.42)';
-  ctx.fillText(`Astrobara Lines v${VERSION}`, W - 16, barTop - 6);
+  ctx.fillText(`Astrobara Lines v${VERSION} · made with Claude`, W - 16, barTop - 6);
 }
 // The Proxima Centauri map: a red dwarf with two planets' orbits, and Alpha Centauri A and B off to the right.
 function drawProxima(labels) {
@@ -5402,12 +5413,13 @@ function updateUI() {
 function reloadNew() { try { if (S && S.started && !S.over) saveAll(); } catch (_) {} location.replace(location.pathname + '?v=' + encodeURIComponent(newer || String(Date.now()))); }
 document.addEventListener('visibilitychange', () => { if (!document.hidden) checkUpdate(); });
 setInterval(checkUpdate, 600000);
+$('splashEyebrow').textContent = `Prototype ${VERSION} · made with Claude`;   // 5.62: (it said 5.59 for a while)
 applyLook(); layout(); newRun(); hud(); trayUI(); splashUI(); cloudInit(); checkUpdate();
 requestAnimationFrame(frame);
 
 // Hooks for headless balancing and input tests.
 window.LC = {
-  get S() { return S; }, get GEN() { return GEN; }, get GENS() { return GENS; }, get NP() { return NP; }, sysFreight, reroute, plx: () => PLX.map(L => ({ ux: L.ux, uy: L.uy, k: L.k, ls: Math.pow(sc / sc0, L.d) })), IDX, PL, YEAR, startRun, step, tutGo, tutEnd, createLine, setStops, removeLine, addShip, removeShip, addPod, shieldPlace, buildDepot, select, room, setLine, openLoop, undo,
+  get S() { return S; }, get GEN() { return GEN; }, get GENS() { return GENS; }, get NP() { return NP; }, sysFreight, reroute, overflowing, reliefFor, needList, plx: () => PLX.map(L => ({ ux: L.ux, uy: L.uy, k: L.k, ls: Math.pow(sc / sc0, L.d) })), IDX, PL, YEAR, startRun, step, tutGo, tutEnd, createLine, setStops, removeLine, addShip, removeShip, addPod, shieldPlace, buildDepot, select, room, setLine, openLoop, undo,
   snapCam, cal, calOf, perOf, lineYear, showLog, fitInfo, setCB, setTextSize, showSettings, get cbSafe() { return cbSafe; }, get TK() { return TK; }, buySensor, SENSORS, setSys, setAutoPause, inScen, trayUI, recordRun, readBoard, openBoard, showLost, endLost, showWin, award, readAch, needList, lookAt, ACH, ask5, qmTip, diagText, saveText, loadSaveText, perf, get capyImg() { return capyImg; }, get won() { return won; }, get lost() { return lost; }, get boardAll() { return boardAll; }, scrap, scrapVal, repairCost, negotiateCost, voteDemand, sysNeeds, get fxs() { return fxs; }, negotiate, startRebel, tunnelEnds, saveAll, readLocal, resumeRun, bestSave, parseCode, runCode, codeOf, splashUI, SCEN, repairPlace, repairSensor, buyOffer, price, sysOf, tunnelOpen, hud, get sc() { return sc; }, UPKEEP, upkeepShare, ovT, reliefFor, BRK_GAP, openPlace, fuelNear, crowdAt, warnRoom, shipSpots: () => shipSpots, get wclock() { return wclock; }, pins: () => pins.map(q => ({ x: rot ? VW - q.y : q.x, y: rot ? q.x : q.y, i: q.i })),
   redrawFee, chargeRedraw, fixShips, whyCrowded, worstTrouble, selLine, checkUpdate, verNum, get newer() { return newer; }, upkeepDue, berths, docked, queueAt, stuckAt, stuckNote, startSwing, breakdowns, lateGame, ovT, crowdFix,
   toast, toastMs, hideToast, get toastT() { return toastT; },
