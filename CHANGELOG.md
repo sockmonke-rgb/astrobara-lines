@@ -1,5 +1,13 @@
 # Changelog
 
+## 5.60
+- **Each star system keeps its own clock for freight.** Freight used to speed up with the calendar everywhere at once, so places kept getting busier for as long as a run lasted, and a system that opened late (Proxima in an Uncharted run, say) arrived already at late-game pace. Now:
+  - a system starts calm when it opens and gets busier through its first ten periods, the way a new run does;
+  - it keeps growing until 8 periods after its last place opens, then eases onto a plateau over about 8 more;
+  - Earth–Moon runs play as before up to 2100. Sol itself levels off only well after its last places open; from 2100, Proxima and then the uncharted system each start calm. Uncharted and Proxima home systems level off about 20 periods in.
+- A long run continued in 5.60 is calmer straight away: about a third less freight at each place in an Uncharted run near 2314.
+- Groundwork for a chain of wormholes in 5.61: the map can now add places during a run, and routing only works through places a line or an open wormhole touches, so it stays quick as the map grows.
+
 ## 5.59
 - **The black band on iPhone, properly this time.** It's a WebKit bug in home-screen web apps: after a reload (the Update button does one), the keyboard or turning, iOS can shrink the app's own window by about a status bar's height, and the band below is outside the page, where nothing can be drawn. 5.57 drew for the whole screen, which only cut the bottom of the game off. Now:
   - the game always fits the window it's really shown in, so nothing is cut off;

@@ -637,7 +637,7 @@ const $ = id => document.getElementById(id);
 const app = $('app'), cv = $('cv'), ctx = cv.getContext('2d');
 
 /* ================= Tuning ================= */
-const VERSION = '5.59';
+const VERSION = '5.60';
 // 5.49: where ≡ → Report sends reports: a Cloudflare Worker that files each one as an issue in a private repo
 // (report-worker/ has its code and setup). While it's empty, Report copies the report and offers a GitHub issue.
 const REPORT_URL = '';
@@ -676,6 +676,9 @@ const RATE_EARLY = 0.014;         // how much faster freight appears each year o
 const FREE_LINE_EVERY = 3;        // the assembly adds a line at every third meeting
 const SPEEDS = [0.1, 0.5, 1, 2, 3, 5];
 const RATE_LATE = 0.004;          // ...and each period after that, when the growing map does most of the work
+// 5.60: a system keeps getting busier until LEVEL_AFTER periods after its last place opens, then eases to a plateau
+// over about LEVEL_EASE more, so a long run's pressure comes from the newer systems rather than the calendar
+const LEVEL_AFTER = 8, LEVEL_EASE = 8;
 
 /* ================= Calendar =================
    One assembly per period of YEAR seconds. The first decade runs a calendar year per
@@ -831,12 +834,15 @@ const farMouth = i => tunnels().some(([, b]) => b === i);
 const homeMouth = i => tunnels().some(([a]) => a === i);
 // The systems you can reach in this run so far, home first.
 function reachSys() { const out = [SCEN[S.scen].view]; for (const t of tunnels()) if (tunnelUp(t)) for (const m of t) if (!out.includes(sysOf(m))) out.push(sysOf(m)); return out; }
-const sysName = v => (v === 'sol' ? 'Sol' : v === 'far' ? 'Proxima' : GEN ? GEN.name : 'Uncharted');
+const sysName = v => (v === 'sol' ? 'Sol' : v === 'far' ? 'Proxima' : GENS[v] ? GENS[v].name : 'Uncharted');
 const sysLabel = v => `⇄ ${sysName(v)}`;
 // Lines stay inside one system; the wormhole joins them.
 const linkOK = (a, b) => sysOf(a) === sysOf(b);
 const PROXIMA = { x: 2440, y: 290 };   // the red dwarf, drawn in the Proxima view
-const NP = PL.length, IDX = {}; PL.forEach((p, i) => (IDX[p.id] = i));
+// 5.60: the list of places can grow during a run (each chained system adds its own), so NP is the count right now and
+// BASE_NP the places every run starts with.
+let NP = PL.length; const IDX = {}; PL.forEach((p, i) => (IDX[p.id] = i));
+const BASE_NP = NP;
 // Each place has its own fill colour so two places of the same kind are easy to tell apart.
 // The kind (shape) is still what freight looks for: square freight goes to whichever station is closest.
 const PLACE_TINT = {
@@ -918,11 +924,11 @@ function bez(A, C, B, t) { const u = 1 - t; return { x: u * u * A.x + 2 * u * t 
 const segKey = (i, j) => (i < j ? i + '-' + j : j + '-' + i);
 // One gentle curve per pair of places, bent away from any place it would otherwise pass through.
 const SEG = {};
-function segFor(i, j, extra) {
+function segFor(i, j, extra, only) {
   const A = PL[i], B = PL[j];
   if (!linkOK(i, j)) return { A, B, C: ctrlPt(A, B, 0) };
   let best = null, bestClear = -1;
-  const obst = extra ? PL.concat(extra) : PL;
+  const obst = only || (extra ? PL.concat(extra) : PL);
   for (const k of [0.05, -0.05, 0.12, -0.12, 0.19, -0.19, 0.27, -0.27, 0.36, -0.36]) {
     const C = ctrlPt(A, B, k); let clear = Infinity;
     for (const o of obst) if (o !== A && o !== B) for (let s = 1; s < 24; s++) clear = Math.min(clear, d2(bez(A, C, B, s / 24), o));
@@ -932,6 +938,10 @@ function segFor(i, j, extra) {
   return { A, B, C: best };
 }
 for (let i = 0; i < NP; i++) for (let j = i + 1; j < NP; j++) SEG[i + '-' + j] = segFor(i, j);
+// 5.60: a curve not worked out yet (a chained system's, or one dropped because a new place moved in) is made when first
+// needed, bent round its own system's places and star (places in other systems are far off and never in the way)
+const sysObst = v => { const o = PL.filter((p, k) => sysOf(k) === v); if (GENS[v]) o.push(GENS[v].star); return o; };
+function segG(a, b) { const k = segKey(a, b); return SEG[k] || (SEG[k] = segFor(Math.min(a, b), Math.max(a, b), null, sysObst(sysOf(a)))); }
 
 /* ================= Uncharted systems =================
    A random system, laid out from the run's seed: a star (red dwarf, binary pair, pulsar...), twelve
@@ -954,37 +964,57 @@ const GEN_NOTE = {
   diamond: 'Comet ice, cracked into rocket fuel.', star: 'Smelters on a metal-rich moon.', cross: 'Where ships for the outer system gather and refuel.',
 };
 const GEN_OPEN = [0.9, 1.9, 3, 4.1, 5.3, 6.6, 8, 9.5, 11];   // periods at which places 4 to 12 open
-let GEN = null;
-function generateSystem(seed) {
-  const r = rngOf({ rs: Math.imul(seed + 1, 2654435761) | 0 }), pick = a => a[Math.floor(r() * a.length)];
-  const star = { ...pick(STAR_TYPES), x: 3820 + (r() - .5) * 160, y: 255 + (r() - .5) * 60 };
-  const name = `ALX-${1000 + Math.floor(r() * 9000)}`, words = shuffle(GEN_WORDS, r), placed = [];
-  const fits = (q, gap) => d2(q, star) > 95 && placed.every(o => d2(q, o) > gap) && q.x > 3390 && q.x < 4250 && q.y > 75 && q.y < 435;
-  for (let k = 0; k < 14; k++) {
+// 5.60: every generated system, by key: 'rnd' (each run's own uncharted system) and, from 5.61, 'g1', 'g2'... (systems
+// further down the chain of wormholes). Their places are R0–R11, RX (the visitor gate) and RW (its wormhole) in 'rnd',
+// and G1R0–G1R11, G1X, G1W and so on in a chained one.
+const GENS = {};
+let GEN = null;   // the run's own uncharted system, GENS.rnd
+const genOf = v => GENS[v] || null, isGen = v => !!GENS[v];
+const genId = (k, s) => (k ? `G${k}${s === 'RX' ? 'X' : s === 'RW' ? 'W' : s}` : s);
+const GEN_DX = 1150;   // each chained system sits this far to the right of the one before it on the map
+const ROMAN = ['II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
+function generateSystem(seed, k = 0) {
+  const key = k ? 'g' + k : 'rnd', dx = GEN_DX * k;
+  const r = rngOf({ rs: Math.imul(seed + 1 + 7919 * k, 2654435761) | 0 }), pick = a => a[Math.floor(r() * a.length)];
+  const star = { ...pick(STAR_TYPES), x: 3820 + dx + (r() - .5) * 160, y: 255 + (r() - .5) * 60 };
+  let name = `ALX-${1000 + Math.floor(r() * 9000)}`;
+  while (Object.keys(GENS).some(v => v !== key && GENS[v].name === name)) name = `ALX-${1000 + Math.floor(r() * 9000)}`;
+  const words = shuffle(GEN_WORDS, r), placed = [];
+  const fits = (q, gap) => d2(q, star) > 95 && placed.every(o => d2(q, o) > gap) && q.x > 3390 + dx && q.x < 4250 + dx && q.y > 75 && q.y < 435;
+  for (let n = 0; n < 14; n++) {
     // the first three sit close to the star; the gate and the wormhole (last two) keep their distance
-    const lo = k < 3 ? 100 : k >= 12 ? 230 : 130, hi = k < 3 ? 230 : 430; let q, tries = 0;
+    const lo = n < 3 ? 100 : n >= 12 ? 230 : 130, hi = n < 3 ? 230 : 430; let q, tries = 0;
     do { const a = r() * Math.PI * 2, d = lo + r() * (hi - lo); q = { x: star.x + Math.cos(a) * d * 1.3, y: star.y + Math.sin(a) * d * .6 }; tries++; }
     while (!fits(q, tries > 250 ? 80 : 112) && tries < 500);
     placed.push(q);
   }
+  // a chained system's names don't repeat one already on the map: a second Brine is Brine II
+  const fresh = m => { if (!k) return m; let out = m, c = 0; while (PL.some(p => p.name === out)) out = `${m} ${ROMAN[c++] || c + 1}`; return out; };
+  const left = q => q.x > 4120 + dx;
+  const defs = GEN_KINDS.map((kind, n) => ({ ...placed[n], id: genId(k, 'R' + n), sys: key, shape: kind,
+    name: fresh(kind === 'world' ? words[n] : `${words[n]} ${GEN_SUFFIX[kind]}`), body: kind === 'world' ? 'world' : undefined,
+    size: kind === 'world' ? 12 : undefined, q: left(placed[n]) ? 'left' : undefined }));
+  defs.push({ ...placed[12], id: genId(k, 'RX'), name: 'Visitor Gate', shape: 'alien', body: 'alien', sys: key, size: 12, rate: 1.1 });
+  defs.push({ ...placed[13], id: genId(k, 'RW'), name: 'Wormhole', shape: 'worm', body: 'worm', q: left(placed[13]) ? 'left' : 'up', rate: 0, size: 12.5, sys: key });
+  // the run's own system lays itself over the places kept for it; a chained one's places join the map
+  for (const d of defs) { if (k) addPlace(d); else Object.assign(PL[IDX[d.id]], d); }
   const irl = {}, at = {};
-  GEN_KINDS.forEach((kind, k) => {
-    const p = PL[IDX['R' + k]];
-    Object.assign(p, placed[k], { shape: kind, name: kind === 'world' ? words[k] : `${words[k]} ${GEN_SUFFIX[kind]}`, body: kind === 'world' ? 'world' : undefined,
-      size: kind === 'world' ? 12 : undefined, q: placed[k].x > 4120 ? 'left' : undefined });
-    at[p.id] = k < 3 ? 0 : GEN_OPEN[k - 3] + (r() - .5) * .3;
-    irl[p.id] = { y: Math.round(2160 + at[p.id] * 4), st: 'fic', note: `${GEN_NOTE[kind]} (${name}, a ${star.type}.)` };
+  GEN_KINDS.forEach((kind, n) => {
+    const id = genId(k, 'R' + n);
+    at[id] = n < 3 ? 0 : GEN_OPEN[n - 3] + (r() - .5) * .3;
+    irl[id] = { y: Math.round(2160 + at[id] * 4), st: 'fic', note: `${GEN_NOTE[kind]} (${name}, a ${star.type}.)` };
   });
-  Object.assign(PL[IDX.RX], placed[12]); Object.assign(PL[IDX.RW], placed[13], { q: placed[13].x > 4120 ? 'left' : 'up' });
-  at.RX = 5.5 + r() * 3;
-  irl.RX = { y: Math.round(2160 + at.RX * 4), st: 'fic', note: 'Nobody built this. It opened on its own, and whoever runs it trades.' };
-  // camera framing for the start, and how far you can pan
+  const gx = genId(k, 'RX');
+  at[gx] = 5.5 + r() * 3;
+  irl[gx] = { y: Math.round(2160 + at[gx] * 4), st: 'fic', note: 'Nobody built this. It opened on its own, and whoever runs it trades.' };
+  // camera framing for the start
   const box = pts => pts.reduce((t, q) => ({ x0: Math.min(t.x0, q.x), y0: Math.min(t.y0, q.y), x1: Math.max(t.x1, q.x), y1: Math.max(t.y1, q.y) }), { x0: Infinity, y0: Infinity, x1: -Infinity, y1: -Infinity });
   const b = box([star, ...placed.slice(0, 3)]), cx = (b.x0 + b.x1) / 2, cy = (b.y0 + b.y1) / 2, hw = Math.max(240, (b.x1 - b.x0) / 2 + 100), hh = Math.max(175, (b.y1 - b.y0) / 2 + 75);
-  const all = box([star, ...placed]);
-  GEN = { seed, name, star, irl, at, base: { x0: cx - hw, y0: cy - hh, x1: cx + hw, y1: cy + hh },
-    world: { x0: all.x0 - 120, y0: all.y0 - 110, x1: all.x1 + 150, y1: all.y1 + 110 }, span: all,
-    orbits: GEN_KINDS.map((kind, k) => (kind === 'world' || kind === 'diamond' ? d2(placed[k], star) : 0)).filter(Boolean) };
+  const G = GENS[key] = { key, k, seed, name, star, irl, at, base: { x0: cx - hw, y0: cy - hh, x1: cx + hw, y1: cy + hh },
+    orbits: GEN_KINDS.map((kind, n) => (kind === 'world' || kind === 'diamond' ? d2(placed[n], star) : 0)).filter(Boolean) };
+  reframe(key);   // how far you can pan
+  if (k) return G;   // (a chained system's curves are worked out as its lines need them)
+  GEN = G;
   // curves between the new places, kept clear of the star
   const ids = PL.map((p, i) => i).filter(i => sysOf(i) === 'rnd');
   for (const i of ids) for (const j of ids) if (i < j) SEG[i + '-' + j] = segFor(i, j, [star]);
@@ -996,6 +1026,23 @@ function generateSystem(seed) {
     while (!fits(q, tries > 250 ? 70 : 90) && tries < 500);
     placed.push(q); Object.assign(SENSORS.find(z => z.id === id), q);
   }
+  return G;
+}
+// 5.60: a place joining the map mid-run (a chained system's), with room for it in every per-place list of the run
+const PLACE_KEYS = { shape: null, irl: null, at: NEVER, open: false, openedAt: 0, Q: null, of: 0, depot: false, shield: false, flash: 0, dmg: false,
+  unrest: 0, rebel: 0, demand: null, fastDock: false, toll: 0, calm: 0, keepShield: false };
+function addPlace(d) {
+  const i = PL.length; PL.push(d); IDX[d.id] = i; NP = PL.length;
+  if (S) for (const key in PLACE_KEYS) if (Array.isArray(S[key])) S[key][i] = key === 'Q' ? [] : key === 'shape' ? d.shape : PLACE_KEYS[key];
+  return i;
+}
+// Back to the places every run starts with (a new run, or a save being put back).
+function resetChain() {
+  for (let i = BASE_NP; i < PL.length; i++) delete IDX[PL[i].id];
+  PL.length = BASE_NP; NP = BASE_NP;
+  for (const k in SEG) { const [a, b] = k.split('-').map(Number); if (a >= BASE_NP || b >= BASE_NP) delete SEG[k]; }
+  for (const v in GENS) if (v !== 'rnd') { delete GENS[v]; delete WORLD[v]; delete SPAN[v]; }
+  reframe('far');   // (a chained wormhole may have widened Proxima's map)
 }
 
 /* ================= Helpers ================= */
@@ -1053,6 +1100,7 @@ function irlFor(k, shape) {
 function newRun(seed, scen) {
   seed = seed ?? Math.floor(Math.random() * SEED_SPACE);
   scen = SCEN[scen] ? scen : 'sol'; useScen(scen);
+  resetChain();
   generateSystem(seed);   // every run has an uncharted system now: an Earth–Moon run reaches one through the Rift
   const SC = SCEN[scen], h = { rs: seed | 0 }, rnd = rngOf(h);
   const shape = PL.map(p => p.shape || null);
@@ -1157,7 +1205,7 @@ function buildTracks() {
   for (const L of S.lines) {
     L.segs = [];
     for (const [a, b] of pairs(L)) {
-      const k = segKey(a, b), G = SEG[k];
+      const k = segKey(a, b), G = segG(a, b);
       const ids = share[k].slice().sort((x, y) => x - y), n = ids.length, off = (ids.indexOf(L.id) - (n - 1) / 2) * gapV;
       const pts = [], N = 24;
       for (let i = 0; i <= N; i++) {
@@ -1189,24 +1237,34 @@ function markClosures() {
   }
   return sig;
 }
+// 5.60: shortest paths only between places a line or an open wormhole touches (the rest can't be passed through), so
+// the work grows with the network you've built, not with every place on the map
 function reroute() {
-  const n = NP, D = [], NX = [];
-  for (let i = 0; i < n; i++) { D.push(Array(n).fill(Infinity)); NX.push(Array(n).fill(-1)); D[i][i] = 0; }
+  const n = NP, up = tunnels().filter(tunnelUp), on = new Uint8Array(n);
+  for (const L of S.lines) for (const sg of L.segs) if (!sg.closed) on[sg.a] = on[sg.b] = 1;
+  for (const [a, b] of up) on[a] = on[b] = 1;
+  const nodes = [], ix = new Int32Array(n).fill(-1);
+  for (let i = 0; i < n; i++) if (on[i]) { ix[i] = nodes.length; nodes.push(i); }
+  const m = nodes.length, D = [], NX = [];
+  for (let i = 0; i < m; i++) { D.push(new Float64Array(m).fill(Infinity)); NX.push(new Int32Array(m).fill(-1)); D[i][i] = 0; }
   for (const L of S.lines) for (const sg of L.segs) {
     if (sg.closed) continue;
-    const i = sg.a, j = sg.b;
+    const i = ix[sg.a], j = ix[sg.b];
     if (sg.len < D[i][j]) { D[i][j] = D[j][i] = sg.len; NX[i][j] = j; NX[j][i] = i; }
   }
-  for (const t of tunnels()) if (tunnelUp(t)) { const [a, b] = t; D[a][b] = D[b][a] = TUNNEL; NX[a][b] = b; NX[b][a] = a; }
-  for (let m = 0; m < n; m++) for (let i = 0; i < n; i++) for (let j = 0; j < n; j++)
-    if (D[i][m] + D[m][j] < D[i][j]) { D[i][j] = D[i][m] + D[m][j]; NX[i][j] = NX[i][m]; }
+  for (const [a, b] of up) { const i = ix[a], j = ix[b]; D[i][j] = D[j][i] = TUNNEL; NX[i][j] = j; NX[j][i] = i; }
+  for (let k = 0; k < m; k++) { const Dk = D[k]; for (let i = 0; i < m; i++) { const Di = D[i], dik = Di[k]; if (dik === Infinity) continue; const Ni = NX[i];
+    for (let j = 0; j < m; j++) if (dik + Dk[j] < Di[j]) { Di[j] = dik + Dk[j]; Ni[j] = Ni[k]; } } }
+  // the open places of each kind freight can be headed for
+  const kinds = {}; for (const s of S.present) kinds[s] = [];
+  for (let z = 0; z < n; z++) if (S.open[z] && kinds[S.shape[z]] && !swingLive('strike', z)) kinds[S.shape[z]].push(z);
   S.NH = []; S.DS = [];
   for (let i = 0; i < n; i++) {
-    const row = {}, dist = {};
+    const row = {}, dist = {}, a = ix[i], Da = a >= 0 ? D[a] : null;
     for (const s of S.present) {
       let best = -1, bd = Infinity;
-      for (let z = 0; z < n; z++) if (S.open[z] && S.shape[z] === s && D[i][z] < bd && !swingLive('strike', z)) { bd = D[i][z]; best = z; }
-      row[s] = best < 0 || best === i ? -1 : NX[i][best];
+      for (const z of kinds[s]) { const d = z === i ? 0 : Da && ix[z] >= 0 ? Da[ix[z]] : Infinity; if (d < bd) { bd = d; best = z; } }
+      row[s] = best < 0 || best === i ? -1 : nodes[NX[a][ix[best]]];
       dist[s] = bd;   // how far the nearest place of this kind is, along your lines
     }
     S.NH.push(row); S.DS.push(dist);
@@ -1443,11 +1501,12 @@ function step(dt) {
     for (let i = 0; i < NP; i++) if (!S.open[i] && S.t >= S.at[i]) openPlace(i);
     events();
   }
-  const yr = S.t / YEAR;
-  // freight appears: faster every year for the first decade, then the growing map does the work
-  const base = tut ? 0.06 : (0.07 + RATE_EARLY * Math.min(yr, 10) + RATE_LATE * Math.max(0, yr - 10)) * SCEN[S.scen].rate * (1 + (SCEN[S.scen].grow || 0) * Math.max(0, yr - 10));
+  // freight appears: faster every year of each system's first decade, then the growing map does the work (5.60: each
+  // system by its own age, levelling off a while after its last place opens)
+  const F = tut ? null : sysFreight();
   for (let i = 0; i < NP; i++) {
     if (!S.open[i]) continue;
+    const base = tut ? 0.06 : F[sysOf(i)] || 0;
     if (S.sandbox && S.Q[i].length >= room(i) * 2) continue;   // with no failing, a pile stops growing past double
 
     const ramp = Math.min(1, (S.clock - S.openedAt[i]) / 12);
@@ -1510,6 +1569,24 @@ function step(dt) {
 function periodSpan(p) {
   const a = Math.floor(calOf(p) + 1e-6), b = Math.floor(calOf(p + 1) - 1e-6);
   return b > a ? `${a}–${String(b).slice(2)}` : String(a);
+}
+// 5.60: the rate freight appears at in each system, by how long ago it opened (see LEVEL_AFTER). A chained system
+// (5.61) is uncharted, so it ramps the way an Uncharted run does.
+function sysFreight() {
+  const t0 = {}, full = {}, out = {};
+  for (let i = 0; i < NP; i++) {
+    const a = S.at[i]; if (a >= NEVER) continue;
+    const v = sysOf(i);
+    if (!(v in t0) || a < t0[v]) t0[v] = a;
+    if (PL[i].rate !== 0 && (!(v in full) || a > full[v])) full[v] = a;
+  }
+  for (const v in t0) {
+    const age = Math.max(0, S.t - t0[v]) / YEAR, lv = ((full[v] ?? t0[v]) - t0[v]) / YEAR + LEVEL_AFTER;
+    const a = age <= lv ? age : lv + LEVEL_EASE * (1 - Math.exp(-(age - lv) / LEVEL_EASE));
+    const sc = GENS[v] && GENS[v].k ? SCEN.rand : SCEN[S.scen];
+    out[v] = (0.07 + RATE_EARLY * Math.min(a, 10) + RATE_LATE * Math.max(0, a - 10)) * sc.rate * (1 + (sc.grow || 0) * Math.max(0, a - 10));
+  }
+  return out;
 }
 function spawn(i) {
   if (swingLive('rush', i) && S.present.has(S.haz.want) && S.rnd() < .85) { S.Q[i].push({ want: S.haz.want, born: S.t }); return; }
@@ -1672,7 +1749,7 @@ function openPlace(i) {
   if (S.shape[i] === 'diamond') for (const L of S.lines) L.dry = dryOf(L);   // 5.36: fuel to be had now
   if (farMouth(i)) return;
   const tn = tunnels().find(([a]) => a === i), hm = tn ? tn[0] : -1, fm = tn ? tn[1] : -1;
-  if (i === IDX.RX) {
+  if (PL[i].body === 'alien') {
     log(`A gate nobody built opened near ${placeName(nearestOpen(i))}. Visitors trade through it: freight to it pays ${fmt(SHAPES.alien.pay)} a load, and it sends out plenty of its own.`, 'warn');
     if (!S.auto) S.hint = { id: 'gate', to: { place: i }, html: `${shp('alien')} <b>Visitor Gate</b> opened · ${fmt(SHAPES.alien.pay)}/load · it needs a line`, t: S.clock };
     newPlacePause(i);
@@ -1681,7 +1758,7 @@ function openPlace(i) {
   if (i === hm) {
     S.inv.lines = Math.min(maxLines(), S.inv.lines + 2); S.inv.ships += 2; trayUI();
     const to = sysOf(fm), rift = i === IDX.RIFT, where = S.scen === 'sol' && !rift ? 'past Saturn' : `near ${placeName(nearestOpen(i))}`;
-    const what = to === 'far' ? 'the Proxima Centauri system' : `an uncharted system, ${GEN.name} (a ${GEN.star.type})`;
+    const what = to === 'far' ? 'the Proxima Centauri system' : `an uncharted system, ${genOf(to).name} (a ${genOf(to).star.type})`;
     log(`${rift ? 'A second wormhole, the Rift,' : 'A wormhole'} opened ${where}, to ${what}. Freight dropped at one end comes out the other. The Alliance sends 2 lines and 2 ships for the far side.${S.scen === 'sol' && !rift ? ' (Science fiction from here on.)' : ''}`, 'good');
     if (!S.auto) { S.hint = { id: 'worm', to: { place: i }, html: `${shp('worm')} <b>${rift ? 'Rift' : 'Wormhole'}</b> to ${sysName(to)} · +2 ${gi('iLine')} +2 ${gi('iShip')} · line to it, then ${sysLabel(to)}`, t: S.clock }; }
     newPlacePause(i);
@@ -2006,7 +2083,7 @@ function startHazard() {
   if (!forced && lateGame() && S.rnd() < SWING) startSwing(opens);
   if (!S.haz) {
   const roll = forced === 'surge' ? 6.9 : forced === 'storm' ? 0 : S.rnd() * 7;
-  const rndOpen = opens.filter(i => sysOf(i) === 'rnd');
+  const rndOpen = opens.filter(i => GENS[sysOf(i)]);   // (5.60: signals come in every generated system)
   if (!forced && rndOpen.length && roll >= 4.4 && (S.scen === 'rand' || roll >= 5.6)) startSignal(rndOpen);
   else if (roll < 3) {
     const pool = opens.filter(i => i !== IDX.EARTH); let i = pool[Math.floor(S.rnd() * pool.length)];
@@ -2015,10 +2092,10 @@ function startHazard() {
     // name the storm after the place nearest its centre
     i = opens.filter(k => k !== IDX.EARTH).reduce((a, k) => (d2(PL[k], c) < d2(PL[a], c) ? k : a), i);
     const far = sysOf(i) === 'far', early = warnBonus(sysOf(i));   // each system's sensors watch its own star
-    const word = sysOf(i) === 'rnd' ? GEN.star.storm : far ? 'Flare' : 'Storm';
+    const word = GENS[sysOf(i)] ? GENS[sysOf(i)].star.storm : far ? 'Flare' : 'Storm';
     const r = Math.min(92 + 2 * yr, 150);
     S.haz = { type: 'storm', phase: 'warn', at: S.t + 20 + early, dur: Math.min(30, 20 + yr), c, r, i, early, sys: sysOf(i),
-      title: `${word} · ${placeName(i)}`, end: `The ${far || sysOf(i) === 'rnd' ? word.toLowerCase() : 'solar storm'} near ${placeName(i)} passed.` };
+      title: `${word} · ${placeName(i)}`, end: `The ${far || GENS[sysOf(i)] ? word.toLowerCase() : 'solar storm'} near ${placeName(i)} passed.` };
     // twin flares: a second zone well away from the first, so you need two shields
     const twin = !lateGame() ? 0 : S.scen === 'rand' ? Math.min(.5, .25 + .02 * (yr - LATE.rand)) : S.scen === 'prox' ? .25 : 0;
     if (twin && S.rnd() < twin) {
@@ -2324,7 +2401,7 @@ function stats(e) {
 }
 // What opens next on the real-world timeline, for the reviews.
 function upcoming(n) {
-  const out = []; for (let i = 0; i < NP; i++) if (!S.open[i] && S.irl[i] && !farMouth(i) && i !== IDX.RX && S.at[i] < NEVER) out.push(i);
+  const out = []; for (let i = 0; i < NP; i++) if (!S.open[i] && S.irl[i] && !farMouth(i) && PL[i].body !== 'alien' && S.at[i] < NEVER) out.push(i);
   out.sort((a, b) => S.at[a] - S.at[b]);
   return out.slice(0, n).map(i => `${esc(placeName(i))} ${S.irl[i].y}`).join(', ');
 }
@@ -2965,7 +3042,7 @@ let cam = { ...BASE };
 const QPAD = { right: [0, 0, 110, 0], left: [110, 0, 0, 0], up: [0, 80, 0, 0], down: [0, 0, 0, 80] };
 // The Proxima system has its own map, framed the same way.
 const FAR_BASE = { x0: 2010, y0: 70, x1: 2520, y1: 440 }, PROX_BASE = { x0: 2200, y0: 100, x1: 2620, y1: 440 };
-const baseOf = v => (v === 'rnd' ? GEN.base : v === 'far' ? (S && S.scen === 'prox' ? PROX_BASE : FAR_BASE) : BASE);
+const baseOf = v => (GENS[v] ? GENS[v].base : v === 'far' ? (S && S.scen === 'prox' ? PROX_BASE : FAR_BASE) : BASE);
 function camTarget() {
   const v = S ? S.view : 'sol', t = { ...baseOf(v) };
   if (!S) return t;
@@ -3003,20 +3080,25 @@ function setSys(v) {
 let camManual = false;
 function fitAllScale() { const t = camTarget(), { rw, rh } = mapBox(); return Math.min(rw / (t.x1 - t.x0), rh / (t.y1 - t.y0)); }
 // The whole map, including places that haven't opened yet: you can pan out to look at what's coming.
+// 5.60: worked out again whenever a system's places change (a chained wormhole joins it), for every system alike; a
+// generated system's star counts as one of its places here.
 const WORLD = {}, SPAN = {};
-for (const v of ['sol', 'far']) {
-  const t = { ...(v === 'far' ? FAR_BASE : BASE) }, u = { x0: Infinity, y0: Infinity, x1: -Infinity, y1: -Infinity };
+function reframe(v) {
+  const g = GENS[v], u = { x0: Infinity, y0: Infinity, x1: -Infinity, y1: -Infinity }, t = g ? { ...u } : { ...(v === 'far' ? FAR_BASE : BASE) };
   PL.forEach((p, i) => {
     if (sysOf(i) !== v) return;
     t.x0 = Math.min(t.x0, p.x - 120); t.y0 = Math.min(t.y0, p.y - 110); t.x1 = Math.max(t.x1, p.x + 150); t.y1 = Math.max(t.y1, p.y + 110);
     u.x0 = Math.min(u.x0, p.x); u.y0 = Math.min(u.y0, p.y); u.x1 = Math.max(u.x1, p.x); u.y1 = Math.max(u.y1, p.y);
   });
+  if (g) { const p = g.star; t.x0 = Math.min(t.x0, p.x - 120); t.y0 = Math.min(t.y0, p.y - 110); t.x1 = Math.max(t.x1, p.x + 150); t.y1 = Math.max(t.y1, p.y + 110);
+    u.x0 = Math.min(u.x0, p.x); u.y0 = Math.min(u.y0, p.y); u.x1 = Math.max(u.x1, p.x); u.y1 = Math.max(u.y1, p.y); }
   WORLD[v] = t; SPAN[v] = u;
 }
+for (const v of ['sol', 'far']) reframe(v);
 // The view's centre stays over the spread of places, so you can't drift off into empty space.
 // Show world point w at screen point a, at scale s (clamped), keeping the view over the map.
 function setView(s, a, w) {
-  const { side, top, rw, rh } = mapBox(), t = S.view === 'rnd' ? GEN.world : WORLD[S.view], sp = S.view === 'rnd' ? GEN.span : SPAN[S.view];
+  const { side, top, rw, rh } = mapBox(), t = WORLD[S.view], sp = SPAN[S.view];
   s = Math.max(Math.min(sc0 * 0.55, fitAllScale() * 0.85, Math.min(rw / (t.x1 - t.x0), rh / (t.y1 - t.y0))), Math.min(sc0 * 2.6, s));
   let nox = a.x - w.x * s, noy = a.y - w.y * s;
   const cx = Math.max(sp.x0, Math.min(sp.x1, (side + rw / 2 - nox) / s)), cy = Math.max(sp.y0, Math.min(sp.y1, (top + rh / 2 - noy) / s));
@@ -3753,7 +3835,7 @@ function coach() {
   const sk = SENSORS.findIndex((z, k) => sensorPlay(k) && !S.sensor[k] && cal(S.t) >= sensorFrom(k) && S.fund >= z.cost + 50);
   if (sk >= 0 && S.log.some(e => e.kind === 'warn' && /Storm|Flare|Pulse|signal/.test(e.text))) return { act: false, html: `${gi('iSensor')} ${SENSORS[sk].short} for sale · ${fmt(SENSORS[sk].cost)}${via(sensorSys(SENSORS[sk]) === 'far' ? IDX.WORMF : sensorSys(SENSORS[sk]) === 'rnd' ? IDX.RW : IDX.EARTH)}` };
   const n = nextOpening();
-  if (n === IDX.RX && S.at[n] - S.t < SOON) return { act: false, html: `${gi('iAlien')} <b>Unknown signal</b> · ${Math.ceil(S.at[n] - S.t)}s` };
+  if (n >= 0 && PL[n].body === 'alien' && S.at[n] - S.t < SOON) return { act: false, html: `${gi('iAlien')} <b>Unknown signal</b> · ${Math.ceil(S.at[n] - S.t)}s` };
   if (n >= 0 && S.at[n] - S.t < SOON) return { act: false, to: { place: n }, html: `${shp(S.shape[n])} <b>${esc(placeName(n))}</b> opens · ${Math.ceil(S.at[n] - S.t)}s${homeMouth(n) && n !== IDX.RIFT ? '' : via(n)}` };
   return null;
 }
@@ -4027,7 +4109,7 @@ function showLog(back, tab) {
     body = `<p>Everything that happened this run, newest first.</p><ul class="ledger">${items || '<li>Nothing yet.</li>'}</ul>`;
   } else {
     const lines = S.lines.map(L => `<li><span class="t" style="color:${L.color}">${yrText(lineYear(L.stops))}</span><span><b style="color:${L.color}">${L.name}${L.loop ? ' loop' : ''}</b> · ${L.stops.map(i => esc(placeName(i))).join(' → ')}${L.loop ? ' → back' : ''}</span></li>`).join('');
-    const order = PL.map((p, i) => i).filter(i => S.irl[i] && !farMouth(i) && S.at[i] < NEVER && (i !== IDX.RX || S.open[i])).sort((a, b) => S.at[a] - S.at[b] || S.irl[a].y - S.irl[b].y);
+    const order = PL.map((p, i) => i).filter(i => S.irl[i] && !farMouth(i) && S.at[i] < NEVER && (PL[i].body !== 'alien' || S.open[i])).sort((a, b) => S.at[a] - S.at[b] || S.irl[a].y - S.irl[b].y);
     const places = order.map(i => {
       const o = S.irl[i], left = S.at[i] - S.t;
       const when = S.open[i] ? 'open' : S.started && !S.tut ? `opens in ${Math.max(1, Math.ceil(left))}s` : 'not yet open';
@@ -4237,7 +4319,7 @@ function previewPath(stops, color, fingerP, loop, isNew, who, num) {
   const segs = []; for (let s = 0; s < stops.length - 1; s++) segs.push([stops[s], stops[s + 1]]);
   if (loop) segs.push([stops[stops.length - 1], stops[0]]);
   for (const [a, b] of segs) {
-    const G = SEG[segKey(a, b)];
+    const G = segG(a, b);
     ctx.beginPath(); ctx.moveTo(X(G.A.x), Y(G.A.y)); ctx.quadraticCurveTo(X(G.C.x), Y(G.C.y), X(G.B.x), Y(G.B.y)); ctx.stroke();
   }
   const last = PL[stops[stops.length - 1]];
@@ -4315,8 +4397,8 @@ function drawBackdrop() {
   const { side, top, rw, rh } = mapBox(), mx = side + rw / 2, my = top + rh / 2, z = sc / sc0;
   plxTrack(mx, my);
   // nebula
-  const v = S ? S.view : 'sol', key = v === 'rnd' && GEN ? 'rnd' + GEN.seed : v;
-  const img = nebula(key, v === 'rnd' && GEN ? [GEN.star.col, '90,60,160', '60,90,170'] : NEB_COLS[v] || NEB_COLS.sol);
+  const v = S ? S.view : 'sol', g = GENS[v], key = g ? (g.k ? g.k + v : 'rnd') + g.seed : v;
+  const img = nebula(key, g ? [g.star.col, '90,60,160', '60,90,170'] : NEB_COLS[v] || NEB_COLS.sol);
   { const ls = Math.pow(z, NEB.d), tw = NEB_W * ls, th = NEB_H * ls;
     const bx = mx + (pmod(NEB.ux, NEB_W) - NEB_W / 2) * ls, by = my + (pmod(NEB.uy, NEB_H) - NEB_H / 2) * ls;
     for (let kx = -1; kx <= 1; kx++) for (let ky = -1; ky <= 1; ky++) { const x = bx + kx * tw, y = by + ky * th; if (x < W && y < H && x + tw > 0 && y + th > 0) ctx.drawImage(img, x, y, tw, th); } }
@@ -4353,7 +4435,7 @@ function draw(rdt) {
   const orbitLabels = [], sol = S.view === 'sol';
   ctx.font = fnt(600, 11, FD); ctx.textAlign = 'center';
   if (S.view === 'far') drawProxima(orbitLabels);
-  else if (S.view === 'rnd') drawUncharted(orbitLabels);
+  else if (GENS[S.view]) drawUncharted(orbitLabels, GENS[S.view]);
   else for (const o of SUN_ORBITS) {
     const r = o.r * sc, cx = X(SUN.x), cy = Y(SUN.y);
     if (cx + r < 0) continue;
@@ -4572,10 +4654,10 @@ function drawProxima(labels) {
   for (const [t, x, y] of [['ALPHA CEN A', 2790, 170], ['ALPHA CEN B', 2805, 330]]) if (X(x) < W - 50) labels.push([t, X(x), Y(y) + 25]);
 }
 // An uncharted system: its star (or two, or a pulsar's sweeping beams) and planets' orbits.
-function drawUncharted(labels) {
-  const st = GEN.star, x = X(st.x), y = Y(st.y);
+function drawUncharted(labels, g) {
+  const st = g.star, x = X(st.x), y = Y(st.y);
   ctx.setLineDash([6, 8]); ctx.strokeStyle = 'rgba(205,215,235,.13)'; ctx.lineWidth = 1;
-  for (const r of GEN.orbits) { ctx.beginPath(); ctx.arc(x, y, r * sc, 0, Math.PI * 2); ctx.stroke(); }
+  for (const r of g.orbits) { ctx.beginPath(); ctx.arc(x, y, r * sc, 0, Math.PI * 2); ctx.stroke(); }
   ctx.setLineDash([]);
   const glow = (gx, gy, R, core) => {
     const g = ctx.createRadialGradient(gx, gy, 0, gx, gy, R * sc); g.addColorStop(0, `rgba(${st.col},.35)`); g.addColorStop(1, `rgba(${st.col},0)`);
@@ -4589,7 +4671,7 @@ function drawUncharted(labels) {
     ctx.save(); ctx.translate(x, y); ctx.rotate(wclock * 1.6); ctx.strokeStyle = `rgba(${st.col},.22)`; ctx.lineWidth = 3 * uk;
     ctx.beginPath(); ctx.moveTo(-140 * sc, 0); ctx.lineTo(140 * sc, 0); ctx.stroke(); ctx.restore();
   }
-  labels.push([`${GEN.name.toUpperCase()} · ${st.type.toUpperCase()}`, x, y + 26]);
+  labels.push([`${g.name.toUpperCase()} · ${st.type.toUpperCase()}`, x, y + 26]);
 }
 // When you've zoomed in, arrows at the edge point to open places off screen; red if they're crowding.
 let onLine = new Set();   // places on a line, worked out each frame
@@ -4634,7 +4716,7 @@ function drawFog() {
     f.globalCompositeOperation = 'destination-out';
     const hole = (x, y, R, k) => { const g = f.createRadialGradient(x, y, R * k, x, y, R); g.addColorStop(0, 'rgba(0,0,0,1)'); g.addColorStop(1, 'rgba(0,0,0,0)'); f.fillStyle = g; f.beginPath(); f.arc(x, y, R, 0, Math.PI * 2); f.fill(); };
     if (S.view === 'sol') { f.save(); f.translate(X(470), Y(250)); f.scale(1, 235 / 480); hole(0, 0, 480 * sc, .8); f.restore(); }
-    else { const c = S.view === 'rnd' ? GEN.star : S.scen === 'prox' ? PROXIMA : PL[IDX.WORMF]; hole(X(c.x), Y(c.y), 260 * sc, .5); }
+    else { const c = GENS[S.view] ? GENS[S.view].star : S.scen === 'prox' ? PROXIMA : PL[IDX.WORMF]; hole(X(c.x), Y(c.y), 260 * sc, .5); }
     for (const i of reveal) hole(X(PL[i].x), Y(PL[i].y), 210 * sc, .45);
     f.globalCompositeOperation = 'source-over';
   }
@@ -4848,7 +4930,7 @@ function placeTut() {
   for (const t of handles()) pts.push([t.x, t.y, 30, 14]);
   for (const L of S.lines) for (const sg of L.segs) for (const p of sg.pts) pts.push([X(p.x), Y(p.y), 1, 8]);
   for (let a = 0; a < open.length; a++) for (let b = a + 1; b < open.length; b++) {
-    const G = SEG[segKey(open[a], open[b])]; for (let k = 1; k < 16; k++) { const q = bez(G.A, G.C, G.B, k / 16); pts.push([X(q.x), Y(q.y), 1.5, 10]); }
+    const G = segG(open[a], open[b]); for (let k = 1; k < 16; k++) { const q = bez(G.A, G.C, G.B, k / 16); pts.push([X(q.x), Y(q.y), 1.5, 10]); }
   }
   const g = S.tut.step === 3 && S.tut.goal, h = g && tutHandle(g);
   if (h) { const m = PL[g.i]; for (let k = 0; k <= 10; k++) pts.push([h.x + (X(m.x) - h.x) * k / 10, h.y + (Y(m.y) - h.y) * k / 10, 6, 12]); }
@@ -5246,7 +5328,7 @@ requestAnimationFrame(frame);
 
 // Hooks for headless balancing and input tests.
 window.LC = {
-  get S() { return S; }, get GEN() { return GEN; }, plx: () => PLX.map(L => ({ ux: L.ux, uy: L.uy, k: L.k, ls: Math.pow(sc / sc0, L.d) })), IDX, PL, YEAR, startRun, step, tutGo, tutEnd, createLine, setStops, removeLine, addShip, removeShip, addPod, shieldPlace, buildDepot, select, room, setLine, openLoop, undo,
+  get S() { return S; }, get GEN() { return GEN; }, get GENS() { return GENS; }, get NP() { return NP; }, sysFreight, reroute, plx: () => PLX.map(L => ({ ux: L.ux, uy: L.uy, k: L.k, ls: Math.pow(sc / sc0, L.d) })), IDX, PL, YEAR, startRun, step, tutGo, tutEnd, createLine, setStops, removeLine, addShip, removeShip, addPod, shieldPlace, buildDepot, select, room, setLine, openLoop, undo,
   snapCam, cal, calOf, perOf, lineYear, showLog, fitInfo, setCB, setTextSize, showSettings, get cbSafe() { return cbSafe; }, get TK() { return TK; }, buySensor, SENSORS, setSys, setAutoPause, inScen, trayUI, recordRun, readBoard, openBoard, showLost, endLost, showWin, award, readAch, needList, lookAt, ACH, ask5, qmTip, diagText, saveText, loadSaveText, perf, get capyImg() { return capyImg; }, get won() { return won; }, get lost() { return lost; }, get boardAll() { return boardAll; }, scrap, scrapVal, repairCost, negotiateCost, voteDemand, sysNeeds, get fxs() { return fxs; }, negotiate, startRebel, tunnelEnds, saveAll, readLocal, resumeRun, bestSave, parseCode, runCode, codeOf, splashUI, SCEN, repairPlace, repairSensor, buyOffer, price, sysOf, tunnelOpen, hud, get sc() { return sc; }, UPKEEP, upkeepShare, ovT, reliefFor, BRK_GAP, openPlace, fuelNear, crowdAt, warnRoom, shipSpots: () => shipSpots, get wclock() { return wclock; }, pins: () => pins.map(q => ({ x: rot ? VW - q.y : q.x, y: rot ? q.x : q.y, i: q.i })),
   redrawFee, chargeRedraw, fixShips, whyCrowded, worstTrouble, selLine, checkUpdate, verNum, get newer() { return newer; }, upkeepDue, berths, docked, queueAt, stuckAt, stuckNote, startSwing, breakdowns, lateGame, ovT, crowdFix,
   toast, toastMs, hideToast, get toastT() { return toastT; },

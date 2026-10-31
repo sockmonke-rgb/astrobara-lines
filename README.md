@@ -22,6 +22,7 @@ It's one HTML file with no build step and no dependencies. It plays in a phone o
 - **Alliance Shop:** every period the Lagrange Alliance sends a ship, sells upgrades and offers one free pick. You can skip the pick and bank interest instead.
 - **Storms, debris and surges:** shields keep lines running through them. Late in a run, places that are kept waiting grow restless and may declare independence until you negotiate.
 - **Normal and Hard:** chosen on the start screen. Hard has the full friction below; Normal caps upkeep at 35%, drops the fuel slowdown, has rarer breakdowns and keeps the 30s red ring.
+- **Freight:** each star system gets busier for about ten periods after it opens, keeps growing until a while after its last place opens, then levels off.
 - **Friction:** ships at work cost upkeep at each shop visit, a share of what the network earned that grows with the fleet (up to 60%). A place loads three ships at once and the rest queue. Long lines with no ◆ fuel depot run slower. Late in a run ships break down now and then, rushes and strikes swing demand, and the red ring fills faster.
 - **Stuck freight:** if loads at a place can't board anything, a note says where and why.
 
