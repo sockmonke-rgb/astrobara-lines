@@ -107,6 +107,7 @@ details.repmore summary{cursor:pointer;font:600 calc(12px*var(--ts))/1.2 var(--f
 #banner button.go{height:30px;min-width:0;padding:0 10px;border:1px solid var(--capy);border-radius:8px;background:rgba(242,166,90,.2);color:#ffd8a8;
   font:600 calc(13px*var(--ts))/1 var(--f-display);letter-spacing:.04em;white-space:nowrap;display:inline-flex;align-items:center;gap:4px;animation:nudge 1.2s ease-in-out infinite}
 #banner button.go .gi{width:15px;height:15px}
+#banner button.go.alt{border-color:rgba(233,237,244,.4);background:rgba(233,237,244,.08);color:#e9edf4;margin-left:6px}
 #banner .cd{font:600 calc(15px*var(--ts))/1 var(--f-data);font-variant-numeric:tabular-nums;color:var(--storm);white-space:nowrap}
 #banner button{height:30px;min-width:30px;padding:0;border:none;background:transparent;color:var(--dim);font-size:calc(18px*var(--ts));pointer-events:auto}
 
@@ -531,7 +532,7 @@ button.link{height:auto;min-height:0;padding:2px 0;border:none;background:none;c
     <div id="prog"></div>
   </div>
 
-  <div id="banner" hidden><div class="bt" id="bText" data-a="bTo"></div><button data-a="bGo" id="bGo" class="go" hidden></button><span class="cd" id="bCd"></span><button data-a="dismiss" id="bX" aria-label="Dismiss">×</button></div>
+  <div id="banner" hidden><div class="bt" id="bText" data-a="bTo"></div><button data-a="bGo" id="bGo" class="go" hidden></button><button data-a="bGo2" id="bGo2" class="go alt" hidden data-tip="Vent the core: the drive is lost, the ship carries on. Free."></button><span class="cd" id="bCd"></span><button data-a="dismiss" id="bX" aria-label="Dismiss">×</button></div>
   <div id="toast" class="out"></div>
   <div id="speedMenu" hidden role="menu" aria-label="Game speed"></div>
   <div id="tut" hidden><div class="tt" id="tutText" data-a="tutBody"></div><div class="th"><svg class="tcapy" viewBox="0 0 64 64" aria-hidden="true"><use href="#capy"/></svg><span class="tc" id="tutStep"></span><button class="skip" data-a="tutSkip">Skip</button><button class="primary" data-a="tutNext" id="tutNext">Next</button></div></div>
@@ -643,7 +644,7 @@ const $ = id => document.getElementById(id);
 const app = $('app'), cv = $('cv'), ctx = cv.getContext('2d');
 
 /* ================= Tuning ================= */
-const VERSION = '5.66';
+const VERSION = '5.67';
 // 5.49: where ≡ → Report sends reports: a Cloudflare Worker that files each one as an issue in a private repo
 // (report-worker/ has its code and setup). While it's empty, Report copies the report and offers a GitHub issue.
 const REPORT_URL = '';
@@ -2181,9 +2182,17 @@ function amAlarm(L, sh, storm) {
   const k = L.ships.indexOf(sh); sh.amAlarm = S.t + AM_WARN; sh.amAt = null;
   log(`${L.name} ship ${k + 1}: antimatter containment failing${storm ? ' in the storm' : ''}. Repair within ${AM_WARN}s or it blows up.`, 'bad');
   if (S.auto) return;
-  toast(`${gi('iAm')} <b>${L.name} ship ${k + 1}</b> containment failing · ${AM_WARN}s · tap its line, Repair${sysOf(L.stops[0]) !== S.view ? ' · ' + esc(sysLabel(sysOf(L.stops[0]))) : ''}`, 4500);
-  // one you could miss (in another system, or at 3× and up) pauses the game, like an overflow
-  if (willPause() && !S.paused && (sysOf(L.stops[0]) !== S.view || S.speed >= 3)) { S.paused = true; S.autoPaused = L.stops[sh.k]; lastPlay = null; }
+  // 5.67: always worth a pause (unless the pause switch is off): Repair, Vent, or let it go
+  if (willPause()) { if (!S.paused) { S.paused = true; S.autoPaused = L.stops[sh.k]; lastPlay = null; } }
+  else toast(`${gi('iAm')} <b>${L.name} ship ${k + 1}</b> containment failing · ${AM_WARN}s · Repair or Vent${sysOf(L.stops[0]) !== S.view ? ' · ' + esc(sysLabel(sysOf(L.stops[0]))) : ''}`, 4500);
+}
+// 5.67: venting the core: free, and the ship carries on as an ordinary ship, but the drive is gone
+function ventAm(L) {
+  const hot = L.ships.filter(x => x.am && x.amAlarm); if (!hot.length) return 'Nothing to vent';
+  for (const x of hot) { x.am = false; x.amAlarm = 0; x.amAt = null; }
+  S.amVented = (S.amVented || 0) + hot.length;
+  log(`You vented the antimatter core${hot.length > 1 ? 's' : ''} on the ${L.name.toLowerCase()} line: ${hot.length > 1 ? 'the ships carry' : 'the ship carries'} on without a drive.`, '');
+  trayUI(); return null;
 }
 // Where it goes off: docked (or within a ship's length of a stop), the place takes the damage, unless a shield there takes
 // the blast; out on a stretch, or at a place that can't be damaged (Earth, a wormhole, a place already damaged), the
@@ -2952,7 +2961,7 @@ function diagText() {
     L.push(`spares: ${JSON.stringify(S.inv)} · upgrades ${JSON.stringify(S.up)} · bought ${JSON.stringify(S.bought || {})}`);
     L.push(`lines ${S.lines.length}/${S.inv.lines}:`);
     for (const ln of S.lines) { const cl = (ln.segs || []).filter(x => x.closed).length, br = ln.ships.filter(x => x.brk || x.fix).length, am = ln.ships.filter(x => x.am), hot = am.filter(x => x.amAlarm).length; L.push(`  ${ln.name}${ln.loop ? ' (loop)' : ''}: ${ln.stops.map(i => PL[i].id).join('-')} · ships ${ln.ships.length} · pods ${ln.ships.reduce((a, x) => a + x.pods, 0)} · carried ${ln.carried || 0} · length ${Math.round(ln.len || 0)}${ln.dry ? ' · NO FUEL' : ''}${br ? ' · broken ' + br : ''}${am.length ? ' · antimatter ' + am.length + (hot ? ' (' + hot + ' failing)' : '') : ''}${cl ? ' · closed stretches ' + cl : ''}`); }
-    if ((S.wreck && S.wreck.length) || (S.stat && S.stat.booms) || S.amSaved) L.push(`antimatter: ${amOpen() ? 'on sale' : 'not yet'} · blew up ${(S.stat && S.stat.booms) || 0} · stabilised ${S.amSaved || 0} · wrecks ${(S.wreck || []).map(w => `${w.a}-${w.b} ${Math.ceil(w.until - S.t)}s`).join(', ') || 'none'}`);
+    if ((S.wreck && S.wreck.length) || (S.stat && S.stat.booms) || S.amSaved || S.amVented) L.push(`antimatter: ${amOpen() ? 'on sale' : 'not yet'} · blew up ${(S.stat && S.stat.booms) || 0} · stabilised ${S.amSaved || 0} · vented ${S.amVented || 0} · wrecks ${(S.wreck || []).map(w => `${w.a}-${w.b} ${Math.ceil(w.until - S.t)}s`).join(', ') || 'none'}`);
     // 5.26: what the crowded places hold, and where ships left full
     const nm = i => `${PL[i].id} ${placeName(i)}`, kind = i => (SHAPES[S.shape[i]] || { short: S.shape[i] }).short;   // 5.27: names and kinds, to match the log
     const wants = i => { const by = {}; for (const c of S.Q[i]) by[c.want] = (by[c.want] || 0) + 1; return Object.keys(by).sort((a, b) => by[b] - by[a]).map(k => `${SHAPES[k].short} ${by[k]}`).join(', '); };
@@ -3618,13 +3627,13 @@ function refreshPop(force) {
         edgeFade(P); return;
       }
     }
-    const sig = 'L' + L.id + confirmRm + L.loop + (lineTrouble(L) > 0) + (S.inv.am > 0);
+    const sig = 'L' + L.id + confirmRm + L.loop + (lineTrouble(L) > 0) + (S.inv.am > 0) + L.ships.some(x => x.amAlarm);
     if (force || sig !== popSig) {
       popSig = sig;
       P.innerHTML = confirmRm
         ? `<span class="ask">Remove the ${L.name.toLowerCase()} line? Its ships become spare.</span><button class="danger" data-a="rmYes">Remove</button>${L.ships.length ? `<button data-a="rmScrap" aria-label="Remove and scrap its ships">Scrap ${L.ships.length}${gi('iShip')} +${fmt(lineScrap(L))}</button>` : ''}<button data-a="rmNo">Keep</button>`
         : `<div class="si" data-a="info"><span class="nm">${swatch(L)}${L.name}<span class="yr" data-f="lyr"></span></span><span class="st" data-f="lst"></span></div>
-          ${lineTrouble(L) ? `<button class="primary nudge" data-a="fixShip" aria-label="Repair">🔧 Repair <small data-f="rCost"></small></button>` : ''}<button class="ic" data-a="addShip" aria-label="Add a ship">+${gi('iShip')}<small data-f="nShips"></small></button><button class="ic" data-a="rmShip" aria-label="Take a ship off">−${gi('iShip')}</button><button class="ic" data-a="addPod" aria-label="Add a cargo pod">+${gi('iPod')}<small data-f="nPods"></small></button>${S.inv.am > 0 ? `<button class="ic" data-a="addAm" aria-label="Fit an antimatter drive">+${gi('iAm')}<small data-f="nAm"></small></button>` : ''}${L.loop ? `<button class="ic" data-a="unloop" aria-label="Open the loop">${gi('iLoop')}✕</button>` : ''}<button class="ic ghost" data-a="rmLine" aria-label="Remove line">${gi('iTrash')}</button><button class="x" data-a="close" aria-label="Close">×</button>`;
+          ${lineTrouble(L) ? `<button class="primary nudge" data-a="fixShip" aria-label="Repair">🔧 Repair <small data-f="rCost"></small></button>` : ''}${L.ships.some(x => x.amAlarm) ? `<button data-a="vent" aria-label="Vent the antimatter core" data-tip="Vent the core: the drive is lost, the ship carries on. Free.">${gi('iAm')} Vent<small>free</small></button>` : ''}<button class="ic" data-a="addShip" aria-label="Add a ship">+${gi('iShip')}<small data-f="nShips"></small></button><button class="ic" data-a="rmShip" aria-label="Take a ship off">−${gi('iShip')}</button><button class="ic" data-a="addPod" aria-label="Add a cargo pod">+${gi('iPod')}<small data-f="nPods"></small></button>${S.inv.am > 0 ? `<button class="ic" data-a="addAm" aria-label="Fit an antimatter drive">+${gi('iAm')}<small data-f="nAm"></small></button>` : ''}${L.loop ? `<button class="ic" data-a="unloop" aria-label="Open the loop">${gi('iLoop')}✕</button>` : ''}<button class="ic ghost" data-a="rmLine" aria-label="Remove line">${gi('iTrash')}</button><button class="x" data-a="close" aria-label="Close">×</button>`;
     }
     if (!confirmRm) {
       const pods = L.ships.reduce((a, s) => a + s.pods, 0), cap = L.ships.reduce((a, s) => a + shipCap(s), 0);
@@ -3763,6 +3772,7 @@ onTap(P, (a, el) => {
     }
     else if (a === 'shipAt') { sel.pickShip = false; placeShip(L, +el.dataset.k, el); refreshPop(true); return; }
     else if (a === 'cancelPick') { sel.pickShip = false; refreshPop(true); return; }
+    else if (a === 'vent') { const sh = L.ships.find(x => x.amAlarm), p = sh ? shipAt(L, sh) : PL[L.stops[0]], r = ventAm(L); if (r) { why(r); noFx(el); } else { burst(p.x, p.y, sysOf(L.stops[0]), 'core vented', '#d9b8ff'); deployFx(el, `${gi('iAm')} vented · ship flies on`); popSig = ''; refreshPop(true); return; } }
     else if (a === 'fixShip') { const r = fixShips(L); if (r) { why(r); noFx(el); } else { const sh = L.ships[0], p = sh ? shipAt(L, sh) : PL[L.stops[0]]; burst(p.x, p.y, sysOf(L.stops[0]), 'repaired', L.color); deployFx(el, `🔧 ${esc(L.name)} running`); popSig = ''; refreshPop(true); return; } }
     else if (a === 'rmShip') { const am0 = S.inv.am || 0, r = removeShip(L, sel.ship); if (r) { why(r); noFx(el); } else { sel.ship = null; deployFx(el, `${gi('iShip')} back to spare · ${S.inv.ships}${(S.inv.am || 0) > am0 ? ` · ${gi('iAm')} kept` : ''}`, true); } }
     else if (a === 'addAm') {
@@ -3957,7 +3967,7 @@ function trayUI() {
   $('cAm').hidden = !(S.inv.am > 0); $('tAm').textContent = S.inv.am || 0;
   for (const [id, v] of [['tShips', S.inv.ships], ['tPods', S.inv.pods], ['tDepots', S.inv.depots], ['tShields', S.inv.shields]]) { $(id).textContent = v; $(id).parentElement.classList.toggle('zero', !v); }
 }
-let bannerSig = '', bannerGo = null, bannerTo = null, bannerKind = '';
+let bannerSig = '', bannerGo = null, bannerGo2 = null, bannerTo = null, bannerKind = '';
 // 5.65: the antimatter ship closest to blowing up, and a wrecked stretch one of your lines runs on
 function amWorst() { let best = null; for (const L of S.lines) L.ships.forEach((x, k) => { if (x.amAlarm && (!best || x.amAlarm < best.x.amAlarm)) best = { L, k, x }; }); return best; }
 function wreckWorst() { for (const w of S.wreck || []) { const L = S.lines.find(L => lineWrecks(L).includes(w)); if (L) return { w, L }; } return null; }
@@ -3965,7 +3975,7 @@ function wreckWorst() { for (const w of S.wreck || []) { const L = S.lines.find(
 let ovSnooze = -1;
 function banner() {
   const h = S.haz, el = $('banner');
-  let cls = '', html = '', cd = '', x = false, go = null, to = null;
+  let cls = '', html = '', cd = '', x = false, go = null, go2 = null, to = null;
   // while the game is paused for something (a new place, a vote), its note shows even over a storm warning
   const held = S.paused && S.autoPaused != null && S.hint && ['new', 'gate', 'worm', 'same', 'talks'].includes(S.hint.id);
   // 5.19: a place overflowing is how a run ends, so it outranks every other note: red, with the time left and Show
@@ -3981,8 +3991,8 @@ function banner() {
   // 5.65: an antimatter ship about to blow up outranks everything but an overflow, storms included (they set it off)
   else if (amWorst() && !S.tut) {
     const w = amWorst();
-    cls = 'live'; html = `${gi('iAm')} <b>${esc(w.L.name)} ship ${w.k + 1}</b> containment failing${S.paused && S.autoPaused != null ? ' · paused' : ''}${sysOf(w.L.stops[0]) !== S.view ? ' · ' + esc(sysLabel(sysOf(w.L.stops[0]))) : ''}`;
-    cd = Math.max(0, Math.ceil(w.x.amAlarm - S.t)) + 's'; go = { label: `Repair ${fmt(repairCost())}`, line: w.L.id, icon: '' }; to = { line: w.L.id };
+    cls = 'live'; html = `${gi('iAm')} <b>${esc(w.L.name)} ship ${w.k + 1}</b> failing${sysOf(w.L.stops[0]) !== S.view ? ' · ' + esc(sysLabel(sysOf(w.L.stops[0]))) : ''}`;
+    cd = Math.max(0, Math.ceil(w.x.amAlarm - S.t)) + 's'; go = { label: `Repair ${fmt(repairCost())}`, line: w.L.id, icon: '' }; go2 = { label: 'Vent', vent: w.L.id, icon: gi('iAm') }; to = { line: w.L.id };
   }
   // a storm or debris you're already protected from needs no banner
   else if (h && !held && !quietHaz(h)) {
@@ -4003,11 +4013,12 @@ function banner() {
   } else if (S.hint) { cls = 'hint'; kind = 'hint'; html = S.hint.html; x = S.hint.id !== 'start'; go = S.hint.go || null; to = S.hint.to || (S.hint.i != null ? { place: S.hint.i } : null) || (go && go.place != null ? { place: go.place } : go && go.talk != null ? { place: go.talk } : null); }
   else { const c = coach(); if (c) { cls = 'coach' + (c.act ? ' act' : ''); html = c.html; go = c.go || null; to = c.to || null; } }
   if (to) cls += ' to';
-  bannerGo = go; bannerTo = to; bannerKind = kind;
-  const sig = cls + html + x + (go ? go.label : '');
+  bannerGo = go; bannerGo2 = go2; bannerTo = to; bannerKind = kind;
+  const sig = cls + html + x + (go ? go.label : '') + (go2 ? go2.label : '');
   if (sig !== bannerSig) {
     bannerSig = sig; el.className = cls; $('bText').innerHTML = (html && /^(hint|coach)/.test(cls) ? '<svg class="bcapy" viewBox="0 0 64 64" aria-hidden="true"><use href="#capy"/></svg>' : '') + html; $('bX').hidden = !x; el.hidden = !html;
     const g = $('bGo'); g.hidden = !go; if (go) g.innerHTML = (go.icon || (go.talk != null ? gi('iFlag') : '')) + esc(go.label);
+    const g2 = $('bGo2'); g2.hidden = !go2; if (go2) g2.innerHTML = (go2.icon || '') + esc(go2.label);
   }
   if ($('bCd').textContent !== cd) $('bCd').textContent = cd;
   if (S.hint && S.hint.id !== 'start' && S.clock - S.hint.t > 30) S.hint = null;
@@ -4115,7 +4126,7 @@ const CTRL_TIP = {
   sys: () => reachSys().length > 2 ? 'Switch star system: pick from the list' : `Switch to ${esc(sysName(sysNext()))}`,
   fit: () => 'Fit the whole map in view',
   play: () => `${S && S.paused ? 'Play' : 'Pause'} <span class="k">Space</span>`,
-  speed: () => 'Game speed, and pausing for new places and talks <span class="k">1</span><span class="k">2</span><span class="k">3</span><span class="k">5</span>',
+  speed: () => 'Game speed, and pausing for new places, talks and antimatter alarms <span class="k">1</span><span class="k">2</span><span class="k">3</span><span class="k">5</span>',
   log: () => 'Timeline, log, how it works, report a problem, and ⚙ settings',
 };
 function tipText(el) {
@@ -4216,7 +4227,7 @@ let menuKind = null;   // what the pop-up above the bar is showing: the speeds, 
 function toggleSpeedMenu(force) {
   const m = $('speedMenu'), show = force ?? (m.hidden || menuKind !== 'speed'); menuKind = show ? 'speed' : null;
   if (show) m.innerHTML = SPEEDS.map(v => `<button data-a="spd" data-v="${v}" class="${v === S.speed ? 'on' : ''}" role="menuitemradio" aria-checked="${v === S.speed}">${spdText(v)}</button>`).join('')
-    + `<button data-a="autoPause" class="ap ${autoPause ? 'on' : ''}" role="menuitemcheckbox" aria-checked="${autoPause}">${pauseIcon}<span>new place · talks</span></button>`;
+    + `<button data-a="autoPause" class="ap ${autoPause ? 'on' : ''}" role="menuitemcheckbox" aria-checked="${autoPause}">${pauseIcon}<span>new place · talks · ${gi('iAm')}</span></button>`;
   m.hidden = !show;
 }
 // With three systems the switch opens a short list of them, each marked with what needs you there.
@@ -4236,6 +4247,13 @@ onTap($('speedMenu'), (a, el) => {
 onTap($('banner'), a => {
   if (a === 'dismiss') { if (bannerKind === 'ov') ovSnooze = overflowing(true); else S.hint = null; bannerSig = ''; hud(); }
   if (a === 'bTo' && bannerTo) goTo(bannerTo);
+  if (a === 'bGo2' && bannerGo2 && bannerGo2.vent != null) {
+    const L = S.lines.find(x => x.id === bannerGo2.vent); if (!L) return;
+    if (!lineView(L)) setSys(sysOf(L.stops[0]));
+    const sh = L.ships.find(x => x.amAlarm), p = sh ? shipAt(L, sh) : PL[L.stops[0]], r = ventAm(L);
+    if (r) toast(r); else { burst(p.x, p.y, sysOf(L.stops[0]), 'core vented', '#d9b8ff'); toast(`${gi('iAm')} Vented · ${esc(L.name)} ship flies on without a drive`); }
+    bannerSig = ''; popSig = ''; refreshPop(true); hud(); return;
+  }
   if (a === 'bGo' && bannerGo) {
     const g = bannerGo;
     if (g.talk != null) openTalks(g.talk);
@@ -4440,7 +4458,7 @@ function helpBody() {
     <li><b>Uncharted.</b> A random system made up from the run’s code: its star might be a red dwarf, a binary pair or a pulsar, and its places and their names are new each time. It’s harder: busier places and more storms. And you’re not alone there. An “unknown signal” might be a craft that stops any line it drifts over (shields don’t help), a derelict worth salvaging, or visitors who make one place very busy. Somewhere a gate nobody built will open, and whoever runs it trades.</li>
     <li><b>Freight.</b> Each system starts calm when it opens and gets busier for about ten periods. It keeps growing until a while after its last place opens, then levels off, so the newer systems bring the pressure.</li>
     <li><b>Late in a run.</b> Ships now and then break down: a warning, then the ship stops where it is for ${BRK_DUR} seconds (a wrench marks it). Tap its line and Repair (or Repair on the note) to fix it at once, even during the warning, or wait it out. And some events are swings in demand: a rush, when one place’s freight nearly all heads for the kind of place farthest from it on your lines, or a strike, when a place takes no deliveries for a while and freight for it goes to another of its kind your lines already reach.</li>
-    <li><b>Antimatter drive.</b> On sale in the Alliance Shop from ${AM_YEAR} (in Proxima and Uncharted runs, from the third visit). Tap a line, then +${gi('iAm')}, to fit one to a ship: the one you picked, or else the first without one. That ship flies twice as fast, needs no ${shp('diamond')} fuel stop, and costs upkeep like ${AM_UPKEEP} ships, so it does a two-ship job with one berth. The catch: now and then its containment fails, more often inside a storm. A red ring and ${AM_WARN} seconds: tap its line (or the note) and Repair. Miss it and the ship blows up with its pods and freight. Docked, it damages the place (a shield there takes the blast); out on a stretch, it wrecks that stretch, closing it for every line until you Repair it or ${WRECK_HEAL} seconds pass. Taking a ship off a line keeps its drive, but not while its containment is failing.</li>
+    <li><b>Antimatter drive.</b> On sale in the Alliance Shop from ${AM_YEAR} (in Proxima and Uncharted runs, from the third visit). Tap a line, then +${gi('iAm')}, to fit one to a ship: the one you picked, or else the first without one. That ship flies twice as fast, needs no ${shp('diamond')} fuel stop, and costs upkeep like ${AM_UPKEEP} ships, so it does a two-ship job with one berth. The catch: now and then its containment fails, more often inside a storm. The game pauses, a red ring goes round the ship, and you have ${AM_WARN} seconds once you press ▶. On the note (or the line's bar): <b>Repair</b> keeps the drive, at a repair's price; <b>Vent</b> is free, and the ship flies on as an ordinary ship without its drive. Or let it go, and the ship blows up with its pods and freight. Docked, it damages the place (a shield there takes the blast); out on a stretch, it wrecks that stretch, closing it for every line until you Repair it or ${WRECK_HEAL} seconds pass. Taking a ship off a line keeps its drive, but not while its containment is failing.</li>
     <li><b>Unrest.</b> Keep a place waiting (its freight above about 60% of its room for a long stretch, or storm damage left unrepaired) and it grows restless: a flag appears and grows. If it fills, the place declares independence for ${REBEL_DUR} seconds: its lines close, it makes and takes no freight, and ships there are held. Once it’s restless enough the workers vote on what they want, usually that your nearest line be extended to them. Serve it to calm it, or tap it and Negotiate: give them what they voted for (they never refuse that, and stay calm for two periods), or offer something else, which they may refuse, and every refusal makes them angrier. Other offers: pay them off, let them keep a 25% toll on deliveries there for two periods, or give them a direct line home (or to the wormhole), a shield for keeps, storage, a fast dock or a cargo pod. Any deal keeps them calm for a period. Late game only: from 2070 in Earth–Moon runs, six periods into Proxima and uncharted runs.</li>
     <li><b>Sensors elsewhere.</b> Uncharted systems have two to buy: a star watch (earlier storm warnings) and a signal array, which hears unknown signals sooner and tells you what they are. Proxima has a flare watch.</li>
     <li><b>Saving.</b> Your run saves itself as you play, and when you close the page. Continue on the start screen picks it up where you left off. A run that ends is not kept.</li>
@@ -4449,7 +4467,7 @@ function helpBody() {
     <li><b>Settings.</b> ≡ menu → ${gi('iGear')} (or ${gi('iGear')} on the start screen). <b>Colour-blind safe</b> swaps the line colours for a set that stays apart with red–green or blue–yellow colour blindness, writes each line’s number on its knobs (on a loop, a numbered disc), its swatch and the new-line tag, marks the round freight colour alone told apart (${shp('moon')} the Moon a crescent, ${shp('mars')} Mars a band across, ${shp('world')} a colony a band down; ${shp('earth')} Earth stays plain, ${shp('proxb')} Proxima b has its ring), and gives a crowded place’s edge arrow a second ring. <b>Text size</b> makes the words in panels, notes and on the map 120% or 140%. Both are kept in this browser.</li>
     <li><b>Report a problem.</b> Something odd? ≡ menu → Report (or ⚑ Report on the Network Lost card): say what happened and Send. It goes to the developer with the game’s state, and with Include run on, the run itself, so it can be loaded exactly as it was. What gets sent · copy shows all of it, with Copy diagnostics and Copy save.</li>
     <li><b>Keyboard.</b> On a computer: Space plays or pauses, 1, 2, 3 and 5 set the speed, Esc closes the bar along the bottom. While you draw or reshape a line, Esc or the right mouse button cancels it. Scroll to zoom; drag empty space, or hold the middle or right button anywhere, to pan.</li>
-    <li><b>Speed.</b> Tap the speed button for 0.1× and 0.5× slow motion or 2×, 3× and 5× (5× asks first). When a new place opens, or a restless place votes on a demand or declares independence, the game pauses so you don’t miss it: white rings spread from any place that isn’t on a line yet, amber rings from a place that wants to talk, the play button pulses, and ▶ carries on. Turn the pause off with the “❚❚ new place · talks” switch in the same menu.</li>
+    <li><b>Speed.</b> Tap the speed button for 0.1× and 0.5× slow motion or 2×, 3× and 5× (5× asks first). When a new place opens, a restless place votes on a demand or declares independence, or an antimatter drive starts to fail, the game pauses so you don’t miss it: white rings spread from any place that isn’t on a line yet, amber rings from a place that wants to talk, the play button pulses, and ▶ carries on. Turn the pause off with the “❚❚ new place · talks · ${gi('iAm')}” switch in the same menu.</li>
     <li><b>Capybaras.</b> They run the Alliance. The quartermaster at the Alliance Shop has advice, and late in a run a capybara envoy can calm a restless place for free, once a period.</li>
     <li><b>Awards.</b> 22 to earn, from your first delivery to lines in three star systems. New ones show a gold note; reviews and the end of a run list what the run earned; the leaderboard’s 🏅 Awards shows them all.</li>
     <li><b>Leaderboard.</b> Every review and every finished run updates your row for that run code. Open it from a review, the end of a run or the start screen; tap a code twice to play it.</li>

@@ -1,5 +1,10 @@
 # Changelog
 
+## 5.67
+- **An antimatter drive starting to fail always pauses the game** (it used to only when you could miss it), unless the pause switch in the speed menu is off. The switch now reads “new place · talks · ⚛”.
+- **Vent**, beside Repair on the note and in the line's bar: free, and the ship flies on as an ordinary ship, but the drive is gone. So there's always a move, even with no budget: Repair keeps the drive for a repair's price, Vent saves the ship and its freight, or let it go.
+- The note says less (⚛ Orange ship 1 failing) to leave room for both buttons on a phone.
+
 ## 5.66
 - **Fixed: a line's buttons (+ ship, pods, remove) could sit off the end of the bottom bar**, behind a long blank stretch you had to drag past. The name and status box on the left grew to fit long status text (5.58), up to half the screen, and didn't shrink back. On a phone with a notch, with Fit showing, that left no room for the buttons. Now the box never grows past the room the buttons need, so they stay in view whenever they fit at all.
 - A failing antimatter drive and a wreck clearing say less in the line bar (⚛ 9s, 💥 32s), since the note at the top says the rest.
