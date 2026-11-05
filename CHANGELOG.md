@@ -1,5 +1,15 @@
 # Changelog
 
+## 5.65
+- **Antimatter drive.** On sale in the Alliance Shop from 2085 (Proxima and Uncharted runs: from the third visit), and now and then a free pick. Tap a line, then **+⚛**, to fit one to a ship: the one you picked, or else the first without one. The Timeline lists it as a concept: in 2026 physicists at Northwestern kept a single positron trapped for a month.
+  - **What it's good at:** the ship flies **twice as fast** and needs **no ◆ fuel stop** (on Hard, a long dry line runs it about 2.9× a normal ship there). It costs upkeep like 1.5 ships, so it does a two-ship job with one berth.
+  - **The catch:** now and then its containment fails, about every 1.1–2.2 periods per ship on Hard (rarer on Normal), and at any moment inside a storm. A pulsing red ring, the seconds left on the map, a red note and **12s to Repair** (same price as other repairs). One you could miss (another system, or 3× and up) pauses the game.
+  - **Miss it and it blows up**, with its pods and freight. Docked, or within a ship's length of a stop, it **damages that place** (holds 4 less until repaired, and the crews get restless), unless a **shield** there takes the blast. Out on a stretch, or at a place that can't be damaged (Earth, a wormhole, a place already damaged), it **wrecks the stretch**: closed for every line until you Repair it or 40s pass. A wreck shows as orange specks in a ring that runs down until it clears.
+  - One Repair on a line fixes all of its trouble: breakdowns, a failing drive and a wreck.
+  - Taking a ship off a line (or removing the line) keeps its drive as a spare, but not while its containment is failing. Spare drives show in the tray, and can be scrapped for cash when you're short of a repair.
+  - On the map a drive burns a violet plume behind its ship. The line bar marks those ships ⚛, says how long until one blows up or a wreck clears, and stops saying "no ◆ fuel, slow" when every ship on the line has a drive.
+- Reports list each line's antimatter ships, how many blew up or were stabilised, and any wrecks.
+
 ## 5.64
 - **Picking a ship by its number now centres the map on it, and keeps it there.** Tap a number in a line's bar and the view glides to that ship at the zoom you're at, then follows it as it flies, so it doesn't slide off screen at 5×. Before, the ship was only ringed wherever it was, often off screen.
   - Touching the map (a tap, a drag, a pinch, the wheel), Fit, tapping the number again, picking another line or closing the bar hands the view back. Picking another number moves to that ship.

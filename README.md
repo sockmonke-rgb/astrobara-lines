@@ -20,6 +20,7 @@ It's one HTML file with no build step and no dependencies. It plays in a phone o
 - **Lines:** tap a line to add ships and cargo pods, or to remove it.
 - **Places:** tap a place to build a depot or fast dock, protect it with a shield, repair storm damage, or open talks.
 - **Alliance Shop:** every period the Lagrange Alliance sends a ship, sells upgrades and offers one free pick. You can skip the pick and bank interest instead.
+- **Antimatter drive:** from 2085 the Shop sells a drive you fit to a ship from its line (+⚛). It flies twice as fast and needs no ◆ fuel stop, for 1.5 ships' upkeep. Now and then its containment fails: 12 seconds to Repair, or it blows up with its freight, damaging the place it's docked at (a shield takes the blast) or wrecking the stretch it's on until repaired or 40 seconds pass.
 - **Storms, debris and surges:** shields keep lines running through them. Late in a run, places that are kept waiting grow restless and may declare independence until you negotiate.
 - **Normal and Hard:** chosen on the start screen. Hard has the full friction below; Normal caps upkeep at 35%, drops the fuel slowdown, has rarer breakdowns and keeps the 30s red ring.
 - **Freight:** each star system gets busier for about ten periods after it opens, keeps growing until a while after its last place opens, then levels off.

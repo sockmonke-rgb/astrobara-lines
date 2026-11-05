@@ -430,6 +430,9 @@ button.link{height:auto;min-height:0;padding:2px 0;border:none;background:none;c
 @keyframes tick{0%{color:#9ff0b8;transform:scale(1.6)}100%{transform:none}}
 #sel .hull.new{animation:hullIn .7s cubic-bezier(.3,1.7,.5,1)}
 #sel .hull[data-a]{cursor:pointer}#sel .hull.on{box-shadow:0 0 0 2px #fff;outline:none}
+#sel .hull .gi{width:10px;height:10px;vertical-align:0}
+#sel .hull.hot{animation:hullHot .5s steps(2) infinite}
+@keyframes hullHot{50%{background:#ff5a4a;color:#fff}}
 @keyframes hullIn{0%{transform:scale(0);box-shadow:0 0 0 0 rgba(255,255,255,.9)}50%{box-shadow:0 0 0 5px rgba(255,255,255,0)}100%{transform:none}}
 .chip.got{animation:okPop .6s ease-out}
 @keyframes toastPop{0%{transform:scale(.85)}60%{transform:scale(1.06)}100%{transform:none}}
@@ -540,6 +543,7 @@ button.link{height:auto;min-height:0;padding:2px 0;border:none;background:none;c
       <div class="chip" data-a="pods" role="button" tabindex="0" aria-label="Cargo pods"><svg viewBox="0 0 24 24"><use href="#iPod"/></svg><span id="tPods">0</span></div>
       <div class="chip" data-a="depots" role="button" tabindex="0" aria-label="Storage"><svg viewBox="0 0 24 24"><use href="#iDepot"/></svg><span id="tDepots">0</span></div>
       <div class="chip" data-a="docks" role="button" tabindex="0" aria-label="Fast docks" id="cDocks" hidden><svg viewBox="0 0 24 24"><use href="#iDock"/></svg><span id="tDocks">0</span></div>
+      <div class="chip" data-a="am" role="button" tabindex="0" aria-label="Antimatter drives" id="cAm" hidden><svg viewBox="0 0 24 24"><use href="#iAm"/></svg><span id="tAm">0</span></div>
       <div class="chip" data-a="shields" role="button" tabindex="0" aria-label="Shields"><svg viewBox="0 0 24 24"><use href="#iShield"/></svg><span id="tShields">0</span></div>
     </div>
     <div id="sel" hidden></div>
@@ -623,6 +627,7 @@ button.link{height:auto;min-height:0;padding:2px 0;border:none;background:none;c
     <g id="iRoom"><rect x="6" y="6" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 9v6M9 12h6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M2 2h3M2 2v3M22 2h-3M22 2v3M2 22h3M2 22v-3M22 22h-3M22 22v-3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></g>
     <g id="iGear"><path d="M10.3 2.5h3.4l.5 2.6 1.9.8 2.2-1.5 2.4 2.4-1.5 2.2.8 1.9 2.6.5v3.4l-2.6.5-.8 1.9 1.5 2.2-2.4 2.4-2.2-1.5-1.9.8-.5 2.6h-3.4l-.5-2.6-1.9-.8-2.2 1.5-2.4-2.4 1.5-2.2-.8-1.9-2.6-.5v-3.4l2.6-.5.8-1.9-1.5-2.2 2.4-2.4 2.2 1.5 1.9-.8z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="12" cy="12" r="3.3" fill="none" stroke="currentColor" stroke-width="1.8"/></g>
     <g id="iLine"><path d="M4 18C8 6 16 18 20 6" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></g>
+    <g id="iAm"><circle cx="12" cy="12" r="2.6" fill="currentColor"/><g fill="none" stroke="currentColor" stroke-width="1.7"><ellipse cx="12" cy="12" rx="10" ry="3.9"/><ellipse cx="12" cy="12" rx="10" ry="3.9" transform="rotate(60 12 12)"/><ellipse cx="12" cy="12" rx="10" ry="3.9" transform="rotate(-60 12 12)"/></g></g>
   </defs>
 </svg>
 
@@ -638,7 +643,7 @@ const $ = id => document.getElementById(id);
 const app = $('app'), cv = $('cv'), ctx = cv.getContext('2d');
 
 /* ================= Tuning ================= */
-const VERSION = '5.64';
+const VERSION = '5.65';
 // 5.49: where ≡ → Report sends reports: a Cloudflare Worker that files each one as an issue in a private repo
 // (report-worker/ has its code and setup). While it's empty, Report copies the report and offers a GitHub issue.
 const REPORT_URL = '';
@@ -670,10 +675,18 @@ function fuelNear(L) {
 const dryOf = L => !!S.hard && L.len > FUEL_RANGE && !L.stops.some(i => S.shape[i] === 'diamond') && fuelNear(L) >= 0;
 const BERTHS = 3;                 // ships a place loads at once (a fast dock adds 2, a wormhole has 2 more)
 const BRK_WARN = 8, BRK_DUR = 20; // late in a run a ship now and then breaks down: warning, then time stopped
+// 5.65: the antimatter drive. Fitted to a ship it flies AM_FAST times as fast and needs no ◆ fuel stop, for AM_UPKEEP
+// ships' upkeep. Now and then its containment fails (more often inside a storm): AM_WARN seconds to Repair, or it blows up
+// with its pods and freight, damaging the place it's docked at (a shield there takes the blast) or wrecking the stretch
+// it's on, closed for every line until repaired or WRECK_HEAL seconds pass.
+const AM_YEAR = 2085, AM_FAST = 2, AM_UPKEEP = 1.5, AM_WARN = 12, AM_STORM = .05, WRECK_HEAL = 40;
+const AM_GAP = () => YEAR * (1.1 + 1.1 * S.rnd()) * (S.hard ? 1 : 1.6);   // between one ship's alarms (rarer in Normal)
+// on sale from AM_YEAR in Earth–Moon runs; Proxima and Uncharted runs start after it, so from their third shop visit
+const amOpen = () => !!S && !S.tut && cal(S.t) >= AM_YEAR && S.t >= 3 * YEAR;
 const SWING = .3;                 // late in a run, the share of events that are swings in demand (rushes, strikes)
 const REDRAW = 5;                 // changing an existing line's stops costs this, at today's prices, never more than you have
 const MAX_LINES = 9, SEED_FUND = 100;
-const START_INV = { lines: 3, ships: 4, pods: 0, depots: 0, shields: 1, docks: 0 };
+const START_INV = { lines: 3, ships: 4, pods: 0, depots: 0, shields: 1, docks: 0, am: 0 };
 const RATE_EARLY = 0.014;         // how much faster freight appears each year of the first decade
 const FREE_LINE_EVERY = 3;        // the assembly adds a line at every third meeting
 const SPEEDS = [0.1, 0.5, 1, 2, 3, 5];
@@ -1205,6 +1218,7 @@ function newRun(seed, scen) {
     log: [], hist: [{ t: 0, fund: SEED_FUND }], hints: {}, hint: null, unreach: 0, unreachT: 0,
     unrest: Array(NP).fill(0), rebel: Array(NP).fill(0), demand: Array(NP).fill(null), fastDock: Array(NP).fill(false), toll: Array(NP).fill(0), calm: Array(NP).fill(0), keepShield: Array(NP).fill(false),
     flash: Array(NP).fill(0), fail: null, stat: { haz: 0, rebels: 0, close: 0, first: null }, ach: [], achNew: [], envoyAt: null, best: readBest(scen), view: SC.view, tunnelT: -9, tunneled: 0, sensor: SENSORS.map(() => false), sensorOff: SENSORS.map(() => 0), up: { fast: 0, hold: 0, dock: 0, room: 0 }, bought: {}, dmg: Array(NP).fill(false), earned: 0,
+    wreck: [], amTold: false,   // 5.65: wrecked stretches ({ a, b: place ids, until }), and whether the drive's been announced
   };
   S.rs = h.rs; S.rnd = rngOf(S);
   S.present = presentShapes();
@@ -1293,11 +1307,16 @@ function markClosures() {
   const h = S.haz && (S.haz.type === 'storm' || S.haz.type === 'drifter') && S.haz.phase === 'live' ? S.haz : null;
   let sig = '';
   for (const L of S.lines) for (const sg of L.segs) {
-    sg.closed = rebelNow(sg.a) || rebelNow(sg.b) || (!!h && (h.type === 'drifter' ? sg.pts.some(p => d2(p, h.c) < h.r) : !S.shield[sg.a] && !S.shield[sg.b] && sg.pts.some(p => inZones(h, p))));
+    sg.closed = wrecked(sg.a, sg.b) || rebelNow(sg.a) || rebelNow(sg.b) || (!!h && (h.type === 'drifter' ? sg.pts.some(p => d2(p, h.c) < h.r) : !S.shield[sg.a] && !S.shield[sg.b] && sg.pts.some(p => inZones(h, p))));
     sig += sg.closed ? 1 : 0;
   }
   return sig;
 }
+// 5.65: a stretch an antimatter ship blew up on stays closed until it's repaired or clears itself
+const sameStretch = (w, a, b) => { const x = IDX[w.a], y = IDX[w.b]; return (x === a && y === b) || (x === b && y === a); };
+const wrecked = (a, b) => !!(S.wreck && S.wreck.length) && S.wreck.some(w => sameStretch(w, a, b));
+const lineWrecks = L => (S.wreck || []).filter(w => L.segs.some(sg => sameStretch(w, sg.a, sg.b)));
+function wreck(a, b) { S.wreck = (S.wreck || []).filter(w => !sameStretch(w, a, b)); S.wreck.push({ a: PL[a].id, b: PL[b].id, until: S.t + WRECK_HEAL }); }
 // 5.60: shortest paths only between places a line or an open wormhole touches (the rest can't be passed through), so
 // the work grows with the network you've built, not with every place on the map
 function reroute() {
@@ -1355,6 +1374,10 @@ const stepK = (L, k, dir) => (L.loop ? (k + dir + L.stops.length) % L.stops.leng
 // Ships turn back at the ends of a line; on a loop they keep going round.
 function nextDir(L, sh) { if (L.loop) return sh.dir; const last = L.stops.length - 1; if (sh.k >= last) return -1; if (sh.k <= 0) return 1; return sh.dir; }
 const shipCap = sh => CAP + 2 * S.up.hold + POD * sh.pods;
+// how fast a ship moves on a stretch: 5.65: an antimatter drive doubles it and needs no ◆ fuel stop
+const shipV = (L, sh, slow) => SPEED * (1 + 0.12 * S.up.fast) * slow * (L.dry && !sh.am ? FUEL_SLOW : 1) * (sh.am ? AM_FAST : 1);
+// a line's ships are slowed for want of fuel (all of them antimatter: none are)
+const slowDry = L => L.dry && (!L.ships.length || L.ships.some(x => !x.am));
 const DMG_ROOM = 4;   // storm damage takes this much room until repaired
 const HUB_ROOM = 6;
 const room = i => ROOM + 2 * S.up.room + (S.depot[i] ? DEPOT_ROOM : 0) + (PL[i].rate === 0 ? HUB_ROOM : 0) - (S.dmg[i] ? DMG_ROOM : 0);
@@ -1412,7 +1435,7 @@ function openLoop(L) {
 }
 function dumpCargo(sh, place) { for (const c of sh.cargo) { delete c.lap; S.Q[place].push(c); } sh.cargo = []; }
 function removeLine(L) {
-  for (const sh of L.ships) { dumpCargo(sh, L.stops[sh.k]); S.inv.ships++; S.inv.pods += sh.pods; }
+  for (const sh of L.ships) { dumpCargo(sh, L.stops[sh.k]); S.inv.ships++; S.inv.pods += sh.pods; if (sh.am) S.inv.am = (S.inv.am || 0) + 1; }
   S.lines = S.lines.filter(x => x !== L);
   if (sel && sel.type === 'line' && sel.id === L.id) closePop();
   netChanged();
@@ -1430,7 +1453,8 @@ function undo() {
     if (S.lines.length >= S.inv.lines) { toast('No free line'); return; }
     const NL = createLine(u.stops, u.loop);
     for (let k = 1; k < u.pods.length && S.inv.ships > 0; k++) addShip(NL);
-    NL.ships.forEach((sh, k) => { let pc = u.pods[k] || 0; while (pc-- > 0 && S.inv.pods > 0) { S.inv.pods--; sh.pods++; } });
+    NL.ships.forEach((sh, k) => { let pc = u.pods[k] || 0; while (pc-- > 0 && S.inv.pods > 0) { S.inv.pods--; sh.pods++; }
+      if (u.am && u.am[k] && S.inv.am > 0) { S.inv.am--; sh.am = true; sh.amAt = S.t + AM_GAP(); } });
     select('line', NL.id); toast('Undone');
   }
   trayUI();
@@ -1472,8 +1496,12 @@ function startDir(L, k, cap) {
 }
 function removeShip(L, pick) {
   if (!L.ships.length) return 'No ships here';
-  const sh = pick && L.ships.includes(pick) ? pick : L.ships.reduce((a, b) => (b.cargo.length < a.cargo.length ? b : a));
-  dumpCargo(sh, L.stops[sh.k]); L.ships = L.ships.filter(x => x !== sh); S.inv.ships++; S.inv.pods += sh.pods;
+  // 5.65: a ship whose antimatter containment is failing can't be brought in: Repair it first
+  const calm = L.ships.filter(x => !x.amAlarm);
+  if (pick && L.ships.includes(pick) && pick.amAlarm) return `${gi('iAm')} containment failing · Repair first`;
+  if (!calm.length) return `${gi('iAm')} containment failing · Repair first`;
+  const sh = pick && L.ships.includes(pick) ? pick : calm.reduce((a, b) => (b.cargo.length < a.cargo.length ? b : a));
+  dumpCargo(sh, L.stops[sh.k]); L.ships = L.ships.filter(x => x !== sh); S.inv.ships++; S.inv.pods += sh.pods; if (sh.am) S.inv.am = (S.inv.am || 0) + 1;
   trayUI(); return null;
 }
 // 5.38: `pick` is the ship you tapped; without one, the ship with fewest pods
@@ -1483,6 +1511,16 @@ function addPod(L, pick) {
   const mine = pick && L.ships.includes(pick), sh = mine ? pick : L.ships.reduce((a, b) => (b.pods < a.pods ? b : a));
   if (sh.pods >= MAX_PODS) return mine ? `Ship ${L.ships.indexOf(sh) + 1} has all its ${gi('iPod')} pods` : 'Pods full here';
   S.inv.pods--; sh.pods++; trayUI(); return null;
+}
+// 5.65: fit an antimatter drive to the ship you tapped, or else to the line's first ship without one
+function fitAm(L, pick) {
+  if (!(S.inv.am > 0)) return `No spare ${gi('iAm')}`;
+  if (!L.ships.length) return `Add a ${gi('iShip')} first`;
+  const mine = pick && L.ships.includes(pick), sh = mine ? pick : L.ships.find(x => !x.am);
+  if (!sh) return `Every ${gi('iShip')} here has ${gi('iAm')}`;
+  if (sh.am) return `Ship ${L.ships.indexOf(sh) + 1} has ${gi('iAm')} already`;
+  S.inv.am--; sh.am = true; sh.amAt = S.t + AM_GAP(); sh.amAlarm = 0; trayUI();
+  log(`You fitted an antimatter drive to ${L.name} ship ${L.ships.indexOf(sh) + 1}: twice as fast, no fuel stop needed.`, ''); return sh;
 }
 function shieldPlace(i) {
   if (S.shield[i]) return 'Already shielded';
@@ -1512,17 +1550,17 @@ function buySensor(k) {
 }
 // Scrap for cash: a spare sells for half its base price at today's prices (what you paid doesn't matter).
 // With no spare ship, one comes off your line with the most ships (never a line's last).
-const SCRAP = [['pod', 'iPod', 'pods'], ['depot', 'iDepot', 'depots'], ['dock', 'iDock', 'docks'], ['ship', 'iShip', 'ships'], ['shield', 'iShield', 'shields']];
+const SCRAP = [['pod', 'iPod', 'pods'], ['depot', 'iDepot', 'depots'], ['dock', 'iDock', 'docks'], ['ship', 'iShip', 'ships'], ['shield', 'iShield', 'shields'], ['am', 'iAm', 'am']];
 const scrapVal = k => Math.round(PRICE[k] * .5 * costK());
 const spare = k => S.inv[SCRAP.find(x => x[0] === k)[2]] || 0;
-function scrapLine() { let best = null; for (const L of S.lines) if (L.ships.length >= 2 && (!best || L.ships.length > best.ships.length)) best = L; return best; }
+function scrapLine() { let best = null; for (const L of S.lines) if (L.ships.length >= 2 && L.ships.some(x => !x.amAlarm) && (!best || L.ships.length > best.ships.length)) best = L; return best; }
 const canScrap = k => spare(k) > 0 || (k === 'ship' && !!scrapLine());
 const lineScrap = L => L.ships.length * scrapVal('ship') + L.ships.reduce((x, sh) => x + sh.pods, 0) * scrapVal('pod');
 function scrap(k) {
   const [, ic, inv] = SCRAP.find(x => x[0] === k); let from = '';
   if (!spare(k)) { if (k !== 'ship' || !scrapLine()) return `No spare ${gi(ic)}`; const L = scrapLine(); removeShip(L); from = ` off the ${L.name.toLowerCase()} line`; }
   const v = scrapVal(k); S.inv[inv]--; S.fund += v; S.hist.push({ t: S.t, fund: S.fund }); fundFx(v); trayUI();
-  log(`You scrapped a ${k}${from} for ${fmt(v)}.`, ''); return null;
+  log(`You scrapped a${k === 'am' ? 'n antimatter drive' : ' ' + k}${from} for ${fmt(v)}.`, ''); return null;
 }
 // Take a shield from wherever it is (one not under the current threat if possible) and put it here.
 // Is place j inside the storm or debris that's coming (or happening)?
@@ -1565,6 +1603,8 @@ function step(dt) {
     S.t += dt;
     for (let i = 0; i < NP; i++) if (!S.open[i] && S.t >= S.at[i]) openPlace(i);
     events();
+    antimatter(dt);
+    if (S.over) return;
     if (S.t >= chainGateAt() - GATE_LEAD) growChain();
   }
   // freight appears: faster every year of each system's first decade, then the growing map does the work (5.60: each
@@ -1689,7 +1729,7 @@ function moveShip(L, sh, dt) {
   if (sg.closed) return;             // holding inside a storm
   if (sh.fix) return;                // 5.21: broken down, under repair
   const slow = S.debris && !S.shield[IDX.LEO] && (sg.a === IDX.LEO || sg.b === IDX.LEO) ? 0.4 : 1;
-  sh.d += SPEED * (1 + 0.12 * S.up.fast) * slow * (L.dry ? FUEL_SLOW : 1) * dt;
+  sh.d += shipV(L, sh, slow) * dt;
   if (sh.d < sg.len) sh.queued = null;   // (a redrawn line can put a waiting ship back out on a longer stretch)
   else {
     // 5.21: every berth taken, so wait just outside
@@ -1745,8 +1785,9 @@ function reliefFor(i) {
       if (stepK(L, sh.k, dir) !== k) continue;
       const sg = segOf(L, sh.k, dir); if (!sg || sg.closed) continue;
       const slow = S.debris && !S.shield[IDX.LEO] && (sg.a === IDX.LEO || sg.b === IDX.LEO) ? 0.4 : 1;
-      const v = SPEED * (1 + 0.12 * S.up.fast) * slow * (L.dry ? FUEL_SLOW : 1);
+      const v = shipV(L, sh, slow);
       const eta = sh.state === 'move' ? Math.max(0, sg.len - sh.d) / v : Math.max(0, sh.dwell) + sg.len / v;
+      if (sh.amAlarm && sh.amAlarm - S.t < eta) continue;   // 5.65: it won't get there in one piece
       if (eta <= left) come.push({ L, sh, k, dir, eta });
     }
   }
@@ -2103,18 +2144,84 @@ function breakdowns() {
 function lineHow(L) { const fw = L.ships.filter(s => s.dir > 0).length; return !L.ships.length ? 'no ships' : !L.loop ? 'back & forth' : fw && fw < L.ships.length ? 'both ways' : 'one way'; }
 // 5.22: a ship that's due a breakdown, or broken down, can be repaired from its line's bar (or the note's Repair)
 // at the same price as a storm-damaged place. Repairing during the warning heads it off. Or just wait it out.
-function shipTrouble(L) { return L.ships.filter(x => x.brk || x.fix); }
+function shipTrouble(L) { return L.ships.filter(x => x.brk || x.fix || x.amAlarm); }
+// 5.65: ...and a stretch of the line an antimatter ship wrecked. One repair fixes all of a line's trouble at once.
+const lineTrouble = L => shipTrouble(L).length + lineWrecks(L).length;
 function fixShips(L) {
-  const bad = shipTrouble(L); if (!bad.length) return 'Running fine';
+  const bad = shipTrouble(L), wr = lineWrecks(L); if (!bad.length && !wr.length) return 'Running fine';
   const c = repairCost(); if (S.fund < c) return `Need ${fmt(c)}`;
   S.fund -= c; S.hist.push({ t: S.t, fund: S.fund }); fundFx(-c);
-  for (const x of bad) { x.brk = 0; x.fix = 0; }
-  log(`You repaired the ${L.name.toLowerCase()} line’s ship for ${fmt(c)}.`, ''); return null;
+  const hot = bad.some(x => x.amAlarm);
+  for (const x of bad) { x.brk = 0; x.fix = 0; if (x.amAlarm) { x.amAlarm = 0; x.amAt = S.t + AM_GAP(); S.amSaved = (S.amSaved || 0) + 1; } }
+  if (wr.length) { S.wreck = S.wreck.filter(w => !wr.includes(w)); markClosures(); reroute(); }
+  log(`You ${[bad.length ? (hot ? 'stabilised' : 'repaired') + ` the ${L.name.toLowerCase()} line’s ship` : '', wr.length ? `cleared the wreck on the ${L.name.toLowerCase()} line` : ''].filter(Boolean).join(' and ')} for ${fmt(c)}.`, ''); return null;
+}
+// 5.65: antimatter drives. Each fitted ship keeps its own clock to its next containment alarm, and inside a live storm
+// one can come at any moment. An alarm gives AM_WARN seconds to Repair; after that the ship blows up.
+function antimatter(dt) {
+  if (S.wreck && S.wreck.length) {
+    const gone = S.wreck.filter(w => S.t >= w.until || IDX[w.a] == null || IDX[w.b] == null);
+    if (gone.length) { S.wreck = S.wreck.filter(w => !gone.includes(w)); for (const w of gone) if (IDX[w.a] != null && IDX[w.b] != null) log(`The wreck between ${placeName(IDX[w.a])} and ${placeName(IDX[w.b])} is cleared.`, 'good'); markClosures(); reroute(); }
+  }
+  if (!S.amTold && amOpen()) {
+    S.amTold = true;
+    log('Antimatter drives are in the Alliance Shop: a ship with one flies twice as fast and needs no fuel stop, but its containment can fail.', 'good');
+    if (!S.auto) toast(`${gi('iAm')} <b>Antimatter drive</b> in the Shop · 2× fast · no ${shp('diamond')} · may blow up`, 6000);
+  }
+  const h = S.haz && S.haz.type === 'storm' && S.haz.phase === 'live' ? S.haz : null;
+  for (const L of S.lines) for (let k = L.ships.length - 1; k >= 0; k--) {
+    const sh = L.ships[k]; if (!sh.am) continue;
+    if (sh.amAlarm) { if (S.t >= sh.amAlarm) { blowUp(L, sh); if (S.over) return; } continue; }
+    if (sh.amAt == null) sh.amAt = S.t + AM_GAP();
+    const storm = !!h && (h.sys || 'sol') === sysOf(L.stops[0]) && inZones(h, shipAt(L, sh)) && S.rnd() < AM_STORM * dt;
+    if (S.t >= sh.amAt || storm) amAlarm(L, sh, storm);
+  }
+}
+function amAlarm(L, sh, storm) {
+  const k = L.ships.indexOf(sh); sh.amAlarm = S.t + AM_WARN; sh.amAt = null;
+  log(`${L.name} ship ${k + 1}: antimatter containment failing${storm ? ' in the storm' : ''}. Repair within ${AM_WARN}s or it blows up.`, 'bad');
+  if (S.auto) return;
+  toast(`${gi('iAm')} <b>${L.name} ship ${k + 1}</b> containment failing · ${AM_WARN}s · tap its line, Repair${sysOf(L.stops[0]) !== S.view ? ' · ' + esc(sysLabel(sysOf(L.stops[0]))) : ''}`, 4500);
+  // one you could miss (in another system, or at 3× and up) pauses the game, like an overflow
+  if (willPause() && !S.paused && (sysOf(L.stops[0]) !== S.view || S.speed >= 3)) { S.paused = true; S.autoPaused = L.stops[sh.k]; lastPlay = null; }
+}
+// Where it goes off: docked (or within a ship's length of a stop), the place takes the damage, unless a shield there takes
+// the blast; out on a stretch, or at a place that can't be damaged (Earth, a wormhole, a place already damaged), the
+// stretch it's on, or the one it was about to leave by, is wrecked. The ship, its pods and its freight are lost.
+function blowUp(L, sh) {
+  const k = L.ships.indexOf(sh), sy = sysOf(L.stops[0]), at = shipAt(L, sh), near = 26;
+  let place = -1, sg = null;
+  if (sh.state === 'stop') place = L.stops[sh.k];
+  else {
+    sg = segOf(L, sh.k, sh.dir);
+    if (sg && sh.queued == null && sh.d < near) place = L.stops[sh.k];
+    else if (sg && (sh.queued != null || sg.len - sh.d < near)) place = L.stops[stepK(L, sh.k, sh.dir)];
+  }
+  const canDmg = i => S.open[i] && i !== IDX.EARTH && PL[i].rate !== 0 && !S.dmg[i];
+  let what = '', short = '';
+  if (place >= 0 && S.shield[place]) { what = `the shield at ${placeName(place)} took the blast`; short = `${gi('iShield')} ${esc(placeName(place))} held`; }
+  else if (place >= 0 && canDmg(place)) {
+    S.dmg[place] = true; if (S.unrest && unrestOn() && canRebel(place)) S.unrest[place] = Math.min(.95, S.unrest[place] + .25);
+    what = `${placeName(place)} is damaged and holds ${DMG_ROOM} less until repaired`; short = `🔧 ${esc(placeName(place))} damaged`;
+  } else {
+    if (!sg) sg = segOf(L, sh.k, nextDir(L, sh));
+    if (sg) { wreck(sg.a, sg.b); what = `the stretch between ${placeName(sg.a)} and ${placeName(sg.b)} is wrecked and closed for ${WRECK_HEAL}s`; short = `${esc(placeName(sg.a))}–${esc(placeName(sg.b))} closed ${WRECK_HEAL}s`; }
+  }
+  const lost = sh.cargo.length, pods = sh.pods;
+  L.ships.splice(k, 1);
+  if (sel && sel.ship === sh) sel.ship = null;
+  S.stat.booms = (S.stat.booms || 0) + 1;
+  log(`${L.name} ship ${k + 1} blew up: the ship${pods ? `, ${pods} pod${pods > 1 ? 's' : ''}` : ''} and ${lost} load${lost === 1 ? '' : 's'} of freight are lost${what ? ', and ' + what : ''}.`, 'bad');
+  markClosures(); reroute(); trayUI();
+  if (S.auto) return;
+  boomFx(at.x, at.y, sy);
+  toast(`💥 <b>${L.name} ship ${k + 1}</b> blew up${short ? ' · ' + short : ''}`, 5000);
+  if (sel && sel.type === 'line' && sel.id === L.id) refreshPop(true);
 }
 // the line whose ship trouble is most pressing: a breakdown under way first, then the soonest due
 function worstTrouble() {
   let best = null;
-  for (const L of S.lines) for (const x of shipTrouble(L)) { const t = x.fix ? x.fix - S.t - 1e3 : x.brk - S.t; if (!best || t < best.t) best = { L, k: L.ships.indexOf(x), x, t }; }
+  for (const L of S.lines) for (const x of shipTrouble(L)) { const t = x.amAlarm ? x.amAlarm - S.t - 2e3 : x.fix ? x.fix - S.t - 1e3 : x.brk - S.t; if (!best || t < best.t) best = { L, k: L.ships.indexOf(x), x, t }; }
   return best;
 }
 // In an uncharted system some warnings are just "a signal": it turns out to be a craft that stops
@@ -2285,6 +2392,7 @@ const OFFERS = {
   hold:   { icon: 'iHold',   name: 'Bigger holds',  desc: () => 'Every ship carries 2 more.', up: 'hold', max: 2 },
   dock:   { icon: 'iDock',   name: 'Fast dock',     desc: () => 'One place loads twice as fast, with 2 more berths.', have: () => `${S.inv.docks || 0} spare` },
   room:   { icon: 'iRoom',   name: 'Bigger stops',  desc: () => 'Every place holds 2 more.', up: 'room', max: 2 },
+  am:     { icon: 'iAm',     name: 'Antimatter drive', desc: () => `One ship flies 2× fast with no ${shp('diamond')} fuel stop. It can blow up.`, have: () => `${S.inv.am || 0} spare` },
 };
 const offerHave = o => (OFFERS[o].up ? `level ${S.up[OFFERS[o].up]} → ${S.up[OFFERS[o].up] + 1} of ${OFFERS[o].max}` : OFFERS[o].have());
 // Two choices, weighted so spare items you haven't used come up less and maxed upgrades not at all.
@@ -2294,6 +2402,7 @@ function offerPair() {
     pod: 1 / (1 + S.inv.pods), depot: 1 / (1 + S.inv.depots), shield: 1 / (1 + S.inv.shields),
   };
   w.dock = 1 / (1 + (S.inv.docks || 0));
+  w.am = amOpen() ? .6 / (1 + (S.inv.am || 0)) : 0;   // 5.65
   for (const k of ['fast', 'hold', 'room']) w[k] = S.up[k] < OFFERS[k].max ? 1 : 0;
   const pick = ex => { const ks = Object.keys(w).filter(k => k !== ex && w[k] > 0); let r = S.rnd() * ks.reduce((a, k) => a + w[k], 0); for (const k of ks) { r -= w[k]; if (r <= 0) return k; } return ks[ks.length - 1]; };
   const a = pick(null); return [a, pick(a)];
@@ -2305,17 +2414,18 @@ function applyOffer(o) {
   else if (o === 'pod') S.inv.pods++;
   else if (o === 'depot') S.inv.depots++;
   else if (o === 'dock') S.inv.docks = (S.inv.docks || 0) + 1;
+  else if (o === 'am') S.inv.am = (S.inv.am || 0) + 1;
   else if (o === 'shield') S.inv.shields++;
   else if (o === 'ship') S.inv.ships++;
   trayUI();
 }
 // The budget's main use: buy more at the assembly. Each purchase of the same thing costs half
 // again as much, and everything gets dearer as the decades pass.
-const PRICE = { ship: 150, pod: 120, depot: 120, shield: 150, line: 400, fast: 600, hold: 500, dock: 160, room: 500 };
+const PRICE = { ship: 150, pod: 120, depot: 120, shield: 150, line: 400, fast: 600, hold: 500, dock: 160, room: 500, am: 300 };
 const price = k => Math.round(PRICE[k] * Math.pow(1.5, S.bought[k] || 0) * (1 + S.t / YEAR / 12));
-const canBuy = k => !(k === 'line' && S.inv.lines >= maxLines()) && !(OFFERS[k].up && S.up[OFFERS[k].up] >= OFFERS[k].max);
+const canBuy = k => !(k === 'line' && S.inv.lines >= maxLines()) && !(OFFERS[k].up && S.up[OFFERS[k].up] >= OFFERS[k].max) && !(k === 'am' && !amOpen());
 function buyOffer(k) {
-  if (!canBuy(k)) return whyNot(k) === 'maxed' ? `${OFFERS[k].name}: maxed` : `You have ${whyNot(k)}`;
+  if (!canBuy(k)) return whyNot(k) === 'maxed' ? `${OFFERS[k].name}: maxed` : k === 'am' ? `${OFFERS[k].name}: ${whyNot(k)}` : `You have ${whyNot(k)}`;
   const c = price(k); if (S.fund < c) return `Need ${fmt(c)}`;
   S.fund -= c; S.bought[k] = (S.bought[k] || 0) + 1; applyOffer(k);
   log(`You bought ${OFFERS[k].name.toLowerCase()} for ${fmt(c)}.`, ''); return null;
@@ -2325,7 +2435,7 @@ const BANK_RATE = .04;
 const bankPay = () => Math.max(5, Math.min(Math.round(S.fund * BANK_RATE), Math.round(.5 * Math.min(...S.meet.pair.map(price)))));
 const haveNow = k => (OFFERS[k].up ? `level ${S.up[OFFERS[k].up]} of ${OFFERS[k].max}` : OFFERS[k].have());
 // 5.39: everything is always listed; what you can't buy now is greyed out and says why
-const whyNot = k => (k === 'line' && S.inv.lines >= maxLines() ? `all ${maxLines()} lines` : OFFERS[k].up && S.up[OFFERS[k].up] >= OFFERS[k].max ? 'maxed' : null);
+const whyNot = k => (k === 'line' && S.inv.lines >= maxLines() ? `all ${maxLines()} lines` : OFFERS[k].up && S.up[OFFERS[k].up] >= OFFERS[k].max ? 'maxed' : k === 'am' && !amOpen() ? (S.scen === 'sol' ? `from ${AM_YEAR}` : 'from the 3rd visit') : null);
 const shopHTML = () => Object.keys(PRICE).map(k => { const no = whyNot(k), short = !no && S.fund < price(k);
   return `<button class="buy${no ? ' maxed' : ''}" data-a="buyUp" data-o="${k}" ${no || short ? 'aria-disabled="true"' : ''} title="${OFFERS[k].name}">${ICON(OFFERS[k].icon)}<span><b>${OFFERS[k].name}</b>${no || fmt(price(k))}<small>${haveNow(k)}${short ? ` · need ${fmt(price(k) - S.fund)} more` : ''}${k === 'depot' ? ' · was Depot' : ''}</small></span></button>`; }).join('');
 const offersHTML = () => S.meet.pair.map(o => `<button class="offer" data-a="offer" data-o="${o}">${ICON(OFFERS[o].icon)}<span class="ot"><b>${OFFERS[o].name}</b><span>${OFFERS[o].desc()}</span><em>${offerHave(o)}</em></span></button>`).join('');
@@ -2381,6 +2491,8 @@ let capyImg = null;
 try { const g = document.getElementById('capy'); capyImg = new Image(); capyImg.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">${g.innerHTML}</svg>`); } catch (_) { capyImg = null; }
 function burst(x, y, sys, label, color) { if (!S || S.auto) return; fxs.push({ x, y, sys, label, color: color || '#7fe0a0', t0: performance.now() }); if (fxs.length > 12) fxs.shift(); }
 function burstAt(i, label, color) { burst(PL[i].x, PL[i].y, sysOf(i), label, color); }
+// 5.65: an antimatter ship blowing up: a white flash, an orange shock ring and flying specks, then the usual burst
+function boomFx(x, y, sys) { if (!S || S.auto) return; fxs.push({ x, y, sys, boom: true, t0: performance.now() }); burst(x, y, sys, 'lost', '#ff9a5a'); try { if (navigator.vibrate) navigator.vibrate([30, 40, 60]); } catch (_) {} }
 function deployFx(el, html, back) {
   if (!S || S.auto) return;
   try { if (navigator.vibrate) navigator.vibrate(back ? 6 : 14); } catch (_) {}
@@ -2412,6 +2524,14 @@ function drawFx() {
       continue;
     }
     if (f.sys !== S.view) continue;
+    if (f.boom) {
+      const x = X(f.x), y = Y(f.y), k = Math.min(1, a / 1.1), e = 1 - Math.pow(1 - k, 3);
+      ctx.save();
+      if (a < .35) { ctx.globalAlpha = 1 - a / .35; ctx.fillStyle = '#fff6e8'; ctx.beginPath(); ctx.arc(x, y, (14 + 46 * a / .35) * uk, 0, Math.PI * 2); ctx.fill(); }
+      ctx.globalAlpha = Math.max(0, 1 - k); ctx.strokeStyle = '#ff9a5a'; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(x, y, (18 + 80 * e) * uk, 0, Math.PI * 2); ctx.stroke();
+      ctx.fillStyle = '#ffd2a0'; for (let n2 = 0; n2 < 14; n2++) { const t = n2 * 2.399, d = (10 + 70 * e * (.55 + .45 * ((n2 * 7) % 5) / 4)) * uk; ctx.beginPath(); ctx.arc(x + Math.cos(t) * d, y + Math.sin(t) * d, 2 * uk, 0, Math.PI * 2); ctx.fill(); }
+      ctx.restore(); continue;
+    }
     const x = X(f.x), y = Y(f.y), e = 1 - Math.pow(1 - Math.min(1, a / .75), 3);
     ctx.save(); ctx.strokeStyle = f.color; ctx.lineCap = 'round';
     if (a < .75) {
@@ -2434,7 +2554,7 @@ function fundFx(delta) { if (S && !S.auto && delta) { floatFx($('hFundBox'), del
 // 5.21: ships and pods in service cost upkeep, charged at each shop visit at today's prices. The budget can go below
 // zero; then nothing can be bought until deliveries bring it back. 5.31: see UPKEEP.
 function upkeepShare() {
-  let n = 0; for (const L of S.lines) for (const x of L.ships) n += 1 + UPKEEP.pod * x.pods;
+  let n = 0; for (const L of S.lines) for (const x of L.ships) n += 1 + UPKEEP.pod * x.pods + (x.am ? AM_UPKEEP - 1 : 0);
   const u = S.hard ? UPKEEP : { ...UPKEEP, ...UPKEEP_NORMAL };
   return Math.min(u.cap, u.ship * n * (1 + n / u.fleet)) * Math.min(1, S.t / YEAR / u.ease);
 }
@@ -2812,7 +2932,7 @@ onTap($('board'), (a, el) => {
    The ≡ menu's Report tab (Diag before 5.49): a plain-text report (version, device, speed of play, the run's state, recent
    log, any errors) to copy and paste to Claude, and the save itself, packed small, to load the exact
    moment back up. Nothing personal: no account id, no budget history beyond the run. */
-const plainText = t => String(t).replace(ICON_RE, (m, n) => ({ iShield: 'shield', iSun: 'sun', iDebris: 'debris', iFlag: 'flag', iShip: 'ship', iPod: 'pod', iDepot: 'depot', iDock: 'dock', iAlien: 'alien', iSensor: 'sensor', iLine: 'line', iLoop: 'loop', iCapy: 'capybara' }[n] || '')).replace(/<svg class="shp"[^>]*aria-label="([^"]*)"[^>]*>[\s\S]*?<\/svg>/g, '[$1]').replace(/<[^>]+>/g, '').replace(/&amp;/g, '&');   // 5.27: shapes become [Fuel depot]
+const plainText = t => String(t).replace(ICON_RE, (m, n) => ({ iShield: 'shield', iSun: 'sun', iDebris: 'debris', iFlag: 'flag', iShip: 'ship', iPod: 'pod', iDepot: 'depot', iDock: 'dock', iAlien: 'alien', iSensor: 'sensor', iLine: 'line', iLoop: 'loop', iCapy: 'capybara', iAm: 'antimatter' }[n] || '')).replace(/<svg class="shp"[^>]*aria-label="([^"]*)"[^>]*>[\s\S]*?<\/svg>/g, '[$1]').replace(/<[^>]+>/g, '').replace(/&amp;/g, '&');   // 5.27: shapes become [Fuel depot]
 function perfLine() {
   const d = perf.dt.filter(x => x > 0 && x < 1000), s = perf.step;
   if (!d.length) return 'no frames yet';
@@ -2831,7 +2951,8 @@ function diagText() {
     L.push(`money: budget ${fmt(S.fund)} · earned ${fmt(S.earned)} · delivered ${S.delivered}`);
     L.push(`spares: ${JSON.stringify(S.inv)} · upgrades ${JSON.stringify(S.up)} · bought ${JSON.stringify(S.bought || {})}`);
     L.push(`lines ${S.lines.length}/${S.inv.lines}:`);
-    for (const ln of S.lines) { const cl = (ln.segs || []).filter(x => x.closed).length, br = ln.ships.filter(x => x.brk || x.fix).length; L.push(`  ${ln.name}${ln.loop ? ' (loop)' : ''}: ${ln.stops.map(i => PL[i].id).join('-')} · ships ${ln.ships.length} · pods ${ln.ships.reduce((a, x) => a + x.pods, 0)} · carried ${ln.carried || 0} · length ${Math.round(ln.len || 0)}${ln.dry ? ' · NO FUEL' : ''}${br ? ' · broken ' + br : ''}${cl ? ' · closed stretches ' + cl : ''}`); }
+    for (const ln of S.lines) { const cl = (ln.segs || []).filter(x => x.closed).length, br = ln.ships.filter(x => x.brk || x.fix).length, am = ln.ships.filter(x => x.am), hot = am.filter(x => x.amAlarm).length; L.push(`  ${ln.name}${ln.loop ? ' (loop)' : ''}: ${ln.stops.map(i => PL[i].id).join('-')} · ships ${ln.ships.length} · pods ${ln.ships.reduce((a, x) => a + x.pods, 0)} · carried ${ln.carried || 0} · length ${Math.round(ln.len || 0)}${ln.dry ? ' · NO FUEL' : ''}${br ? ' · broken ' + br : ''}${am.length ? ' · antimatter ' + am.length + (hot ? ' (' + hot + ' failing)' : '') : ''}${cl ? ' · closed stretches ' + cl : ''}`); }
+    if ((S.wreck && S.wreck.length) || (S.stat && S.stat.booms) || S.amSaved) L.push(`antimatter: ${amOpen() ? 'on sale' : 'not yet'} · blew up ${(S.stat && S.stat.booms) || 0} · stabilised ${S.amSaved || 0} · wrecks ${(S.wreck || []).map(w => `${w.a}-${w.b} ${Math.ceil(w.until - S.t)}s`).join(', ') || 'none'}`);
     // 5.26: what the crowded places hold, and where ships left full
     const nm = i => `${PL[i].id} ${placeName(i)}`, kind = i => (SHAPES[S.shape[i]] || { short: S.shape[i] }).short;   // 5.27: names and kinds, to match the log
     const wants = i => { const by = {}; for (const c of S.Q[i]) by[c.want] = (by[c.want] || 0) + 1; return Object.keys(by).sort((a, b) => by[b] - by[a]).map(k => `${SHAPES[k].short} ${by[k]}`).join(', '); };
@@ -3497,26 +3618,27 @@ function refreshPop(force) {
         edgeFade(P); return;
       }
     }
-    const sig = 'L' + L.id + confirmRm + L.loop + (shipTrouble(L).length > 0);
+    const sig = 'L' + L.id + confirmRm + L.loop + (lineTrouble(L) > 0) + (S.inv.am > 0);
     if (force || sig !== popSig) {
       popSig = sig;
       P.innerHTML = confirmRm
         ? `<span class="ask">Remove the ${L.name.toLowerCase()} line? Its ships become spare.</span><button class="danger" data-a="rmYes">Remove</button>${L.ships.length ? `<button data-a="rmScrap" aria-label="Remove and scrap its ships">Scrap ${L.ships.length}${gi('iShip')} +${fmt(lineScrap(L))}</button>` : ''}<button data-a="rmNo">Keep</button>`
         : `<div class="si" data-a="info"><span class="nm">${swatch(L)}${L.name}<span class="yr" data-f="lyr"></span></span><span class="st" data-f="lst"></span></div>
-          ${shipTrouble(L).length ? `<button class="primary nudge" data-a="fixShip" aria-label="Repair the ship">🔧 Repair <small data-f="rCost"></small></button>` : ''}<button class="ic" data-a="addShip" aria-label="Add a ship">+${gi('iShip')}<small data-f="nShips"></small></button><button class="ic" data-a="rmShip" aria-label="Take a ship off">−${gi('iShip')}</button><button class="ic" data-a="addPod" aria-label="Add a cargo pod">+${gi('iPod')}<small data-f="nPods"></small></button>${L.loop ? `<button class="ic" data-a="unloop" aria-label="Open the loop">${gi('iLoop')}✕</button>` : ''}<button class="ic ghost" data-a="rmLine" aria-label="Remove line">${gi('iTrash')}</button><button class="x" data-a="close" aria-label="Close">×</button>`;
+          ${lineTrouble(L) ? `<button class="primary nudge" data-a="fixShip" aria-label="Repair">🔧 Repair <small data-f="rCost"></small></button>` : ''}<button class="ic" data-a="addShip" aria-label="Add a ship">+${gi('iShip')}<small data-f="nShips"></small></button><button class="ic" data-a="rmShip" aria-label="Take a ship off">−${gi('iShip')}</button><button class="ic" data-a="addPod" aria-label="Add a cargo pod">+${gi('iPod')}<small data-f="nPods"></small></button>${S.inv.am > 0 ? `<button class="ic" data-a="addAm" aria-label="Fit an antimatter drive">+${gi('iAm')}<small data-f="nAm"></small></button>` : ''}${L.loop ? `<button class="ic" data-a="unloop" aria-label="Open the loop">${gi('iLoop')}✕</button>` : ''}<button class="ic ghost" data-a="rmLine" aria-label="Remove line">${gi('iTrash')}</button><button class="x" data-a="close" aria-label="Close">×</button>`;
     }
     if (!confirmRm) {
       const pods = L.ships.reduce((a, s) => a + s.pods, 0), cap = L.ships.reduce((a, s) => a + shipCap(s), 0);
       const how = lineHow(L);
       // one little hull per ship, numbered like the badges on the map
-      const nowMs = performance.now(), hulls = L.ships.map((sh, k) => `<span class="hull${bornAt.has(sh) && nowMs - bornAt.get(sh) < 700 ? ' new' : ''}${sel.ship === sh ? ' on' : ''}" data-a="pickHull" data-k="${k}" role="button" aria-label="Ship ${k + 1}" style="--c:${L.color}">${k + 1}${sh.pods ? '<i></i>'.repeat(sh.pods) : ''}${sh.fix || sh.brk ? '🔧' : ''}</span>`).join('');
+      const nowMs = performance.now(), hulls = L.ships.map((sh, k) => `<span class="hull${bornAt.has(sh) && nowMs - bornAt.get(sh) < 700 ? ' new' : ''}${sel.ship === sh ? ' on' : ''}${sh.amAlarm ? ' hot' : ''}" data-a="pickHull" data-k="${k}" role="button" aria-label="Ship ${k + 1}${sh.am ? ', antimatter' : ''}" style="--c:${L.color}">${k + 1}${sh.pods ? '<i></i>'.repeat(sh.pods) : ''}${sh.am ? gi('iAm') : ''}${sh.fix || sh.brk ? '🔧' : ''}</span>`).join('');
       // 5.51: with a ship picked, what it carries takes the place of the line's summary (tap its number again to go back)
       const pk = sel.ship && L.ships.includes(sel.ship) ? sel.ship : null;
-      const html = `${hulls}<span>${pk ? loadText(pk) : `${how} · holds ${cap}`}${L.dry ? ` · no ${shp('diamond')} fuel, slow` : ''}</span>`;
+      const wr = lineWrecks(L).length, hot = L.ships.find(x => x.amAlarm);
+      const html = `${hulls}<span>${hot ? `${gi('iAm')} blows in ${Math.max(0, Math.ceil(hot.amAlarm - S.t))}s · ` : ''}${wr ? `💥 wrecked ${Math.max(0, Math.ceil(Math.min(...lineWrecks(L).map(w => w.until)) - S.t))}s · ` : ''}${pk ? loadText(pk) : `${how} · holds ${cap}`}${slowDry(L) ? ` · no ${shp('diamond')} fuel, slow` : ''}</span>`;
       const el = P.querySelector('[data-f="lst"]'); if (el && el.dataset.sig !== html) { el.dataset.sig = html; el.innerHTML = html; }
-      setF('nShips', String(S.inv.ships), true); setF('nPods', String(S.inv.pods), true); setF('lyr', yrTag(L.stops));
+      setF('nShips', String(S.inv.ships), true); setF('nPods', String(S.inv.pods), true); setF('nAm', String(S.inv.am || 0), true); setF('lyr', yrTag(L.stops));
       const nudge = P.querySelector('[data-a="addShip"]'); if (nudge) nudge.classList.toggle('nudge', !!(S.tut && S.tut.step === 5 && S.inv.ships > 0));
-      offBtn('addShip', S.inv.ships < 1); offBtn('rmShip', !L.ships.length); offBtn('addPod', S.inv.pods < 1 || !L.ships.length);
+      offBtn('addShip', S.inv.ships < 1); offBtn('rmShip', !L.ships.length); offBtn('addPod', S.inv.pods < 1 || !L.ships.length); offBtn('addAm', !L.ships.some(x => !x.am));
       setF('rCost', fmt(repairCost())); offBtn('fixShip', S.fund < repairCost());
     }
   } else if (sel.type === 'sensor') {
@@ -3616,7 +3738,8 @@ onTap(P, (a, el) => {
     const yr = nm && nm.querySelector('.yr') ? nm.querySelector('.yr').textContent : '';
     let what = st ? st.innerHTML : '';
     if (sel.type === 'line') { const L = S.lines.find(x => x.id === sel.id); if (L) { const tr = shipTrouble(L)[0], cap = L.ships.reduce((a, x) => a + shipCap(x), 0);
-      what = `${L.ships.length} ${gi('iShip')}${tr ? ` · 🔧 ship ${L.ships.indexOf(tr) + 1} ${tr.fix ? 'stopped' : 'about to break down'}: Repair` : ''} · ${lineHow(L)} · holds ${cap}${L.dry ? ` · no ${shp('diamond')} fuel, slow${fuelNear(L) >= 0 ? `: add ${shp('diamond')} ${esc(placeName(fuelNear(L)))}` : ''}` : ''}${L.stops.length >= 3 && !L.loop ? ' · ✂ drag an end knob back along the line to cut stops' : ''}`; } }
+      const nAm = L.ships.filter(x => x.am).length, wr = lineWrecks(L);
+      what = `${L.ships.length} ${gi('iShip')}${nAm ? ` (${nAm} ${gi('iAm')}: 2× fast, no ${shp('diamond')} needed)` : ''}${tr ? ` · ${tr.amAlarm ? gi('iAm') : '🔧'} ship ${L.ships.indexOf(tr) + 1} ${tr.amAlarm ? 'containment failing' : tr.fix ? 'stopped' : 'about to break down'}: Repair` : ''}${wr.length ? ` · 💥 ${wr.map(w => `${esc(placeName(IDX[w.a]))}–${esc(placeName(IDX[w.b]))}`).join(', ')} wrecked: Repair` : ''} · ${lineHow(L)} · holds ${cap}${slowDry(L) ? ` · no ${shp('diamond')} fuel, slow${fuelNear(L) >= 0 ? `: add ${shp('diamond')} ${esc(placeName(fuelNear(L)))}` : ''}` : ''}${L.stops.length >= 3 && !L.loop ? ' · ✂ drag an end knob back along the line to cut stops' : ''}`; } }
     toast(`<b>${esc(name)}</b>${yr ? ` · ${esc(yr)}` : ''} · ${what}`, 4500); return;
   }
   if (a === 'scrap') {
@@ -3635,8 +3758,13 @@ onTap(P, (a, el) => {
     }
     else if (a === 'shipAt') { sel.pickShip = false; placeShip(L, +el.dataset.k, el); refreshPop(true); return; }
     else if (a === 'cancelPick') { sel.pickShip = false; refreshPop(true); return; }
-    else if (a === 'fixShip') { const r = fixShips(L); if (r) { why(r); noFx(el); } else { const sh = L.ships[0], p = sh ? shipAt(L, sh) : PL[L.stops[0]]; burst(p.x, p.y, sysOf(L.stops[0]), 'repaired', L.color); deployFx(el, `🔧 ${esc(L.name)} running`); refreshPop(true); return; } }
-    else if (a === 'rmShip') { const r = removeShip(L, sel.ship); if (r) { why(r); noFx(el); } else { sel.ship = null; deployFx(el, `${gi('iShip')} back to spare · ${S.inv.ships}`, true); } }
+    else if (a === 'fixShip') { const r = fixShips(L); if (r) { why(r); noFx(el); } else { const sh = L.ships[0], p = sh ? shipAt(L, sh) : PL[L.stops[0]]; burst(p.x, p.y, sysOf(L.stops[0]), 'repaired', L.color); deployFx(el, `🔧 ${esc(L.name)} running`); popSig = ''; refreshPop(true); return; } }
+    else if (a === 'rmShip') { const am0 = S.inv.am || 0, r = removeShip(L, sel.ship); if (r) { why(r); noFx(el); } else { sel.ship = null; deployFx(el, `${gi('iShip')} back to spare · ${S.inv.ships}${(S.inv.am || 0) > am0 ? ` · ${gi('iAm')} kept` : ''}`, true); } }
+    else if (a === 'addAm') {
+      const pick = sel.ship && L.ships.includes(sel.ship) ? sel.ship : null, r = fitAm(L, pick);
+      if (typeof r === 'string') { why(r); noFx(el); }
+      else { const p = shipAt(L, r); bornAt.set(r, performance.now()); burst(p.x, p.y, sysOf(L.stops[0]), 'antimatter · 2× fast', '#d9b8ff'); deployFx(el, `+${gi('iAm')} ship ${L.ships.indexOf(r) + 1} · 2× fast`); refreshPop(true); return; }
+    }
     else if (a === 'pickHull') { const sh = L.ships[+el.dataset.k]; sel.ship = sel.ship === sh ? null : sh; if (sel.ship) seeShip(L, sel.ship); refreshPop(); return; }
     else if (a === 'addPod') {
       const pick = sel.ship && L.ships.includes(sel.ship) ? sel.ship : null, tgt = pick || (L.ships.length ? L.ships.reduce((x, y) => (y.pods < x.pods ? y : x)) : null), r = addPod(L, pick);
@@ -3644,15 +3772,16 @@ onTap(P, (a, el) => {
       else { const p = shipAt(L, tgt); bornAt.set(tgt, performance.now()); burst(p.x, p.y, sysOf(L.stops[0]), `+pod · holds ${shipCap(tgt)}`, L.color);
         deployFx(el, `+1 ${gi('iPod')} ship ${L.ships.indexOf(tgt) + 1} holds ${shipCap(tgt)}`); }
     }
-    else if (a === 'rmLine') confirmRm = true;
+    else if (a === 'rmLine') { if (L.ships.some(x => x.amAlarm)) { why(`${gi('iAm')} containment failing · Repair first`); noFx(el); } else confirmRm = true; }
     else if (a === 'rmNo') confirmRm = false;
     else if (a === 'rmScrap') {
+      if (L.ships.some(x => x.amAlarm)) { confirmRm = false; why(`${gi('iAm')} containment failing · Repair first`); refreshPop(true); return; }
       const n = L.ships.length, pods = L.ships.reduce((x, sh) => x + sh.pods, 0), v = lineScrap(L), at = shipAt(L, L.ships[0] || { state: 'stop', k: 0 });
       removeLine(L); S.inv.ships -= n; S.inv.pods -= pods; S.fund += v; S.hist.push({ t: S.t, fund: S.fund }); fundFx(v); trayUI();
       log(`You removed the ${L.name.toLowerCase()} line and scrapped its ${n} ship${n > 1 ? 's' : ''} for ${fmt(v)}.`, '');
       burst(at.x, at.y, sysOf(L.stops[0]), `+${fmt(v)} scrap`); deployFx(null, `+${fmt(v)} · ${n} ${gi('iShip')} scrapped`); return;
     }
-    else if (a === 'rmYes') { setUndo({ kind: 'remove', stops: L.stops.slice(), loop: L.loop, pods: L.ships.map(sh => sh.pods) }); removeLine(L); toast('Removed · Undo?'); return; }
+    else if (a === 'rmYes') { if (L.ships.some(x => x.amAlarm)) { confirmRm = false; why(`${gi('iAm')} containment failing · Repair first`); refreshPop(true); return; } setUndo({ kind: 'remove', stops: L.stops.slice(), loop: L.loop, pods: L.ships.map(sh => sh.pods), am: L.ships.map(sh => !!sh.am) }); removeLine(L); toast('Removed · Undo?'); return; }
     else if (a === 'unloop') { setUndo({ kind: 'change', id: L.id, stops: L.stops.slice(), loop: true }); openLoop(L); chargeRedraw(); }
   } else if (sel.type === 'sensor') {
     const z = SENSORS[sel.id];
@@ -3803,9 +3932,9 @@ function sysBtn() {
 let traySig = '';
 let trayWas = null;
 function trayUI() {
-  const sig = [S.inv.lines, S.view, S.lines.map(L => L.slot + sysOf(L.stops[0])).join('.'), S.inv.ships, S.inv.pods, S.inv.depots, S.inv.shields, S.inv.docks].join('|');
+  const sig = [S.inv.lines, S.view, S.lines.map(L => L.slot + sysOf(L.stops[0])).join('.'), S.inv.ships, S.inv.pods, S.inv.depots, S.inv.shields, S.inv.docks, S.inv.am].join('|');
   if (sig === traySig) return; traySig = sig;
-  const now = { tShips: S.inv.ships, tPods: S.inv.pods, tDepots: S.inv.depots, tShields: S.inv.shields, tDocks: S.inv.docks || 0, tLines: S.inv.lines };
+  const now = { tShips: S.inv.ships, tPods: S.inv.pods, tDepots: S.inv.depots, tShields: S.inv.shields, tDocks: S.inv.docks || 0, tAm: S.inv.am || 0, tLines: S.inv.lines };
   if (trayWas && !S.auto) for (const k in now) if (now[k] > trayWas[k]) { const c = $(k).closest('.chip'); c.classList.remove('got'); void c.offsetWidth; c.classList.add('got'); }
   trayWas = now;
   // 5.61: this system's lines, then the free ones in the colours they'd get here; lines in other systems as a count
@@ -3820,9 +3949,13 @@ function trayUI() {
   $('tAway').hidden = !away; $('tAway').textContent = `+${away}`;
   requestAnimationFrame(() => edgeFade($('tray')));
   $('cDocks').hidden = !(S.inv.docks > 0); $('tDocks').textContent = S.inv.docks || 0;
+  $('cAm').hidden = !(S.inv.am > 0); $('tAm').textContent = S.inv.am || 0;
   for (const [id, v] of [['tShips', S.inv.ships], ['tPods', S.inv.pods], ['tDepots', S.inv.depots], ['tShields', S.inv.shields]]) { $(id).textContent = v; $(id).parentElement.classList.toggle('zero', !v); }
 }
 let bannerSig = '', bannerGo = null, bannerTo = null, bannerKind = '';
+// 5.65: the antimatter ship closest to blowing up, and a wrecked stretch one of your lines runs on
+function amWorst() { let best = null; for (const L of S.lines) L.ships.forEach((x, k) => { if (x.amAlarm && (!best || x.amAlarm < best.x.amAlarm)) best = { L, k, x }; }); return best; }
+function wreckWorst() { for (const w of S.wreck || []) { const L = S.lines.find(L => lineWrecks(L).includes(w)); if (L) return { w, L }; } return null; }
 // 5.53: × on an overflow note while paused puts it away, so the note it covered shows; Play brings it back
 let ovSnooze = -1;
 function banner() {
@@ -3840,6 +3973,12 @@ function banner() {
     cd = Math.max(0, Math.ceil((1 - S.of[ov]) * ovT())) + 's'; go = why.go || { label: 'Show', place: ov }; to = { place: ov };
     x = S.paused; kind = 'ov';
   }
+  // 5.65: an antimatter ship about to blow up outranks everything but an overflow, storms included (they set it off)
+  else if (amWorst() && !S.tut) {
+    const w = amWorst();
+    cls = 'live'; html = `${gi('iAm')} <b>${esc(w.L.name)} ship ${w.k + 1}</b> containment failing${S.paused && S.autoPaused != null ? ' · paused' : ''}${sysOf(w.L.stops[0]) !== S.view ? ' · ' + esc(sysLabel(sysOf(w.L.stops[0]))) : ''}`;
+    cd = Math.max(0, Math.ceil(w.x.amAlarm - S.t)) + 's'; go = { label: `Repair ${fmt(repairCost())}`, line: w.L.id, icon: '' }; to = { line: w.L.id };
+  }
   // a storm or debris you're already protected from needs no banner
   else if (h && !held && !quietHaz(h)) {
     cls = h.phase; html = `<b>${hazIcon(h)} ${esc(h.title)}</b>${h.early ? ' ' + gi('iSensor') : ''} ${h.phase === 'warn' || h.type === 'drifter' || h.type === 'rush' || h.type === 'strike' ? hazWhat(h) : h.type === 'surge' ? '' : hazAction(h)}`;
@@ -3849,9 +3988,13 @@ function banner() {
     const i = stuckWorst(), st = stuckNote(i), w = Object.keys(st.by).sort((a, b) => st.by[b] - st.by[a])[0];
     cls = 'coach act'; html = `${shp(w)} <b>${st.n} stuck at ${esc(placeName(i))}</b> · ${st.noRoute >= st.n / 2 ? `no line reaches ${shp(w)}` : `no ship goes their way`}${via(i)}`; go = { label: 'Show', place: i }; to = { place: i };
   } else if (worstTrouble() && !S.tut) {
-    const w = worstTrouble(), secs = Math.max(0, Math.ceil((w.x.fix || w.x.brk) - S.t));
-    cls = 'coach act'; html = `🔧 <b>${esc(w.L.name)} ship ${w.k + 1}</b> ${w.x.fix ? `stopped · ${secs}s` : `breaks down in ${secs}s`}${sysOf(w.L.stops[0]) !== S.view ? ' · ' + esc(sysLabel(sysOf(w.L.stops[0]))) : ''}`;
+    const w = worstTrouble(), secs = Math.max(0, Math.ceil((w.x.amAlarm || w.x.fix || w.x.brk) - S.t));
+    cls = 'coach act'; html = `🔧 <b>${esc(w.L.name)} ship ${w.k + 1}</b> ${w.x.amAlarm ? `blows up in ${secs}s` : w.x.fix ? `stopped · ${secs}s` : `breaks down in ${secs}s`}${sysOf(w.L.stops[0]) !== S.view ? ' · ' + esc(sysLabel(sysOf(w.L.stops[0]))) : ''}`;
     go = { label: `Repair ${fmt(repairCost())}`, line: w.L.id, icon: '' }; to = { line: w.L.id };
+  } else if (wreckWorst() && !S.tut) {
+    const { w, L } = wreckWorst(), a = IDX[w.a], b = IDX[w.b];
+    cls = 'coach act'; html = `💥 <b>${esc(placeName(a))}–${esc(placeName(b))}</b> wrecked · clears in ${Math.max(0, Math.ceil(w.until - S.t))}s${sysOf(a) !== S.view ? ' · ' + esc(sysLabel(sysOf(a))) : ''}`;
+    go = { label: `Repair ${fmt(repairCost())}`, line: L.id, icon: '' }; to = { line: L.id };
   } else if (S.hint) { cls = 'hint'; kind = 'hint'; html = S.hint.html; x = S.hint.id !== 'start'; go = S.hint.go || null; to = S.hint.to || (S.hint.i != null ? { place: S.hint.i } : null) || (go && go.place != null ? { place: go.place } : go && go.talk != null ? { place: go.talk } : null); }
   else { const c = coach(); if (c) { cls = 'coach' + (c.act ? ' act' : ''); html = c.html; go = c.go || null; to = c.to || null; } }
   if (to) cls += ' to';
@@ -3882,13 +4025,15 @@ function whyCrowded(i) {
   for (const L of mine) { const k = L.stops.indexOf(i), n = L.stops.length; for (const j of [k - 1, k + 1]) { const y = L.stops[L.loop ? (j + n) % n : j]; if (y != null && y !== i) nbs.add(y); } }
   const reb = [...nbs].find(j => rebelNow(j));
   if (reb != null) return { note: `${esc(placeName(reb))} is independent · lines closed`, story: `${esc(placeName(reb))} had declared independence, closing the lines through it.`, go: { label: 'Negotiate', talk: reb } };
+  const wl = mine.find(L => lineWrecks(L).some(w => IDX[w.a] === i || IDX[w.b] === i));
+  if (wl) return { note: `a wreck has closed ${wl.name}`, story: `An antimatter ship had blown up on the ${wl.name.toLowerCase()} line, closing it.`, go: { label: `Repair ${fmt(repairCost())}`, line: wl.id } };
   if (mine.some(L => L.segs.some(sg => sg.closed && (sg.a === i || sg.b === i)))) { const c = S.haz && S.haz.type === 'drifter'; return { note: `${c ? 'a craft' : 'the storm'} has closed its lines`, story: `A ${c ? 'drifting craft' : 'storm'} had closed its lines.` }; }
   const st = stuckAt(i);
   if (st && st.n >= Math.max(3, S.Q[i].length / 3)) { const w = Object.keys(st.by).sort((a, b) => st.by[b] - st.by[a])[0]; return { note: `${st.n} stuck · ${st.noRoute >= st.n / 2 ? `no line reaches ${shp(w)}` : 'no ship goes their way'}`, story: `${st.n} of them had no way to their kind of place.` }; }
   if (queueAt(i) >= 2) return { note: crowdFix(i), story: 'Ships were queueing for its berths.' };
   const lf = S.leftFull && S.leftFull[i] && S.t - S.leftFull[i].t < 20 ? S.lines.find(L => L.id === S.leftFull[i].L) : null;
-  if (lf) return { note: `ships leave full on ${lf.name}${lf.dry ? ` · no ${shp('diamond')} fuel` : ''} · ${fixFor(lf)}`, story: `Ships were leaving it full on the ${lf.name.toLowerCase()} line${lf.dry ? `, which had no ${shp('diamond')} fuel stop and ran ${Math.round((1 - FUEL_SLOW) * 100)}% slow` : ''}.` };
-  const dry = mine.find(L => L.dry);
+  if (lf) return { note: `ships leave full on ${lf.name}${slowDry(lf) ? ` · no ${shp('diamond')} fuel` : ''} · ${fixFor(lf)}`, story: `Ships were leaving it full on the ${lf.name.toLowerCase()} line${slowDry(lf) ? `, which had no ${shp('diamond')} fuel stop and ran ${Math.round((1 - FUEL_SLOW) * 100)}% slow` : ''}.` };
+  const dry = mine.find(slowDry);
   if (dry) return { note: `${dry.name} has no ${shp('diamond')} fuel, runs slow${fuelNear(dry) >= 0 ? ` · add ${shp('diamond')} ${esc(placeName(fuelNear(dry)))} to it` : ''}`, story: `The ${dry.name.toLowerCase()} line had no ${shp('diamond')} fuel stop, so its ships ran ${Math.round((1 - FUEL_SLOW) * 100)}% slow.` };
   const broken = mine.find(L => L.ships.some(x => x.fix));
   if (broken) return { note: `${broken.name} ship broken down`, story: `A ship on the ${broken.name.toLowerCase()} line was broken down.`, go: { label: `Repair ${fmt(repairCost())}`, line: broken.id } };
@@ -3908,7 +4053,7 @@ function crowdFix(i) {
   if (S.inv.pods && mine.some(L => L.ships.some(sh => sh.pods < MAX_PODS))) a.push(`+${gi('iPod')}`);
   if (S.inv.depots && !S.depot[i]) a.push(`${gi('iDepot')} storage`);
   if (a.length) return `add ${a.join(' ')}`;
-  const dry = mine.find(L => L.dry); if (dry) return fuelNear(dry) >= 0 ? `add ${shp('diamond')} ${esc(placeName(fuelNear(dry)))} to ${dry.name}` : `give ${dry.name} a ${shp('diamond')} fuel stop`;
+  const dry = mine.find(slowDry); if (dry) return fuelNear(dry) >= 0 ? `add ${shp('diamond')} ${esc(placeName(fuelNear(dry)))} to ${dry.name}` : `give ${dry.name} a ${shp('diamond')} fuel stop`;
   if (S.lines.length < S.inv.lines) return `draw a line to it`;
   if (mine.length && S.lines.some(L => !L.stops.includes(i) && L.ships.length > 1)) return `move a ${gi('iShip')} here from another line`;
   return mine.length ? `extend a line to it` : `draw a line to it`;
@@ -3941,6 +4086,7 @@ const TRAY_HELP = {
   pods: () => `${gi('iPod')} ${S.inv.pods} spare · tap a line, +`,
   depots: () => `${gi('iDepot')} ${S.inv.depots} spare · tap a place`,
   docks: () => `${gi('iDock')} ${S.inv.docks || 0} spare · tap a place, Dock`,
+  am: () => `${gi('iAm')} ${S.inv.am || 0} spare · tap a line, +${gi('iAm')} · 2× fast, no ${shp('diamond')}, may blow up`,
   shields: () => `${gi('iShield')} ${S.inv.shields} spare · tap a place, Protect`,
 };
 /* ================= Hover tips =================
@@ -4018,7 +4164,7 @@ function mapTip(p) {
     return { key: 's' + k, cur: 'pointer', html: `${gi('iSensor')} <b>${esc(z.name)}</b> · ${down ? 'knocked out by a storm · tap to repair' : owned ? 'on' : soon ? `for sale from ${sensorFrom(k)}` : `${fmt(z.cost)} · tap to buy`}<br>${z.kind === 'signal' ? 'hears unknown signals' : 'storm warnings'} ${z.bonus}s sooner · it carries no freight` };
   }
   const L = lineAt(p);
-  if (L) return { key: 'L' + L.id, cur: 'pointer', html: `${swatch(L)}<b>${L.name} line</b> · ${L.stops.map(i => esc(placeName(i))).join(' → ')}${L.loop ? ' → back' : ''}<br>${L.ships.length} ship${L.ships.length === 1 ? '' : 's'}${L.dry ? ` · <b>no ${shp('diamond')} fuel</b> (the crossed-out ${shp('diamond')}): ${Math.round((1 - FUEL_SLOW) * 100)}% slower${fuelNear(L) >= 0 ? `, add ${shp('diamond')} ${esc(placeName(fuelNear(L)))}` : ''}` : ''}${shipTrouble(L).length ? ' · 🔧 a ship breaking down' : ''} · tap to add ships or pods, or to remove it` };
+  if (L) return { key: 'L' + L.id, cur: 'pointer', html: `${swatch(L)}<b>${L.name} line</b> · ${L.stops.map(i => esc(placeName(i))).join(' → ')}${L.loop ? ' → back' : ''}<br>${L.ships.length} ship${L.ships.length === 1 ? '' : 's'}${slowDry(L) ? ` · <b>no ${shp('diamond')} fuel</b> (the crossed-out ${shp('diamond')}): ${Math.round((1 - FUEL_SLOW) * 100)}% slower${fuelNear(L) >= 0 ? `, add ${shp('diamond')} ${esc(placeName(fuelNear(L)))}` : ''}` : ''}${L.ships.some(x => x.amAlarm) ? ` · ${gi('iAm')} containment failing` : shipTrouble(L).length ? ' · 🔧 a ship breaking down' : ''}${lineWrecks(L).length ? ' · 💥 a stretch wrecked' : ''}${L.ships.some(x => x.am) ? ` · ${L.ships.filter(x => x.am).length} ${gi('iAm')}` : ''} · tap to add ships or pods, or to remove it` };
   return null;
 }
 function hoverMap(e) {
@@ -4215,6 +4361,7 @@ function showLog(back, tab) {
       <p>${S.scen === 'rand' ? `${GEN.name} is a random ${GEN.star.type} system: everything in it is made up, and not everything in it is ours.` : S.scen === 'prox' ? 'Everything at Proxima is science fiction; the notes give the real astronomy.' : 'Each place opens in the year real-world plans expect regular freight there (as of October 2026). A line’s year is its latest stop. After the 2030s, dates are educated guesses.'}</p>
       ${lines ? `<div class="eyebrow" style="margin-top:12px">Your lines</div><ul class="ledger">${lines}</ul>` : ''}
       <div class="eyebrow" style="margin-top:12px">Places</div><ul class="ledger tl">${places}</ul>
+      <div class="eyebrow" style="margin-top:12px">Ships</div><ul class="ledger tl"><li class="${amOpen() ? '' : 'later'}"><span class="t">${AM_YEAR}</span><span><b>${gi('iAm')} Antimatter drive</b> <span class="st st-idea">${STATUS.idea}</span> <span class="when">${amOpen() ? 'in the Shop' : whyNot('am')}</span><br>A pinch of antimatter sparks a lot of fusion fuel. In 2026 physicists at Northwestern kept a single positron trapped for a month; a drive would need micrograms, made and held safely.</span></li></ul>
       <div class="eyebrow" style="margin-top:12px">Storm sensors · bought, not connected</div><ul class="ledger tl">${SENSORS.map((z, k) => !SCEN[S.scen].sensors.includes(z.id) ? '' : `<li class="${S.sensor[k] ? '' : 'later'}"><span class="t">${z.st === 'now' ? 'now' : sensorFrom(k)}</span><span><b>${z.name}</b> <span class="st st-${z.st}">${STATUS[z.st]}</span> <span class="when">${S.sensor[k] ? 'yours' : fmt(z.cost)}</span><br>${esc(z.note)}</span></li>`).join('')}</ul>`;
   }
   openModal(`<div class="lbody"><h2>${{ log: 'Log', help: 'How it works', timeline: 'Timeline', diag: 'Report a problem', set: 'Settings' }[logTab]}</h2>${body}</div><div class="foot">${tabs}<button class="ghost" data-a="home">Start screen</button><button class="primary" data-a="close">Close</button></div>`, 'log', modalKind === 'log' ? modalNext : null);
@@ -4266,6 +4413,7 @@ function helpBody() {
       <br>· <b>››</b> at a place's corner: a fast dock · <b>%</b>: a toll, deliveries there pay less for a while
       <br>· <b>red badge with a wrench</b>: storm damage, tap to repair · <b>orange flag</b>: restless crews (dashed orange outline: independent)
       <br>· <b>crossed-out ${shp('diamond')}</b> halfway along a line: no ${shp('diamond')} fuel stop, its ships run ${Math.round((1 - FUEL_SLOW) * 100)}% slower
+      <br>· <b>violet plume</b> behind a ship: an ${gi('iAm')} antimatter drive · <b>red ring and seconds</b> round it: containment failing, Repair · <b>orange specks in a ring</b> on a stretch: wrecked and closed (the ring runs down until it clears)
       <br>· <b>numbered badges</b> on ships: ship 1, 2, 3 of the line · <b>amber outline / 🔧</b> on a ship: breaking down · <b>white ring</b>: the ship you picked, drawn on top, with what it carries beside its number
       <br>· <b>dashed amber circle</b>: a storm on its way · <b>shaded orange circle</b>: a storm now · <b>NEW</b>: just opened · <b>arrows at the screen edge</b>: places off screen (red: crowding)</li>
     <li><b>Lines.</b> Drag from a place through others to draw a line. Drag the round knob at either end to extend it (dragging from a place starts a new line, unless a line is selected and ends there: then it extends that line; a selected line’s knobs can be grabbed from a little further away too), or drag the knob back along the line to cut stops off (as many as you like, down to two), or drop it on the line’s first stop to make a loop. While drawing, go back over the stops one by one to take them off (going straight back to the first stop makes a loop instead); with a mouse, Esc or the right button cancels the whole drag. Undo appears for a few seconds after every change. Changing a line you already have costs a little (never more than you have, and Undo gives it back); drawing a new one is free. Tap a line to add ships or pods, or to remove it.</li>
@@ -4287,6 +4435,7 @@ function helpBody() {
     <li><b>Uncharted.</b> A random system made up from the run’s code: its star might be a red dwarf, a binary pair or a pulsar, and its places and their names are new each time. It’s harder: busier places and more storms. And you’re not alone there. An “unknown signal” might be a craft that stops any line it drifts over (shields don’t help), a derelict worth salvaging, or visitors who make one place very busy. Somewhere a gate nobody built will open, and whoever runs it trades.</li>
     <li><b>Freight.</b> Each system starts calm when it opens and gets busier for about ten periods. It keeps growing until a while after its last place opens, then levels off, so the newer systems bring the pressure.</li>
     <li><b>Late in a run.</b> Ships now and then break down: a warning, then the ship stops where it is for ${BRK_DUR} seconds (a wrench marks it). Tap its line and Repair (or Repair on the note) to fix it at once, even during the warning, or wait it out. And some events are swings in demand: a rush, when one place’s freight nearly all heads for the kind of place farthest from it on your lines, or a strike, when a place takes no deliveries for a while and freight for it goes to another of its kind your lines already reach.</li>
+    <li><b>Antimatter drive.</b> On sale in the Alliance Shop from ${AM_YEAR} (in Proxima and Uncharted runs, from the third visit). Tap a line, then +${gi('iAm')}, to fit one to a ship: the one you picked, or else the first without one. That ship flies twice as fast, needs no ${shp('diamond')} fuel stop, and costs upkeep like ${AM_UPKEEP} ships, so it does a two-ship job with one berth. The catch: now and then its containment fails, more often inside a storm. A red ring and ${AM_WARN} seconds: tap its line (or the note) and Repair. Miss it and the ship blows up with its pods and freight. Docked, it damages the place (a shield there takes the blast); out on a stretch, it wrecks that stretch, closing it for every line until you Repair it or ${WRECK_HEAL} seconds pass. Taking a ship off a line keeps its drive, but not while its containment is failing.</li>
     <li><b>Unrest.</b> Keep a place waiting (its freight above about 60% of its room for a long stretch, or storm damage left unrepaired) and it grows restless: a flag appears and grows. If it fills, the place declares independence for ${REBEL_DUR} seconds: its lines close, it makes and takes no freight, and ships there are held. Once it’s restless enough the workers vote on what they want, usually that your nearest line be extended to them. Serve it to calm it, or tap it and Negotiate: give them what they voted for (they never refuse that, and stay calm for two periods), or offer something else, which they may refuse, and every refusal makes them angrier. Other offers: pay them off, let them keep a 25% toll on deliveries there for two periods, or give them a direct line home (or to the wormhole), a shield for keeps, storage, a fast dock or a cargo pod. Any deal keeps them calm for a period. Late game only: from 2070 in Earth–Moon runs, six periods into Proxima and uncharted runs.</li>
     <li><b>Sensors elsewhere.</b> Uncharted systems have two to buy: a star watch (earlier storm warnings) and a signal array, which hears unknown signals sooner and tells you what they are. Proxima has a flare watch.</li>
     <li><b>Saving.</b> Your run saves itself as you play, and when you close the page. Continue on the start screen picks it up where you left off. A run that ends is not kept.</li>
@@ -4629,8 +4778,18 @@ function draw(rdt) {
       if (chosen) { ctx.strokeStyle = '#ffffff'; ctx.globalAlpha = .75; ctx.lineWidth = 2; ctx.setLineDash([3, 13]); ctx.lineDashOffset = -clock * 30; polyline(sg.pts); ctx.stroke(); ctx.setLineDash([]); ctx.lineDashOffset = 0; ctx.globalAlpha = 1; }
     }
   }
+  // 5.65: a stretch an antimatter ship wrecked: orange specks halfway along, with a ring that runs down until it clears
+  for (const w of S.wreck || []) {
+    const a = IDX[w.a], b = IDX[w.b]; if (a == null || b == null || !inView(a)) continue;
+    const G = segG(a, b), m = bez(G.A, G.C, G.B, .5), x = X(m.x), y = Y(m.y), r = 13 * uk, f = Math.max(0, Math.min(1, (w.until - S.t) / WRECK_HEAL));
+    ctx.save(); ctx.fillStyle = 'rgba(4,6,11,.88)'; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = 'rgba(255,138,90,.3)'; ctx.lineWidth = 2.5; ctx.stroke();
+    ctx.strokeStyle = '#ff8a5a'; ctx.beginPath(); ctx.arc(x, y, r, -Math.PI / 2, -Math.PI / 2 + f * Math.PI * 2); ctx.stroke();
+    ctx.fillStyle = '#ffb37a'; for (let k = 0; k < 6; k++) { const t = k * 1.9 + clock * .6, d = (2.5 + (k % 3) * 2.2) * uk; ctx.beginPath(); ctx.arc(x + Math.cos(t) * d, y + Math.sin(t) * d, (1.1 + (k % 2) * .7) * uk, 0, Math.PI * 2); ctx.fill(); }
+    ctx.restore();
+  }
   // 5.25: a long line with no ◆ fuel stop wears a small crossed-out diamond halfway along
-  for (const L of shown) if (L.dry && L.segs.length) {
+  for (const L of shown) if (slowDry(L) && L.segs.length) {
     const sg = L.segs[Math.floor(L.segs.length / 2)], m = sg.pts[12], x = X(m.x), y = Y(m.y), r = 7 * uk;
     ctx.save(); ctx.globalAlpha = selId != null && L.id !== selId ? .3 : 1;
     ctx.beginPath(); ctx.moveTo(x, y - r); ctx.lineTo(x + r, y); ctx.lineTo(x, y + r); ctx.lineTo(x - r, y); ctx.closePath(); ctx.fillStyle = '#04060b'; ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = L.color; ctx.stroke();
@@ -4700,8 +4859,15 @@ function draw(rdt) {
       if (sel && sel.ship === sh) { ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2.5; ctx.globalAlpha = .7 + .25 * Math.sin(clock * 5); ctx.beginPath(); ctx.arc(x, y, hl + 6, 0, Math.PI * 2); ctx.stroke(); ctx.globalAlpha = 1; }   // 5.38: the ship you picked
       if (bt < 1.6) { ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2.5; ctx.globalAlpha = 1 - bt / 1.6; ctx.beginPath(); ctx.arc(x, y, hl + 5 + bt * 14, 0, Math.PI * 2); ctx.stroke(); ctx.globalAlpha = 1; }
       ctx.save(); ctx.translate(x, y); ctx.rotate(pos.ang); ctx.globalAlpha = selId != null && !chosen ? .3 : 1;
-      const sick = sh.fix || (sh.brk && Math.sin(clock * 10) > 0);
-      ctx.fillStyle = L.color; ctx.strokeStyle = sick ? '#ffc35a' : chosen ? '#ffffff' : '#04060b'; ctx.lineWidth = sick ? 2.6 : chosen ? 2.2 : 2; ctx.lineJoin = 'round';
+      const sick = sh.fix || (sh.brk && Math.sin(clock * 10) > 0), hot = sh.amAlarm && Math.sin(clock * 14) > 0;
+      // 5.65: an antimatter drive burns a violet plume behind the ship
+      if (sh.am) {
+        const fl = (sh.state === 'move' && !sh.fix ? 1 : .45) * (.8 + .2 * Math.sin(clock * 31 + si * 2.1));
+        ctx.save(); ctx.shadowColor = '#b47bff'; ctx.shadowBlur = 10 * zk;
+        ctx.fillStyle = 'rgba(190,140,255,.95)'; ctx.beginPath(); ctx.moveTo(-hl + 2 * zk, -hw * .85); ctx.quadraticCurveTo(-hl - 6 * zk, -hw * .5, -hl - (9 + 13 * fl) * zk, 0); ctx.quadraticCurveTo(-hl - 6 * zk, hw * .5, -hl + 2 * zk, hw * .85); ctx.closePath(); ctx.fill();
+        ctx.shadowBlur = 0; ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.moveTo(-hl + 1 * zk, -hw * .4); ctx.lineTo(-hl - (3.5 + 6 * fl) * zk, 0); ctx.lineTo(-hl + 1 * zk, hw * .4); ctx.closePath(); ctx.fill(); ctx.restore();
+      }
+      ctx.fillStyle = L.color; ctx.strokeStyle = hot ? '#ff5a4a' : sick ? '#ffc35a' : chosen ? '#ffffff' : sh.am ? '#e6d2ff' : '#04060b'; ctx.lineWidth = hot || sick ? 2.6 : chosen ? 2.2 : 2; ctx.lineJoin = 'round';
       if (sh.fix) ctx.globalAlpha *= .55;
       // a hull with a pointed nose, so you can see which way it is going
       ctx.beginPath(); ctx.moveTo(-hl + rr, -hw); ctx.lineTo(hl - nose, -hw); ctx.lineTo(hl, 0); ctx.lineTo(hl - nose, hw); ctx.lineTo(-hl + rr, hw);
@@ -4711,6 +4877,15 @@ function draw(rdt) {
       for (let k = 0; k < n; k++) ctx.fillRect(-len / 2 + 3 * zk + (k % cols) * cw + (cw - cb) / 2, -wid / 2 + 2.2 * zk + Math.floor(k / cols) * 3.8 * zk, cb, cb);
       ctx.restore();
       if (sh.fix) { ctx.font = `${Math.round(12 * uk * TK)}px system-ui, sans-serif`; ctx.textAlign = 'center'; ctx.fillText('🔧', x, y - hl - (chosen ? 20 : 6)); }
+      // 5.65: containment failing: a red ring pulsing round it and the seconds left
+      if (sh.amAlarm) {
+        const left = Math.max(0, sh.amAlarm - S.t), pz = .5 + .5 * Math.sin(clock * 12);
+        ctx.save(); ctx.strokeStyle = '#ff5a4a'; ctx.lineWidth = 2.5; ctx.globalAlpha = .45 + .55 * pz;
+        ctx.beginPath(); ctx.arc(x, y, hl + 7 + 5 * pz, 0, Math.PI * 2); ctx.stroke();
+        ctx.globalAlpha = 1; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(x, y, hl + 3, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * left / AM_WARN); ctx.stroke();
+        ctx.font = fnt(700, 12, FM); ctx.textAlign = 'center'; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(4,6,11,.9)'; const ty = y + hl + 18 * TK;
+        ctx.strokeText(`${Math.ceil(left)}s`, x, ty); ctx.fillStyle = '#ff8a7a'; ctx.fillText(`${Math.ceil(left)}s`, x, ty); ctx.restore();
+      }
       if (chosen && L.ships.length > 0) {
         // number badge, kept upright
         const by = y - hl - 9; ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(x, by, 8 * TK, 0, Math.PI * 2); ctx.fill();
@@ -5437,6 +5612,7 @@ window.LC = {
   snapCam, cal, calOf, perOf, lineYear, showLog, fitInfo, setCB, setTextSize, showSettings, get cbSafe() { return cbSafe; }, get TK() { return TK; }, buySensor, SENSORS, setSys, setAutoPause, inScen, trayUI, recordRun, readBoard, openBoard, showLost, endLost, showWin, award, readAch, needList, lookAt, ACH, ask5, qmTip, diagText, saveText, loadSaveText, perf, get capyImg() { return capyImg; }, get won() { return won; }, get lost() { return lost; }, get boardAll() { return boardAll; }, scrap, scrapVal, repairCost, negotiateCost, voteDemand, sysNeeds, get fxs() { return fxs; }, negotiate, startRebel, tunnelEnds, saveAll, readLocal, resumeRun, bestSave, parseCode, runCode, codeOf, splashUI, SCEN, repairPlace, repairSensor, buyOffer, price, sysOf, tunnelOpen, hud, get sc() { return sc; }, UPKEEP, upkeepShare, ovT, reliefFor, BRK_GAP, openPlace, fuelNear, crowdAt, warnRoom, shipSpots: () => shipSpots, get wclock() { return wclock; }, pins: () => pins.map(q => ({ x: rot ? VW - q.y : q.x, y: rot ? q.x : q.y, i: q.i })),
   redrawFee, chargeRedraw, fixShips, whyCrowded, worstTrouble, selLine, checkUpdate, verNum, get newer() { return newer; }, upkeepDue, berths, docked, queueAt, stuckAt, stuckNote, startSwing, breakdowns, lateGame, ovT, crowdFix,
   toast, toastMs, hideToast, get toastT() { return toastT; },
+  fitAm, blowUp, amAlarm, antimatter, amOpen, lineWrecks, wrecked, wreck, shipV, slowDry, amWorst, wreckWorst, AM: { YEAR: AM_YEAR, FAST: AM_FAST, WARN: AM_WARN, HEAL: WRECK_HEAL, UPKEEP: AM_UPKEEP }, offerPair, whyNot, canBuy, applyOffer,   // 5.65
   fast(sec) { const n = Math.round(sec / STEP); for (let i = 0; i < n && !S.over; i++) step(STEP); },
   screen(id) { const n = PL[IDX[id]], x = X(n.x), y = Y(n.y); return rot ? { x: VW - y, y: x } : { x, y }; },
   linePoint(i) { const p = S.lines[i].segs[0].pts[12], x = X(p.x), y = Y(p.y); return rot ? { x: VW - y, y: x } : { x, y }; },
