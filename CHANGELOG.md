@@ -1,5 +1,11 @@
 # Changelog
 
+## 5.68
+- **Places can vote to ban antimatter ships.** A place an antimatter ship blew up at, or beside (either end of a stretch it wrecked), remembers it for three periods. If its crews get restless while antimatter ships still call there, their vote is **no ⚛ here** instead of the usual line or money. A blast out on a stretch now adds a little unrest at both ends, as storm damage does.
+  - Give them it and the drives on every line through there **go back to spare** (one failing at that moment is vented), and none can be fitted to those lines for two periods. A line redrawn through a place with a ban gives its drives back to spare too. The place's bar shows the time left (no ⚛ 160s).
+  - As with any vote, you can offer something else instead, and they may refuse.
+- **The start screen shows an antimatter ship** once you've unlocked the drive in any run: it laps the orange line at twice the speed of the others, violet plume and all. Remembered in this browser.
+
 ## 5.67
 - **An antimatter drive starting to fail always pauses the game** (it used to only when you could miss it), unless the pause switch in the speed menu is off. The switch now reads “new place · talks · ⚛”.
 - **Vent**, beside Repair on the note and in the line's bar: free, and the ship flies on as an ordinary ship, but the drive is gone. So there's always a move, even with no budget: Repair keeps the drive for a repair's price, Vent saves the ship and its freight, or let it go.
