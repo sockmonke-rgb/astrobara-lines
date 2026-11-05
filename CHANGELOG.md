@@ -1,5 +1,8 @@
 # Changelog
 
+## 5.69
+- **Fixed: the start screen's antimatter ship didn't show until you'd played a moment in 5.68.** It only noticed the drive while a run was going. Now a saved run that has reached the drive counts too, so it's there on the start screen straight after the update.
+
 ## 5.68
 - **Places can vote to ban antimatter ships.** A place an antimatter ship blew up at, or beside (either end of a stretch it wrecked), remembers it for three periods. If its crews get restless while antimatter ships still call there, their vote is **no ⚛ here** instead of the usual line or money. A blast out on a stretch now adds a little unrest at both ends, as storm damage does.
   - Give them it and the drives on every line through there **go back to spare** (one failing at that moment is vented), and none can be fitted to those lines for two periods. A line redrawn through a place with a ban gives its drives back to spare too. The place's bar shows the time left (no ⚛ 160s).

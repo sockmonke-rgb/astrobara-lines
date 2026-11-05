@@ -644,7 +644,7 @@ const $ = id => document.getElementById(id);
 const app = $('app'), cv = $('cv'), ctx = cv.getContext('2d');
 
 /* ================= Tuning ================= */
-const VERSION = '5.68';
+const VERSION = '5.69';
 // 5.49: where ≡ → Report sends reports: a Cloudflare Worker that files each one as an issue in a private repo
 // (report-worker/ has its code and setup). While it's empty, Report copies the report and offers a GitHub issue.
 const REPORT_URL = '';
@@ -5404,8 +5404,13 @@ function rememberScen(k) { pickScen = k; try { localStorage.setItem('lagrange-sc
 let pickHard = (() => { try { return localStorage.getItem('lagrange-hard') === '1'; } catch (_) { return false; } })();
 function rememberHard(v) { pickHard = !!v; try { localStorage.setItem('lagrange-hard', pickHard ? '1' : '0'); } catch (_) {} }
 const tutDone = () => { try { return localStorage.getItem('lagrange-tut') === '1'; } catch (_) { return false; } };
+// the period an Earth–Moon run reaches AM_YEAR (perOf goes by the current run's calendar, which may be another start's)
+function amPerSol() { const K = KNOTS_SOL; for (let k = 1; k < K.length; k++) if (AM_YEAR <= K[k][1]) return K[k - 1][0] + (AM_YEAR - K[k - 1][1]) * (K[k][0] - K[k - 1][0]) / (K[k][1] - K[k - 1][1]); return K[K.length - 1][0]; }
 function splashUI() {
   const sv = bestSave(), sol = pickScen === 'sol';
+  // 5.69: a saved run that's reached the antimatter drive counts as unlocking it, so the start screen shows one before
+  // you've played a moment in this version (5.68 only noticed while a run was going)
+  if (!amSeen && sv && sv.state) { const o = sv.state; if (o.amTold || (o.t || 0) >= (o.scen === 'sol' ? amPerSol() : 3) * YEAR) { amSeen = true; setPref('lagrange-am', 1); splashKey = ''; } }
   document.querySelectorAll('#splash [data-a=scen]').forEach(b => { const on = b.dataset.k === pickScen; b.classList.toggle('on', on); b.setAttribute('aria-checked', String(on)); });
   document.querySelectorAll('#splash [data-a=mode]').forEach(b => { const on = (b.dataset.k === '1') === pickHard; b.classList.toggle('on', on); b.setAttribute('aria-checked', String(on)); });
   $('bCont').hidden = !sv; if (sv) $('bCont').textContent = `Continue · ${sv.label || 'saved run'}`;
