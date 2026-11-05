@@ -643,7 +643,7 @@ const $ = id => document.getElementById(id);
 const app = $('app'), cv = $('cv'), ctx = cv.getContext('2d');
 
 /* ================= Tuning ================= */
-const VERSION = '5.65';
+const VERSION = '5.66';
 // 5.49: where ≡ → Report sends reports: a Cloudflare Worker that files each one as an issue in a private repo
 // (report-worker/ has its code and setup). While it's empty, Report copies the report and offers a GitHub issue.
 const REPORT_URL = '';
@@ -3634,7 +3634,7 @@ function refreshPop(force) {
       // 5.51: with a ship picked, what it carries takes the place of the line's summary (tap its number again to go back)
       const pk = sel.ship && L.ships.includes(sel.ship) ? sel.ship : null;
       const wr = lineWrecks(L).length, hot = L.ships.find(x => x.amAlarm);
-      const html = `${hulls}<span>${hot ? `${gi('iAm')} blows in ${Math.max(0, Math.ceil(hot.amAlarm - S.t))}s · ` : ''}${wr ? `💥 wrecked ${Math.max(0, Math.ceil(Math.min(...lineWrecks(L).map(w => w.until)) - S.t))}s · ` : ''}${pk ? loadText(pk) : `${how} · holds ${cap}`}${slowDry(L) ? ` · no ${shp('diamond')} fuel, slow` : ''}</span>`;
+      const html = `${hulls}<span>${hot ? `${gi('iAm')} ${Math.max(0, Math.ceil(hot.amAlarm - S.t))}s · ` : ''}${wr ? `💥 ${Math.max(0, Math.ceil(Math.min(...lineWrecks(L).map(w => w.until)) - S.t))}s · ` : ''}${pk ? loadText(pk) : `${how} · holds ${cap}`}${slowDry(L) ? ` · no ${shp('diamond')} fuel, slow` : ''}</span>`;
       const el = P.querySelector('[data-f="lst"]'); if (el && el.dataset.sig !== html) { el.dataset.sig = html; el.innerHTML = html; }
       setF('nShips', String(S.inv.ships), true); setF('nPods', String(S.inv.pods), true); setF('nAm', String(S.inv.am || 0), true); setF('lyr', yrTag(L.stops));
       const nudge = P.querySelector('[data-a="addShip"]'); if (nudge) nudge.classList.toggle('nudge', !!(S.tut && S.tut.step === 5 && S.inv.ships > 0));
@@ -3713,7 +3713,12 @@ let fitRaf = 0;
 function fitInfo(reset) {
   const si = P.querySelector('.si'); if (!si || P.hidden) return;
   if (reset) si.style.minWidth = '';
-  const nm = si.querySelector('.nm'), st = si.querySelector('.st'), cap = Math.max(190, W * .48);
+  // 5.66: ...but never so far that the buttons beside it go out of sight. It used to be able to grow to half the
+  // screen, and on a phone with a notch that pushed every button off the bar (the line's + ship among them).
+  let others = 0, kids = 0; for (const c of P.children) if (c !== si && c.offsetWidth) { others += c.offsetWidth; kids++; }
+  const gap = parseFloat(getComputedStyle(P).columnGap) || 6, room = Math.floor(P.clientWidth - others - gap * kids - 2);
+  const nm = si.querySelector('.nm'), st = si.querySelector('.st'), cap = Math.max(118, Math.min(Math.max(190, W * .48), room));
+  if (parseFloat(si.style.minWidth) > cap) si.style.minWidth = cap + 'px';
   const cut = () => (nm && nm.scrollWidth > nm.clientWidth + 1) || (st && st.scrollHeight > st.clientHeight + 1);
   let w = si.offsetWidth, n = 0;
   while (cut() && w < cap && n++ < 60) { w = Math.min(cap, w + 12); si.style.minWidth = w + 'px'; }

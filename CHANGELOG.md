@@ -1,5 +1,9 @@
 # Changelog
 
+## 5.66
+- **Fixed: a line's buttons (+ ship, pods, remove) could sit off the end of the bottom bar**, behind a long blank stretch you had to drag past. The name and status box on the left grew to fit long status text (5.58), up to half the screen, and didn't shrink back. On a phone with a notch, with Fit showing, that left no room for the buttons. Now the box never grows past the room the buttons need, so they stay in view whenever they fit at all.
+- A failing antimatter drive and a wreck clearing say less in the line bar (⚛ 9s, 💥 32s), since the note at the top says the rest.
+
 ## 5.65
 - **Antimatter drive.** On sale in the Alliance Shop from 2085 (Proxima and Uncharted runs: from the third visit), and now and then a free pick. Tap a line, then **+⚛**, to fit one to a ship: the one you picked, or else the first without one. The Timeline lists it as a concept: in 2026 physicists at Northwestern kept a single positron trapped for a month.
   - **What it's good at:** the ship flies **twice as fast** and needs **no ◆ fuel stop** (on Hard, a long dry line runs it about 2.9× a normal ship there). It costs upkeep like 1.5 ships, so it does a two-ship job with one berth.
