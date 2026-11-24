@@ -21,10 +21,10 @@ It's one HTML file with no build step and no dependencies. It plays in a phone o
 - **Places:** tap a place to build a depot or fast dock, protect it with a shield, repair storm damage, or open talks.
 - **Alliance Shop:** every period the Lagrange Alliance sends a ship, sells upgrades and offers one free pick. You can skip the pick and bank interest instead.
 - **Antimatter drive:** from 2085 the Shop sells a drive you fit to a ship from its line (+⚛). It flies twice as fast and needs no ◆ fuel stop, for 1.5 ships' upkeep. Now and then its containment fails and the game pauses: Repair it, Vent the core for free (the ship flies on without its drive), or let it blow up with its freight, damaging the place it's docked at (a shield takes the blast) or wrecking the stretch it's on until repaired or 40 seconds pass.
-- **Storms, debris and surges:** shields keep lines running through them. Late in a run, places that are kept waiting grow restless and may declare independence until you negotiate.
+- **Storms, debris and surges:** shields keep lines running through them. Late in a run, places that are kept waiting grow restless and vote on what they want, with strike notice: no deal in 30 seconds and the crews on lines through there strike (about half the ships lay up, one per line keeps running). Keep them waiting longer and they declare independence until you negotiate.
 - **Normal and Hard:** chosen on the start screen. Hard has the full friction below; Normal caps upkeep at 35%, drops the fuel slowdown, has rarer breakdowns and keeps the 30s red ring.
 - **Freight:** each star system gets busier for about ten periods after it opens, keeps growing until a while after its last place opens, then levels off.
-- **Friction:** ships at work cost upkeep at each shop visit, a share of what the network earned that grows with the fleet (up to 60%). A place loads three ships at once and the rest queue. Long lines with no ◆ fuel depot run slower. Late in a run ships break down now and then, rushes and strikes swing demand, and the red ring fills faster.
+- **Friction:** ships at work cost upkeep at each shop visit, a share of what the network earned that grows with the fleet (up to 60%). A place loads three ships at once and the rest queue. Long lines with no ◆ fuel depot run slower. Late in a run ships break down now and then, rushes swing demand, and the red ring fills faster.
 - **Stuck freight:** if loads at a place can't board anything, a note says where and why.
 
 ## Starts
@@ -46,7 +46,7 @@ Every run has a code like `SOL-HALO-417`. Type it on the start screen to play th
   - <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> <kbd>5</kbd> set the speed (5× asks first).
   - <kbd>Esc</kbd> closes the bar along the bottom.
 - **Notes:** the notes that pop up at the top right fade on their own. Hold one to pause the game and read it; tap it to put it away.
-- **Pauses:** by default the game pauses when a new place opens or a place wants to talk. Turn this off in the speed menu.
+- **Pauses:** by default the game pauses when a new place opens, a place wants to talk or its crews go on strike. Turn this off in the speed menu.
 - **Settings:** ≡ → ⚙, or ⚙ on the start screen. **Colour-blind safe** uses line colours that stay apart with colour blindness, numbers every line on its knobs and swatch, and marks round freight (the Moon a crescent, Mars a band). **Text size** goes to 120% or 140%. Both are kept in the browser.
 
 ## Saving, leaderboard, awards

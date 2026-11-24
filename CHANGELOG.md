@@ -1,5 +1,16 @@
 # Changelog
 
+## 5.71
+- **Strikes, after notice.** Like the CP train drivers' strike of 23–27 November 2026: when a restless place votes on what it wants, it now gives **strike notice** too (strike in 30s). Make any deal before then, or serve it till it calms down, and it's called off. Otherwise the crews on every line through there **walk out for 30s**:
+  - about half of each of those lines' ships stand down at their next stop. They drop off what's for that stop, keep the rest of their freight aboard, and lay up above the stop, dimmed with a little flag. **One ship per line always runs** (minimum service), so a line of n ships runs n/2 rounded down, at least one;
+  - the share holds while it's on: taking a striking ship off and putting it back doesn't get it working again;
+  - if your lines reach another place of its kind, its docks take **no deliveries**, and freight for it goes there instead (a dashed red ring). The only one of its kind keeps taking them;
+  - settling calls it off at any point: their demand (never refused), the capybara envoy, a payment or any other deal they take.
+- Escalation is now vote → strike → independence. Independence can still come during the notice, if they get angry enough, but waits while a strike is on.
+- The game pauses at the vote (strike in 30s) and when the strike starts, with Negotiate in the note, unless the pause switch is off. The note at the top counts down to the strike, then to its end. Talks show the strike clock beside unrest, and the place's bar and the line's bar say how long and how many ships are out.
+- **No more random strikes.** The demand swing where a place took no deliveries out of the blue is gone; strikes come from votes left unmet. Rushes come as often as before, and the old strike's share of events goes to the rest. A strike already under way in a saved run finishes as before.
+- Reports list strikes by place and line, and the end card counts them.
+
 ## 5.70
 - The start screen's antimatter ship is solid orange, outlined like the others, so it reads against the line.
 

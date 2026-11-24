@@ -433,6 +433,7 @@ button.link{height:auto;min-height:0;padding:2px 0;border:none;background:none;c
 #sel .hull[data-a]{cursor:pointer}#sel .hull.on{box-shadow:0 0 0 2px #fff;outline:none}
 #sel .hull .gi{width:10px;height:10px;vertical-align:0}
 #sel .hull.hot{animation:hullHot .5s steps(2) infinite}
+#sel .hull.walk{opacity:.5}
 @keyframes hullHot{50%{background:#ff5a4a;color:#fff}}
 @keyframes hullIn{0%{transform:scale(0);box-shadow:0 0 0 0 rgba(255,255,255,.9)}50%{box-shadow:0 0 0 5px rgba(255,255,255,0)}100%{transform:none}}
 .chip.got{animation:okPop .6s ease-out}
@@ -644,7 +645,7 @@ const $ = id => document.getElementById(id);
 const app = $('app'), cv = $('cv'), ctx = cv.getContext('2d');
 
 /* ================= Tuning ================= */
-const VERSION = '5.70';
+const VERSION = '5.71';
 // 5.49: where ≡ → Report sends reports: a Cloudflare Worker that files each one as an issue in a private repo
 // (report-worker/ has its code and setup). While it's empty, Report copies the report and offers a GitHub issue.
 const REPORT_URL = '';
@@ -1052,7 +1053,7 @@ function generateSystem(seed, k = 0) {
 }
 // 5.60: a place joining the map mid-run (a chained system's), with room for it in every per-place list of the run
 const PLACE_KEYS = { shape: null, irl: null, at: NEVER, open: false, openedAt: 0, Q: null, of: 0, depot: false, shield: false, flash: 0, dmg: false,
-  unrest: 0, rebel: 0, demand: null, fastDock: false, toll: 0, calm: 0, keepShield: false };
+  unrest: 0, rebel: 0, demand: null, fastDock: false, toll: 0, calm: 0, keepShield: false, walk: null };
 function addPlace(d) {
   const i = PL.length; PL.push(d); IDX[d.id] = i; NP = PL.length;
   if (S) for (const key in PLACE_KEYS) if (Array.isArray(S[key])) S[key][i] = key === 'Q' ? [] : key === 'shape' ? d.shape : PLACE_KEYS[key];
@@ -1218,8 +1219,8 @@ function newRun(seed, scen) {
     fund: SEED_FUND, delivered: 0, yearDel: 0, yearPay: 0, lastMeet: 0, earnedMeet: 0,
     haz: null, debris: false, nextHaz: (rnd(), YEAR * .5), script: ['surge', 'storm'], boom: null, nextBoom: YEAR * (2.6 + 0.6 * rnd()),
     log: [], hist: [{ t: 0, fund: SEED_FUND }], hints: {}, hint: null, unreach: 0, unreachT: 0,
-    unrest: Array(NP).fill(0), rebel: Array(NP).fill(0), demand: Array(NP).fill(null), fastDock: Array(NP).fill(false), toll: Array(NP).fill(0), calm: Array(NP).fill(0), keepShield: Array(NP).fill(false),
-    flash: Array(NP).fill(0), fail: null, stat: { haz: 0, rebels: 0, close: 0, first: null }, ach: [], achNew: [], envoyAt: null, best: readBest(scen), view: SC.view, tunnelT: -9, tunneled: 0, sensor: SENSORS.map(() => false), sensorOff: SENSORS.map(() => 0), up: { fast: 0, hold: 0, dock: 0, room: 0 }, bought: {}, dmg: Array(NP).fill(false), earned: 0,
+    unrest: Array(NP).fill(0), rebel: Array(NP).fill(0), demand: Array(NP).fill(null), fastDock: Array(NP).fill(false), toll: Array(NP).fill(0), calm: Array(NP).fill(0), keepShield: Array(NP).fill(false), walk: Array(NP).fill(null),
+    flash: Array(NP).fill(0), fail: null, stat: { haz: 0, rebels: 0, strikes: 0, close: 0, first: null }, ach: [], achNew: [], envoyAt: null, best: readBest(scen), view: SC.view, tunnelT: -9, tunneled: 0, sensor: SENSORS.map(() => false), sensorOff: SENSORS.map(() => 0), up: { fast: 0, hold: 0, dock: 0, room: 0 }, bought: {}, dmg: Array(NP).fill(false), earned: 0,
     wreck: [], amTold: false, amFear: {}, noAm: {},   // 5.68: when a blast last shook each place, and bans on antimatter ships (by place id)   // 5.65: wrecked stretches ({ a, b: place ids, until }), and whether the drive's been announced
   };
   S.rs = h.rs; S.rnd = rngOf(S);
@@ -1337,9 +1338,16 @@ function reroute() {
   for (const [a, b] of up) { const i = ix[a], j = ix[b]; D[i][j] = D[j][i] = TUNNEL; NX[i][j] = j; NX[j][i] = i; }
   for (let k = 0; k < m; k++) { const Dk = D[k]; for (let i = 0; i < m; i++) { const Di = D[i], dik = Di[k]; if (dik === Infinity) continue; const Ni = NX[i];
     for (let j = 0; j < m; j++) if (dik + Dk[j] < Di[j]) { Di[j] = dik + Dk[j]; Ni[j] = Ni[k]; } } }
+  // 5.71: a place on strike sends freight for it to the nearest other place of its kind your lines reach, if any
+  S.walkAlt = {};
+  if (walkAny()) for (let z = 0; z < n; z++) if (walkLive(z)) {
+    let b = -1, bd = Infinity; const a = ix[z];
+    if (a >= 0) for (let k = 0; k < n; k++) if (k !== z && S.open[k] && S.shape[k] === S.shape[z] && !walkLive(k) && ix[k] >= 0 && D[a][ix[k]] < bd) { bd = D[a][ix[k]]; b = k; }
+    S.walkAlt[z] = b;
+  }
   // the open places of each kind freight can be headed for
   const kinds = {}; for (const s of S.present) kinds[s] = [];
-  for (let z = 0; z < n; z++) if (S.open[z] && kinds[S.shape[z]] && !swingLive('strike', z)) kinds[S.shape[z]].push(z);
+  for (let z = 0; z < n; z++) if (S.open[z] && kinds[S.shape[z]] && !noDeliv(z)) kinds[S.shape[z]].push(z);
   S.NH = []; S.DS = [];
   for (let i = 0; i < n; i++) {
     const row = {}, dist = {}, a = ix[i], Da = a >= 0 ? D[a] : null;
@@ -1726,7 +1734,14 @@ function spawn(i) {
   for (const [s, w] of opts) { r -= w; if (r <= 0) { want = s; break; } }
   S.Q[i].push({ want, born: S.t });
 }
+// 5.71: a ship on strike drops off what's for here (if the place takes deliveries), keeps the rest aboard, and loads nothing
+function layUp(L, sh) {
+  const p = L.stops[sh.k]; if (noDeliv(p) || !sh.cargo.some(c => c.want === S.shape[p])) return 0;
+  let n = 0; sh.cargo = sh.cargo.filter(c => { if (c.want !== S.shape[p]) return true; delete c.lap; deliver(c, L, p); n++; return false; });
+  return n;
+}
 function moveShip(L, sh, dt) {
+  if (sh.state === 'stop' && sh.walk) { layUp(L, sh); return; }   // 5.71: laid up till the strike's over
   if (sh.state === 'stop') {
     sh.dwell -= dt;
     if (sh.dwell > 0) return;
@@ -1749,11 +1764,11 @@ function moveShip(L, sh, dt) {
   else {
     // 5.21: every berth taken, so wait just outside
     const nk = stepK(L, sh.k, sh.dir), np = L.stops[nk];
-    if (docked(np) >= berths(np)) { sh.d = sg.len; if (sh.queued !== np) { sh.queued = np; if (!S.auto && queueAt(np) >= 2) hint('berth', np); } return; }
+    if (!sh.walk && docked(np) >= berths(np)) { sh.d = sg.len; if (sh.queued !== np) { sh.queued = np; if (!S.auto && queueAt(np) >= 2) hint('berth', np); } return; }
     sh.queued = null;
     sh.k = nk; sh.d = 0; sh.state = 'stop';
     if (L.loop) turnRound(L, sh);
-    sh.dwell = (0.3 + 0.1 * exchange(L, sh)) * dockK(L.stops[sh.k]);
+    sh.dwell = (0.3 + 0.1 * (sh.walk ? layUp(L, sh) : exchange(L, sh))) * dockK(L.stops[sh.k]);
   }
 }
 // 5.21: loads at a place that no ship will ever take: no route to their kind of place, or no ship that goes their
@@ -1762,7 +1777,7 @@ function stuckAt(i) {
   if (!onLines(i) || rebelNow(i) || !S.Q[i].length) return null;
   const mine = S.lines.filter(L => L.stops.includes(i));
   if (mine.some(L => L.segs.some(sg => sg.closed))) return null;
-  if (S.haz && S.haz.type === 'strike' && S.haz.phase === 'live') return null;
+  if ((S.haz && S.haz.type === 'strike' && S.haz.phase === 'live') || walkAny()) return null;
   const tw = tunnels().find(t => t.includes(i) && tunnelUp(t));
   let n = 0, noRoute = 0; const by = {};
   for (const c of S.Q[i]) {
@@ -1795,7 +1810,7 @@ function reliefFor(i) {
   for (const L of S.lines) {
     const k = L.stops.indexOf(i); if (k < 0) continue;
     for (const sh of L.ships) {
-      if (sh.fix || (sh.state === 'stop' && sh.k === k)) continue;   // docked here already took what it could
+      if (sh.fix || sh.walk || (sh.state === 'stop' && sh.k === k)) continue;   // docked here already took what it could (5.71: or on strike)
       const dir = sh.state === 'move' ? sh.dir : nextDir(L, sh);
       if (stepK(L, sh.k, dir) !== k) continue;
       const sg = segOf(L, sh.k, dir); if (!sg || sg.closed) continue;
@@ -1815,7 +1830,7 @@ function reliefFor(i) {
     if (q == null || !sg || sg.closed) continue;
     const lap = oneWay(L), rides = c => helps(c, i, q) || (lap && ahead(L, k, d, c, i));
     let keep = 0, drop = 0;
-    for (const c of sh.cargo) { if (S.shape[i] === c.want) { if (swingLive('strike', i)) keep++; continue; } if (rides(c)) keep++; else drop++; }
+    for (const c of sh.cargo) { if (S.shape[i] === c.want) { if (noDeliv(i)) keep++; continue; } if (rides(c)) keep++; else drop++; }
     let free = shipCap(sh) - keep, took = 0;
     for (let j = 0; j < S.Q[i].length && free > 0; j++) if (!taken.has(j) && rides(S.Q[i][j])) { taken.add(j); free--; took++; }
     net += took - drop;
@@ -1824,7 +1839,7 @@ function reliefFor(i) {
 }
 // 5.21: how many ships a place loads at once, and how many are loading or waiting there now
 const berths = i => BERTHS + (S.fastDock && S.fastDock[i] ? 2 : 0) + (PL[i].rate === 0 ? 2 : 0);
-function docked(i) { let n = 0; for (const L of S.lines) for (const sh of L.ships) if (sh.state === 'stop' && L.stops[sh.k] === i) n++; return n; }
+function docked(i) { let n = 0; for (const L of S.lines) for (const sh of L.ships) if (sh.state === 'stop' && L.stops[sh.k] === i && !sh.walk) n++; return n; }   // 5.71: a ship on strike is laid up, not in a berth
 function queueAt(i) { let n = 0; for (const L of S.lines) for (const sh of L.ships) if (sh.queued === i && sh.state === 'move') n++; return n; }
 // 5.20: a loop's ships stay split between the two ways round. A ship on the busier side turns round where it
 // docks, so a lopsided loop (two ships closed into a loop while both were heading the same way, a ship taken
@@ -1849,7 +1864,7 @@ function exchange(L, sh) {
   const lap = open && oneWay(L);
   let n = 0; const keep = [];
   for (const c of sh.cargo) {
-    if (S.shape[p] === c.want && !swingLive('strike', p)) { delete c.lap; deliver(c, L, p); n++; }
+    if (S.shape[p] === c.want && !noDeliv(p)) { delete c.lap; deliver(c, L, p); n++; }
     else if (open && S.shape[p] === c.want) keep.push(c);   // 5.21: struck: it rides on rather than piling up at a place on strike
     else if (!open || !(helps(c, p, q) || (c.lap && L.loop && ahead(L, sh.k, dir, c, p)))) { delete c.lap; S.Q[p].push(c); n++; }
     else keep.push(c);
@@ -1937,20 +1952,79 @@ const warnRoom = () => (lateGame() ? 5 : 3);
 const crowdAt = i => Math.max(room(i) - warnRoom() + 1, Math.ceil(room(i) * .75));
 const negotiateCost = () => Math.round(100 * costK());
 const rebelWord = i => (S.scen === 'sol' && BELT.includes(PL[i].id) ? 'Belters' : 'Workers');
+/* 5.71: strikes, like the CP train drivers' strike of 23–27 November 2026. A restless place that votes on a demand
+   gives strike notice with it. Meet them (any deal, or serve them till they calm down) before it runs out, or the
+   crews on lines through there walk out for WALK_DUR seconds: about half each line's ships stand down at their next
+   stop, holding their freight, while one per line keeps running as a minimum service; and if your lines reach
+   another place of its kind, its docks take no deliveries and freight for it goes there instead. Settling calls
+   it off at any point. Independence, the next step, takes its place. */
+const NOTICE = 30, WALK_DUR = 30;
+const walkOf = i => (S && S.walk && S.walk[i]) || null;
+const walkSoon = i => { const w = walkOf(i); return !!w && S.t < w.at; };
+const walkLive = i => { const w = walkOf(i); return !!w && S.t >= w.at && S.t < w.until; };
+const walkAny = () => !!(S && S.walk) && S.walk.some((w, i) => w && walkLive(i));
+// a place on strike takes no deliveries if another of its kind is on your lines (the old random strike too)
+const noDeliv = i => swingLive('strike', i) || (walkLive(i) && !!S.walkAlt && S.walkAlt[i] >= 0);
+// how many of a line's ships stand down: about half, but one always runs
+const walkDown = n => Math.min(n - 1, Math.ceil(n / 2));
+// 5.71: each line through a place on strike keeps about half its ships stood down, whatever ships come and go, so
+// swapping a ship off and back on doesn't break the strike: a line of n runs max(1, n/2 rounded down)
+function walkLines() {
+  for (const L of S.lines) {
+    let by = null; for (const i of L.stops) if (walkLive(i)) { by = PL[i].id; break; }
+    const want = by ? walkDown(L.ships.length) : 0; let have = 0;
+    for (const x of L.ships) if (x.walk) { if (have < want) have++; else x.walk = null; }
+    for (let k = L.ships.length - 1; k >= 0 && have < want; k--) { const x = L.ships[k]; if (!x.walk) { x.walk = by; have++; } }
+  }
+}
+const walkShips = L => L.ships.filter(x => x.walk).length;
+function giveNotice(i) {
+  if (!S.walk) S.walk = Array(NP).fill(null);
+  if (S.walk[i] || !onLines(i)) return false;
+  S.walk[i] = { at: S.t + NOTICE, until: S.t + NOTICE + WALK_DUR }; return true;
+}
+function startWalk(i) {
+  const w = S.walk[i]; w.on = true; if (S.stat) S.stat.strikes = (S.stat.strikes || 0) + 1;
+  walkLines(); reroute();
+  const out = S.lines.reduce((a, L) => a + (L.stops.includes(i) ? walkShips(L) : 0), 0), alt = S.walkAlt ? S.walkAlt[i] : -1;
+  log(`Crews on lines through ${placeName(i)} went on strike for ${WALK_DUR}s: ${out} ship${out === 1 ? '' : 's'} stood down, one per line still runs${alt >= 0 ? `, and its docks take no deliveries (freight for it goes to ${placeName(alt)})` : ''}. Settle to call it off.`, 'bad');
+  const what = out ? `${out} ${gi('iShip')} out` : alt >= 0 ? `no deliveries` : 'minimum service';
+  if (!S.auto && !talkPause(i, `on strike ${WALK_DUR}s · ${what}`)) toast(`${gi('iFlag')} <b>Strike at ${esc(placeName(i))}</b> · ${what} ${WALK_DUR}s · tap it to negotiate`, 5000);
+}
+function endWalk(i, why) {
+  const w = S.walk[i], live = !!w && w.on; S.walk[i] = null;
+  if (live) { walkLines(); reroute(); }
+  if (why === 'over') { log(`The strike at ${placeName(i)} is over. Its crews are back.`, 'good'); if (!S.auto) toast(`${gi('iFlag')} Strike at ${esc(placeName(i))} over`, 2800); }
+  else if (why) log(`The ${live ? 'strike' : 'strike notice'} at ${placeName(i)} was called off${why === 'calm' ? ': they calmed down' : ''}.`, 'good');
+}
+function walkTick() {
+  if (!S.walk) return;
+  let any = false;
+  for (let i = 0; i < NP; i++) {
+    const w = S.walk[i]; if (!w) continue;
+    if (S.t >= w.until) endWalk(i, 'over');
+    else if (S.t >= w.at && !w.on) startWalk(i);
+    if (S.walk[i] && S.walk[i].on) any = true;
+  }
+  if (any || S.lines.some(L => L.ships.some(x => x.walk))) walkLines();
+}
 function unrestTick(dt) {
   if (!S.unrest) { S.unrest = Array(NP).fill(0); S.rebel = Array(NP).fill(0); }
   if (!S.demand) S.demand = Array(NP).fill(null);
+  walkTick();
   for (let i = 0; i < NP; i++) {
     if (S.rebel[i]) { if (S.t >= S.rebel[i]) endRebel(i, false); continue; }
     if (!S.open[i] || !unrestOn() || !canRebel(i) || (S.calm && S.calm[i] > S.t)) continue;
     const p = S.Q[i].length / room(i), d = p > .6 ? (p - .6) * .05 : p < .35 ? -.012 : -.002;
-    S.unrest[i] = Math.max(0, Math.min(1, S.unrest[i] + (d + (S.dmg[i] ? .004 : 0)) * dt));
+    // 5.71: while its crews are out, independence waits for the strike to end (the notice doesn't hold it back)
+    S.unrest[i] = Math.max(0, Math.min(walkLive(i) ? .99 : 1, S.unrest[i] + (d + (S.dmg[i] ? .004 : 0)) * dt));
     if (S.unrest[i] >= .6 && !S.demand[i]) voteDemand(i);
-    if (S.unrest[i] < .3 && S.demand[i]) S.demand[i] = null;
+    if (S.unrest[i] < .3 && S.demand[i]) { S.demand[i] = null; if (walkOf(i)) endWalk(i, 'calm'); }
     if (S.unrest[i] >= 1) startRebel(i);
   }
 }
 function startRebel(i) {
+  if (walkOf(i)) endWalk(i, null);   // 5.71: independence takes the strike's place
   S.rebel[i] = S.t + REBEL_DUR; S.unrest[i] = 1; if (S.stat) S.stat.rebels++;
   markClosures(); reroute();
   log(`${rebelWord(i)} at ${placeName(i)} declared independence: its lines are closed and it trades with no one for ${REBEL_DUR}s, or until you negotiate.`, 'bad');
@@ -2019,8 +2093,9 @@ const demandText = d => (d.type === 'noam' ? 'no antimatter ships here, for two 
 const demandShort = d => (d.type === 'noam' ? 'no ⚛' : d.type === 'extend' ? `${S.lines.find(x => x.id === d.L).name} line` : d.type === 'line' ? `line to ${placeName(d.to)}` : 'money');
 function voteDemand(i) {
   S.demand[i] = demandFor(i);
-  log(`${rebelWord(i)} at ${placeName(i)} voted on what they want: ${demandText(S.demand[i])}.`, 'warn');
-  if (!S.auto && !talkPause(i, `voted: ${esc(demandShort(S.demand[i]))}`)) toast(`${gi('iFlag')} <b>${esc(placeName(i))}</b> voted: ${esc(demandText(S.demand[i]))}`, 4500);
+  const notice = giveNotice(i);   // 5.71
+  log(`${rebelWord(i)} at ${placeName(i)} voted on what they want: ${demandText(S.demand[i])}.${notice ? ` Unless they get a deal in ${NOTICE}s, crews on lines through there strike for ${WALK_DUR}s.` : ''}`, 'warn');
+  if (!S.auto && !talkPause(i, `voted: ${esc(demandShort(S.demand[i]))}${notice ? ` · strike in ${NOTICE}s` : ''}`)) toast(`${gi('iFlag')} <b>${esc(placeName(i))}</b> voted: ${esc(demandText(S.demand[i]))}${notice ? ` · strike in ${NOTICE}s` : ''}`, 4500);
 }
 // A vote or a declaration of independence is worth stopping for: pause, open the place's bar (its
 // Negotiate button pulses), put a Negotiate button in the note, and glide a zoomed-in view there.
@@ -2069,6 +2144,7 @@ function settle(i, what, calm) {
   if (S.rebel[i]) endRebel(i, true);
   S.unrest[i] = 0;
   log(`Talks with ${placeName(i)}: they settled for ${what}.`, 'good');
+  if (walkOf(i)) endWalk(i, 'deal');   // 5.71: a deal calls off the strike, or its notice
 }
 // Giving them what they voted for always works, and keeps them calm for two periods.
 function acceptDemand(i) {
@@ -2098,13 +2174,14 @@ function talksHTML(i) {
   const dIcon = d.type === 'pay' ? 'iFlag' : d.type === 'noam' ? 'iAm' : 'iLine', dSw = d.type === 'extend' ? swatch(S.lines.find(x => x.id === d.L)) : '';
   return `<div class="mhead"><div class="col"><div class="eyebrow">Talks · ${esc(placeName(i))}</div>
       <div class="mfunds"><div class="mfund"><span class="lbl">${reb ? 'Independent' : 'Unrest'}</span><b style="color:#ffb27a">${reb ? Math.ceil(S.rebel[i] - S.t) + 's' : Math.round(S.unrest[i] * 100) + '%'}</b></div>
+        ${!reb && walkOf(i) ? `<div class="mfund"><span class="lbl">${walkLive(i) ? 'On strike' : 'Strike in'}</span><b style="color:${walkLive(i) ? '#ff8a7a' : '#ffb27a'}">${Math.max(0, Math.ceil((walkLive(i) ? walkOf(i).until : walkOf(i).at) - S.t))}s</b></div>` : ''}
         <div class="mfund"><span class="lbl">Budget</span><b>${fmt(S.fund)}</b></div></div></div>
       <span class="credit mnote">Every refusal<br>makes them angrier</span></div>
     <div class="lbody"><div class="eyebrow">They voted for</div>
-      <button class="term demand" data-a="deal" data-k="vote" data-i="${i}" ${dNo ? 'aria-disabled="true"' : ''}>${ICON(dIcon)}<span class="ot"><b>${dSw}${esc(demandText(d))}</b><span>${d.type === 'noam' ? `Drives on lines through here go back to spare, and none can be fitted to those lines for two periods. ` : ''}Give them this and they’ll stay calm for two periods. They won’t refuse their own demand.</span>${dNo ? `<em>${dNo}</em>` : ''}</span></button>
+      <button class="term demand" data-a="deal" data-k="vote" data-i="${i}" ${dNo ? 'aria-disabled="true"' : ''}>${ICON(dIcon)}<span class="ot"><b>${dSw}${esc(demandText(d))}</b><span>${d.type === 'noam' ? `Drives on lines through here go back to spare, and none can be fitted to those lines for two periods. ` : ''}Give them this and they’ll stay calm for two periods${!reb && walkOf(i) ? ', and the strike’s off' : ''}. They won’t refuse their own demand.</span>${dNo ? `<em>${dNo}</em>` : ''}</span></button>
       <div class="eyebrow" style="margin-top:12px">Or offer something else · they may refuse</div>
       <div class="terms">${terms(i).map(t => { const no = talk.refused.has(t.k) ? 'Refused' : t.no; return `<button class="term${talk.refused.has(t.k) ? ' refused' : ''}" data-a="deal" data-k="${t.k}" data-i="${i}" ${no ? 'aria-disabled="true"' : ''}>${ICON(t.icon)}<span class="ot"><b>${t.name}</b><span>${t.desc}</span>${no ? `<em>${no}</em>` : ''}</span></button>`; }).join('')}</div></div>
-    <div class="foot"><span class="credit">Or keep them waiting, and serve them better.</span><button data-a="close">Not now</button></div>`;
+    <div class="foot"><span class="credit">${!reb && walkSoon(i) ? 'Or keep them waiting, and the crews strike.' : 'Or keep them waiting, and serve them better.'}</span><button data-a="close">Not now</button></div>`;
 }
 /* ================= Events ================= */
 const HAZ_GAP = () => YEAR * SCEN[S.scen].haz * (Math.max(0.4, 0.9 - 0.04 * S.t / YEAR) + 0.4 * S.rnd());
@@ -2161,7 +2238,7 @@ function breakdowns() {
   if (S.t < S.nextBrk) return;
   S.nextBrk = S.t + BRK_GAP();
   const pool = []; let tot = 0;
-  for (const L of S.lines) L.ships.forEach((sh, k) => { if (sh.brk || sh.fix) return; const w = 1 + L.stops.reduce((a, p) => a + S.Q[p].length / room(p), 0); pool.push([L, sh, k, w]); tot += w; });
+  for (const L of S.lines) L.ships.forEach((sh, k) => { if (sh.brk || sh.fix || sh.walk) return; const w = 1 + L.stops.reduce((a, p) => a + S.Q[p].length / room(p), 0); pool.push([L, sh, k, w]); tot += w; });
   if (!pool.length) return;
   let r = S.rnd() * tot, pick = pool[0]; for (const e of pool) { r -= e[3]; if (r <= 0) { pick = e; break; } }
   const [L, sh, k] = pick; sh.brk = S.t + BRK_WARN;
@@ -2347,8 +2424,8 @@ function startHazard() {
     toast(`${hazIcon(S.haz)} <b>${esc(S.haz.title)}</b> in ${Math.ceil(S.haz.at - S.t)}s · needs ${gi('iShield')} · ${sysLabel(S.haz.sys)}`, 6000);
 }
 // 5.21: a swing in demand. A rush: one place's freight all heads for one far-off kind of place for a while.
-// A strike: a place takes no deliveries for a while, and freight for its kind goes to another one that your
-// lines already reach from it (so there is always somewhere for it to go).
+// (Until 5.71 a swing could also be a strike: a place took no deliveries for a while, and freight for its kind went
+// to another one your lines already reached from it.)
 function linkedTo(a) {
   const seen = new Set([a]), todo = [a];
   while (todo.length) { const x = todo.pop(); for (const L of S.lines) { const n = L.stops.length; L.stops.forEach((s, k) => { if (s !== x) return; for (const j of [k - 1, k + 1]) { const y = L.stops[L.loop ? (j + n) % n : j]; if (y != null && !seen.has(y)) { seen.add(y); todo.push(y); } } }); } }
@@ -2358,13 +2435,11 @@ function startSwing(opens) {
   const busy = opens.filter(i => onLines(i) && PL[i].rate !== 0 && PL[i].body !== 'alien');
   if (!busy.length) return;
   const alt = i => { const net = linkedTo(i); let b = -1, bd = Infinity; for (const j of net) if (j !== i && S.open[j] && S.shape[j] === S.shape[i] && d2(PL[i], PL[j]) < bd) { bd = d2(PL[i], PL[j]); b = j; } return b; };
+  // 5.71: strikes no longer come out of the blue: they follow a vote left unmet (see NOTICE). The half of swings that
+  // used to be one goes to an ordinary event instead, so rushes come as often as before. (A strike in an older save
+  // still runs its course.)
   const strikes = busy.filter(i => i !== IDX[SCEN[S.scen].start[0]] && alt(i) >= 0);
-  if (strikes.length && S.rnd() < .5) {
-    const i = strikes[Math.floor(S.rnd() * strikes.length)], a = alt(i), role = SHAPES[S.shape[i]].role.toLowerCase();
-    S.haz = { type: 'strike', phase: 'warn', at: S.t + 15, dur: 30, i, alt: a, title: `Strike at ${placeName(i)}`, end: `The strike at ${placeName(i)} is over.`,
-      say: `For 30s it takes no deliveries: freight for a ${role} goes to ${placeName(a)} instead.` };
-    return;
-  }
+  if (strikes.length && S.rnd() < .5) return;
   const i = busy[Math.floor(S.rnd() * busy.length)];
   let want = null, far = 0; for (const s of S.present) if (s !== S.shape[i] && S.DS[i][s] < Infinity && S.DS[i][s] > far) { far = S.DS[i][s]; want = s; }
   if (!want) return;
@@ -2759,6 +2834,7 @@ function lostRows() {
   const left = [['reached', qLabel(S.t)], ['years run', String(Math.floor(cal(S.t)) - y0)], ['delivered', `${S.delivered.toLocaleString('en-US')} loads`],
     ['earned', fmt(S.earned)], ['network', `${S.open.filter(Boolean).length} places · ${S.lines.length} lines · ${ships} ships`]];
   const right = [['peak budget', fmt(Math.max(...S.hist.map(h => h.fund)))], ['first crowding', first], ['close calls', String(Math.max(0, (st.close || 0) - 1))], ['storms weathered', String(st.haz || 0)]];
+  if (st.strikes) right.push(['strikes', `${st.strikes} called`]);
   if (st.rebels) right.push(['independence', `${st.rebels} declared`]);
   return [left, right];
 }
@@ -2991,7 +3067,7 @@ function diagText() {
     L.push(`money: budget ${fmt(S.fund)} · earned ${fmt(S.earned)} · delivered ${S.delivered}`);
     L.push(`spares: ${JSON.stringify(S.inv)} · upgrades ${JSON.stringify(S.up)} · bought ${JSON.stringify(S.bought || {})}`);
     L.push(`lines ${S.lines.length}/${S.inv.lines}:`);
-    for (const ln of S.lines) { const cl = (ln.segs || []).filter(x => x.closed).length, br = ln.ships.filter(x => x.brk || x.fix).length, am = ln.ships.filter(x => x.am), hot = am.filter(x => x.amAlarm).length; L.push(`  ${ln.name}${ln.loop ? ' (loop)' : ''}: ${ln.stops.map(i => PL[i].id).join('-')} · ships ${ln.ships.length} · pods ${ln.ships.reduce((a, x) => a + x.pods, 0)} · carried ${ln.carried || 0} · length ${Math.round(ln.len || 0)}${ln.dry ? ' · NO FUEL' : ''}${br ? ' · broken ' + br : ''}${am.length ? ' · antimatter ' + am.length + (hot ? ' (' + hot + ' failing)' : '') : ''}${cl ? ' · closed stretches ' + cl : ''}`); }
+    for (const ln of S.lines) { const cl = (ln.segs || []).filter(x => x.closed).length, br = ln.ships.filter(x => x.brk || x.fix).length, am = ln.ships.filter(x => x.am), hot = am.filter(x => x.amAlarm).length; L.push(`  ${ln.name}${ln.loop ? ' (loop)' : ''}: ${ln.stops.map(i => PL[i].id).join('-')} · ships ${ln.ships.length} · pods ${ln.ships.reduce((a, x) => a + x.pods, 0)} · carried ${ln.carried || 0} · length ${Math.round(ln.len || 0)}${ln.dry ? ' · NO FUEL' : ''}${br ? ' · broken ' + br : ''}${ln.ships.some(x => x.walk) ? ' · on strike ' + ln.ships.filter(x => x.walk).length : ''}${am.length ? ' · antimatter ' + am.length + (hot ? ' (' + hot + ' failing)' : '') : ''}${cl ? ' · closed stretches ' + cl : ''}`); }
     if ((S.wreck && S.wreck.length) || (S.stat && S.stat.booms) || S.amSaved || S.amVented) L.push(`antimatter: ${amOpen() ? 'on sale' : 'not yet'} · blew up ${(S.stat && S.stat.booms) || 0} · stabilised ${S.amSaved || 0} · vented ${S.amVented || 0} · bans ${Object.entries(S.noAm || {}).filter(([, u]) => u > S.t).map(([id, u]) => `${id} ${Math.ceil(u - S.t)}s`).join(', ') || 'none'} · wrecks ${(S.wreck || []).map(w => `${w.a}-${w.b} ${Math.ceil(w.until - S.t)}s`).join(', ') || 'none'}`);
     // 5.26: what the crowded places hold, and where ships left full
     const nm = i => `${PL[i].id} ${placeName(i)}`, kind = i => (SHAPES[S.shape[i]] || { short: S.shape[i] }).short;   // 5.27: names and kinds, to match the log
@@ -3000,7 +3076,7 @@ function diagText() {
     if (busy.length) L.push(`crowded: ` + busy.map(i => `${nm(i)} ${S.Q[i].length}/${room(i)}${onLines(i) ? '' : ' · NO LINE'} wants ${wants(i)}${stuckAt(i) ? ' · stuck ' + stuckAt(i).n + (stuckAt(i).noRoute ? ' (no route ' + stuckAt(i).noRoute + ')' : '') : ''}${queueAt(i) ? ' · queue ' + queueAt(i) : ''}`).join(' | '));
     if (S.leftFull) { const lf = Object.keys(S.leftFull).filter(p => S.t - S.leftFull[p].t < 30); if (lf.length) L.push(`left full (30s): ` + lf.map(p => `${nm(p)} by ${(S.lines.find(x => x.id === S.leftFull[p].L) || { name: '?' }).name} ${Math.round(S.t - S.leftFull[p].t)}s ago`).join(', ')); }
     { const f = S.over ? (lost ? lost.i : S.fail) : null; if (f != null) L.push(`LOST at ${nm(f)} ${lost ? lost.waiting : S.Q[f].length}/${lost ? lost.room : room(f)} · wants ${wants(f)} · lines ${S.lines.filter(x => x.stops.includes(f)).map(x => `${x.name}:${x.ships.length}`).join(' ') || 'none'} · why: ${plainText((lost && lost.why) || whyCrowded(f).story || '-')}`); }
-    L.push(`places: ` + PL.map((pl, i) => (S.open[i] ? `${nm(i)} (${kind(i)}${onLines(i) ? '' : ', NO LINE'}) ${S.Q[i].length}/${room(i)}${S.of[i] > 0 ? ' ring ' + Math.round(S.of[i] * 100) + '%' : ''}${S.dmg[i] ? ' damaged' : ''}${S.shield[i] ? ' shield' : ''}${S.depot[i] ? ' depot' : ''}${S.fastDock && S.fastDock[i] ? ' dock' : ''}${S.unrest && S.unrest[i] >= .3 ? ' unrest ' + Math.round(S.unrest[i] * 100) + '%' : ''}${rebelNow(i) ? ' INDEPENDENT' : ''}` : '')).filter(Boolean).join(', '));
+    L.push(`places: ` + PL.map((pl, i) => (S.open[i] ? `${nm(i)} (${kind(i)}${onLines(i) ? '' : ', NO LINE'}) ${S.Q[i].length}/${room(i)}${S.of[i] > 0 ? ' ring ' + Math.round(S.of[i] * 100) + '%' : ''}${S.dmg[i] ? ' damaged' : ''}${S.shield[i] ? ' shield' : ''}${S.depot[i] ? ' depot' : ''}${S.fastDock && S.fastDock[i] ? ' dock' : ''}${S.unrest && S.unrest[i] >= .3 ? ' unrest ' + Math.round(S.unrest[i] * 100) + '%' : ''}${rebelNow(i) ? ' INDEPENDENT' : ''}${walkLive(i) ? ` ON STRIKE ${Math.ceil(walkOf(i).until - S.t)}s${S.walkAlt && S.walkAlt[i] >= 0 ? ' (no deliveries, to ' + PL[S.walkAlt[i]].id + ')' : ''}` : walkSoon(i) ? ` strike in ${Math.ceil(walkOf(i).at - S.t)}s` : ''}` : '')).filter(Boolean).join(', '));
     L.push(`hazard: ${S.haz ? `${S.haz.type} ${S.haz.phase} "${plainText(S.haz.title)}" at ${S.haz.at.toFixed(1)}` : 'none'} · next at ${S.nextHaz != null ? S.nextHaz.toFixed(0) : '-'} · boom ${S.boom ? S.boom.shape : 'none'} · opening act ${JSON.stringify(S.script || [])}`);
     { const ov = overflowing(); if (ov >= 0) L.push(`overflowing: ${PL[ov].id} ${placeName(ov)} · ${plainText(whyCrowded(ov).note)} · ring ${Math.round(S.of[ov] * 100)}% · ships coming ${reliefFor(ov) ? 'enough' : 'not enough'}${S.ovW && S.ovW[ov] ? ' · pause held' : ''}`); }
     L.push(`note: ${S.hint ? S.hint.id : 'none'} · selected ${sel ? sel.type + ' ' + sel.id : 'nothing'} · awards ${Object.keys(readAch()).filter(k => ACH.some(a => a.id === k)).length}/${ACH.length} · board rows ${readBoard().length}`);
@@ -3670,11 +3746,11 @@ function refreshPop(force) {
       const pods = L.ships.reduce((a, s) => a + s.pods, 0), cap = L.ships.reduce((a, s) => a + shipCap(s), 0);
       const how = lineHow(L);
       // one little hull per ship, numbered like the badges on the map
-      const nowMs = performance.now(), hulls = L.ships.map((sh, k) => `<span class="hull${bornAt.has(sh) && nowMs - bornAt.get(sh) < 700 ? ' new' : ''}${sel.ship === sh ? ' on' : ''}${sh.amAlarm ? ' hot' : ''}" data-a="pickHull" data-k="${k}" role="button" aria-label="Ship ${k + 1}${sh.am ? ', antimatter' : ''}" style="--c:${L.color}">${k + 1}${sh.pods ? '<i></i>'.repeat(sh.pods) : ''}${sh.am ? gi('iAm') : ''}${sh.fix || sh.brk ? '🔧' : ''}</span>`).join('');
+      const nowMs = performance.now(), hulls = L.ships.map((sh, k) => `<span class="hull${bornAt.has(sh) && nowMs - bornAt.get(sh) < 700 ? ' new' : ''}${sel.ship === sh ? ' on' : ''}${sh.amAlarm ? ' hot' : ''}${sh.walk ? ' walk' : ''}" data-a="pickHull" data-k="${k}" role="button" aria-label="Ship ${k + 1}${sh.am ? ', antimatter' : ''}${sh.walk ? ', on strike' : ''}" style="--c:${L.color}">${k + 1}${sh.pods ? '<i></i>'.repeat(sh.pods) : ''}${sh.am ? gi('iAm') : ''}${sh.fix || sh.brk ? '🔧' : sh.walk ? gi('iFlag') : ''}</span>`).join('');
       // 5.51: with a ship picked, what it carries takes the place of the line's summary (tap its number again to go back)
       const pk = sel.ship && L.ships.includes(sel.ship) ? sel.ship : null;
-      const wr = lineWrecks(L).length, hot = L.ships.find(x => x.amAlarm);
-      const html = `${hulls}<span>${hot ? `${gi('iAm')} ${Math.max(0, Math.ceil(hot.amAlarm - S.t))}s · ` : ''}${wr ? `💥 ${Math.max(0, Math.ceil(Math.min(...lineWrecks(L).map(w => w.until)) - S.t))}s · ` : ''}${pk ? loadText(pk) : `${how} · holds ${cap}`}${slowDry(L) ? ` · no ${shp('diamond')} fuel, slow` : ''}</span>`;
+      const wr = lineWrecks(L).length, hot = L.ships.find(x => x.amAlarm), wk = walkShips(L), wAt = wk ? L.stops.find(i => walkLive(i)) : undefined;
+      const html = `${hulls}<span>${hot ? `${gi('iAm')} ${Math.max(0, Math.ceil(hot.amAlarm - S.t))}s · ` : ''}${wk && wAt != null ? `${gi('iFlag')} ${wk} out ${Math.max(0, Math.ceil(walkOf(wAt).until - S.t))}s · ` : ''}${wr ? `💥 ${Math.max(0, Math.ceil(Math.min(...lineWrecks(L).map(w => w.until)) - S.t))}s · ` : ''}${pk ? loadText(pk) : `${how} · holds ${cap}`}${slowDry(L) ? ` · no ${shp('diamond')} fuel, slow` : ''}</span>`;
       const el = P.querySelector('[data-f="lst"]'); if (el && el.dataset.sig !== html) { el.dataset.sig = html; el.innerHTML = html; }
       setF('nShips', String(S.inv.ships), true); setF('nPods', String(S.inv.pods), true); setF('nAm', String(S.inv.am || 0), true); setF('lyr', yrTag(L.stops));
       const nudge = P.querySelector('[data-a="addShip"]'); if (nudge) nudge.classList.toggle('nudge', !!(S.tut && S.tut.step === 5 && S.inv.ships > 0));
@@ -3718,6 +3794,7 @@ function refreshPop(force) {
     offBtn('depot', S.inv.depots < 1); offBtn('shield', S.inv.shields < 1);
     const q = S.Q[i], by = {}; for (const c of q) by[c.want] = (by[c.want] || 0) + 1;
     const ust = (!S.unrest ? '' : rebelNow(i) ? ` · independent ${Math.ceil(S.rebel[i] - S.t)}s` : S.unrest[i] >= .3 ? ` · unrest ${Math.round(S.unrest[i] * 100)}%` : '')
+      + (walkLive(i) ? ` · on strike ${Math.ceil(walkOf(i).until - S.t)}s` : walkSoon(i) ? ` · strike in ${Math.ceil(walkOf(i).at - S.t)}s` : '')
       + (S.demand && demandOK(i, S.demand[i]) ? ` · wants ${esc(demandShort(S.demand[i]))}` : '')
       + (S.toll && S.toll[i] > S.t ? ` · toll ${Math.ceil(S.toll[i] - S.t)}s` : '') + (S.fastDock && S.fastDock[i] ? ` · ${gi('iDock')}` : '')
       + (queueAt(i) ? ` · ${queueAt(i)} ${gi('iShip')} queued (${berths(i)} berths)` : '') + (stuckNote(i) ? ` · ${stuckNote(i).n} stuck` : '');
@@ -3911,7 +3988,9 @@ function needList(sys) {
     else if (S.of[i] > .05 && q >= crowdAt(i)) out.push({ lvl: 'warn', i, icon: shp(S.shape[i]), why: `crowding ${q}/${rm} · ring ${Math.round(S.of[i] * 100)}%` });
     else if (S.of[i] > .05) out.push({ lvl: 'warn', i, icon: shp(S.shape[i]), why: `clearing ${q}/${rm}` });
     else if (q >= crowdAt(i) && PL[i].rate !== 0) out.push({ lvl: 'warn', i, icon: shp(S.shape[i]), why: `crowding ${q}/${rm}` });
-    if (S.unrest && !rebelNow(i) && S.demand && S.demand[i] && demandOK(i, S.demand[i])) out.push({ lvl: 'warn', i, icon: gi('iFlag'), why: 'wants to talk' });
+    if (walkLive(i) && !rebelNow(i)) out.push({ lvl: 'hot', i, icon: gi('iFlag'), why: `on strike · Negotiate` });   // 5.71
+    else if (walkSoon(i) && !rebelNow(i)) out.push({ lvl: 'warn', i, icon: gi('iFlag'), why: `strike in ${Math.ceil(walkOf(i).at - S.t)}s · Negotiate` });
+    else if (S.unrest && !rebelNow(i) && S.demand && S.demand[i] && demandOK(i, S.demand[i])) out.push({ lvl: 'warn', i, icon: gi('iFlag'), why: 'wants to talk' });
     if (S.dmg[i]) out.push({ lvl: 'warn', i, icon: '🔧', why: 'damaged · Repair' });
     if (stuckNote(i)) out.push({ lvl: 'warn', i, icon: shp(S.shape[i]), why: `${stuckNote(i).n} stuck` });
     if (!on.has(i)) out.push({ lvl: 'ask', i, icon: shp(S.shape[i]), why: 'needs a line' });
@@ -4025,6 +4104,13 @@ function banner() {
     cls = 'live'; html = `${gi('iAm')} <b>${esc(w.L.name)} ship ${w.k + 1}</b> failing${sysOf(w.L.stops[0]) !== S.view ? ' · ' + esc(sysLabel(sysOf(w.L.stops[0]))) : ''}`;
     cd = Math.max(0, Math.ceil(w.x.amAlarm - S.t)) + 's'; go = { label: `Repair ${fmt(repairCost())}`, line: w.L.id, icon: '' }; go2 = { label: 'Vent', vent: w.L.id, icon: gi('iAm') }; to = { line: w.L.id };
   }
+  // 5.71: a strike, or its notice, with the time left and Negotiate; only a storm a shield would help with outranks it
+  else if (walkWorst() >= 0 && !held && !S.tut && !(h && needsYou(h))) {
+    const i = walkWorst(), w = walkOf(i), live = walkLive(i), alt = noDeliv(i) ? S.walkAlt[i] : -1, out = walkOut(i);
+    cls = live ? 'live' : 'warn';
+    html = `<b>${gi('iFlag')} Strike · ${esc(placeName(i))}</b> ${live ? `${out ? `${out} ${gi('iShip')} out` : alt >= 0 ? '' : 'minimum service'}${alt >= 0 ? `${out ? ' · ' : ''}${shp(S.shape[i])} to ${esc(placeName(alt))}` : ''}` : S.demand && demandOK(i, S.demand[i]) ? `wants ${esc(demandShort(S.demand[i]))}` : ''}${via(i)}`;
+    cd = (live ? 'now ' : '') + Math.max(0, Math.ceil((live ? w.until : w.at) - S.t)) + 's'; go = { label: 'Negotiate', talk: i }; to = { place: i };
+  }
   // a storm or debris you're already protected from needs no banner
   else if (h && !held && !quietHaz(h)) {
     cls = h.phase; html = `<b>${hazIcon(h)} ${esc(h.title)}</b>${h.early ? ' ' + gi('iSensor') : ''} ${h.phase === 'warn' || h.type === 'drifter' || h.type === 'rush' || h.type === 'strike' ? hazWhat(h) : h.type === 'surge' ? '' : hazAction(h)}`;
@@ -4054,6 +4140,9 @@ function banner() {
   if ($('bCd').textContent !== cd) $('bCd').textContent = cd;
   if (S.hint && S.hint.id !== 'start' && S.clock - S.hint.t > 30) S.hint = null;
 }
+// 5.71: the strike to show: notices first (soonest), then strikes on
+function walkWorst() { let b = -1, bt = Infinity; if (S.walk) for (let i = 0; i < NP; i++) { const w = S.walk[i]; if (!w || rebelNow(i)) continue; const t = walkSoon(i) ? w.at - S.t : 1e4 + w.until - S.t; if (t < bt) { bt = t; b = i; } } return b; }
+const walkOut = i => S.lines.reduce((a, L) => a + (L.stops.includes(i) ? walkShips(L) : 0), 0);
 function stuckWorst() { let w = -1; for (let i = 0; i < NP; i++) { const st = stuckNote(i); if (st && (w < 0 || st.n > stuckNote(w).n)) w = i; } return w; }
 // The place closest to ending the run: overflowing now, its red ring filling.
 // 5.62: loud, only the ones flagged (ships on the way won't clear them, or the ring is half full)
@@ -4117,7 +4206,7 @@ function coach() {
   const dm = S.dmg.findIndex((v, i) => v && S.open[i]);
   if (dm >= 0) return { act: true, to: { place: dm }, html: `🔧 <b>${esc(placeName(dm))}</b> damaged · ${S.fund >= repairCost() ? fmt(repairCost()) : `short ${fmt(repairCost() - S.fund)}, scrap spares`}${via(dm)}`, go: { label: 'Repair', place: dm, icon: '🔧' } };
   let ur = -1; for (let i = 0; i < NP; i++) if (S.open[i] && S.unrest && (rebelNow(i) || S.unrest[i] >= .6) && (ur < 0 || S.unrest[i] > S.unrest[ur])) ur = i;
-  if (ur >= 0) return { act: true, to: { place: ur }, html: `${gi('iFlag')} <b>${esc(placeName(ur))}</b> ${rebelNow(ur) ? `independent · ${Math.ceil(S.rebel[ur] - S.t)}s` : 'restless'}${S.demand && demandOK(ur, S.demand[ur]) ? ` · wants ${esc(demandShort(S.demand[ur]))}` : ''}${via(ur)}`, go: { label: 'Negotiate', talk: ur } };
+  if (ur >= 0) return { act: true, to: { place: ur }, html: `${gi('iFlag')} <b>${esc(placeName(ur))}</b> ${rebelNow(ur) ? `independent · ${Math.ceil(S.rebel[ur] - S.t)}s` : walkLive(ur) ? `on strike · ${Math.ceil(walkOf(ur).until - S.t)}s` : 'restless'}${S.demand && demandOK(ur, S.demand[ur]) ? ` · wants ${esc(demandShort(S.demand[ur]))}` : ''}${walkSoon(ur) ? ` · strike in ${Math.ceil(walkOf(ur).at - S.t)}s` : ''}${via(ur)}`, go: { label: 'Negotiate', talk: ur } };
   if (S.inv.pods && S.lines.length) return { act: true, html: `${gi('iPod')} spare pod · tap a line` };
   if (S.inv.depots) return { act: true, html: `${gi('iDepot')} spare storage · tap a place` };
   const sk = SENSORS.findIndex((z, k) => sensorPlay(k) && !S.sensor[k] && cal(S.t) >= sensorFrom(k) && S.fund >= z.cost + 50);
@@ -4193,7 +4282,9 @@ function tipPlace(i) {
   if (S.depot[i]) bits.push('storage');
   if (S.fastDock && S.fastDock[i]) bits.push('fast dock ››');
   if (S.toll && S.toll[i] > S.t) bits.push(`% toll · pays less for ${Math.ceil(S.toll[i] - S.t)}s`);
-  if (swingLive('strike', i)) bits.push('on strike · takes no deliveries');
+  if (walkLive(i)) bits.push(`on strike ${Math.ceil(walkOf(i).until - S.t)}s${noDeliv(i) ? ' · takes no deliveries' : ''} · tap to negotiate`);
+  else if (walkSoon(i)) bits.push(`strike in ${Math.ceil(walkOf(i).at - S.t)}s · tap to negotiate`);
+  else if (swingLive('strike', i)) bits.push('on strike · takes no deliveries');
   if (swingLive('rush', i)) bits.push('rush · freight ×2');
   if (stuckNote(i)) bits.push(`${stuckNote(i).n} stuck`);
   return `${shp(s)} <b>${esc(placeName(i))}</b> · ${sh.role}<br>${bits.join(' · ')}<br>${onLines(i) ? 'tap for storage, a shield or repair · drag to draw a line' : 'not on a line yet · drag from it to start one'}`;
@@ -4465,7 +4556,7 @@ function helpBody() {
       <br>· <b>dashed blue ring</b>: shielded from storms (solid: theirs for good)
       <br>· <b>second outline</b> and a ${gi('iDepot')} tag with a number: Storage (the number is how much it holds)
       <br>· <b>››</b> at a place's corner: a fast dock · <b>%</b>: a toll, deliveries there pay less for a while
-      <br>· <b>red badge with a wrench</b>: storm damage, tap to repair · <b>orange flag</b>: restless crews (dashed orange outline: independent)
+      <br>· <b>red badge with a wrench</b>: storm damage, tap to repair · <b>orange flag</b>: restless crews (dashed orange outline: independent) · <b>dim ship with a flag</b>: on strike, laid up above its stop · <b>dashed red ring</b>: on strike, takes no deliveries
       <br>· <b>crossed-out ${shp('diamond')}</b> halfway along a line: no ${shp('diamond')} fuel stop, its ships run ${Math.round((1 - FUEL_SLOW) * 100)}% slower
       <br>· <b>violet plume</b> behind a ship: an ${gi('iAm')} antimatter drive · <b>red ring and seconds</b> round it: containment failing, Repair · <b>orange specks in a ring</b> on a stretch: wrecked and closed (the ring runs down until it clears)
       <br>· <b>numbered badges</b> on ships: ship 1, 2, 3 of the line · <b>amber outline / 🔧</b> on a ship: breaking down · <b>white ring</b>: the ship you picked, drawn on top, with what it carries beside its number
@@ -4488,9 +4579,9 @@ function helpBody() {
     <li><b>Where to start.</b> On the start screen pick Earth–Moon (2027, real-world plans) or Proxima (2100, science fiction: Proxima b and the Alpha Centauri stars, with frequent flares instead of solar storms). Every run has a code, shown in the Timeline: type it on the start screen to play the same map again, or share it.</li>
     <li><b>Uncharted.</b> A random system made up from the run’s code: its star might be a red dwarf, a binary pair or a pulsar, and its places and their names are new each time. It’s harder: busier places and more storms. And you’re not alone there. An “unknown signal” might be a craft that stops any line it drifts over (shields don’t help), a derelict worth salvaging, or visitors who make one place very busy. Somewhere a gate nobody built will open, and whoever runs it trades.</li>
     <li><b>Freight.</b> Each system starts calm when it opens and gets busier for about ten periods. It keeps growing until a while after its last place opens, then levels off, so the newer systems bring the pressure.</li>
-    <li><b>Late in a run.</b> Ships now and then break down: a warning, then the ship stops where it is for ${BRK_DUR} seconds (a wrench marks it). Tap its line and Repair (or Repair on the note) to fix it at once, even during the warning, or wait it out. And some events are swings in demand: a rush, when one place’s freight nearly all heads for the kind of place farthest from it on your lines, or a strike, when a place takes no deliveries for a while and freight for it goes to another of its kind your lines already reach.</li>
+    <li><b>Late in a run.</b> Ships now and then break down: a warning, then the ship stops where it is for ${BRK_DUR} seconds (a wrench marks it). Tap its line and Repair (or Repair on the note) to fix it at once, even during the warning, or wait it out. And some events are swings in demand: a rush, when one place’s freight nearly all heads for the kind of place farthest from it on your lines.</li>
     <li><b>Antimatter drive.</b> On sale in the Alliance Shop from ${AM_YEAR} (in Proxima and Uncharted runs, from the third visit). Tap a line, then +${gi('iAm')}, to fit one to a ship: the one you picked, or else the first without one. That ship flies twice as fast, needs no ${shp('diamond')} fuel stop, and costs upkeep like ${AM_UPKEEP} ships, so it does a two-ship job with one berth. The catch: now and then its containment fails, more often inside a storm. The game pauses, a red ring goes round the ship, and you have ${AM_WARN} seconds once you press ▶. On the note (or the line's bar): <b>Repair</b> keeps the drive, at a repair's price; <b>Vent</b> is free, and the ship flies on as an ordinary ship without its drive. Or let it go, and the ship blows up with its pods and freight. Docked, it damages the place (a shield there takes the blast); out on a stretch, it wrecks that stretch, closing it for every line until you Repair it or ${WRECK_HEAL} seconds pass. Taking a ship off a line keeps its drive, but not while its containment is failing.</li>
-    <li><b>Unrest.</b> Keep a place waiting (its freight above about 60% of its room for a long stretch, or storm damage left unrepaired) and it grows restless: a flag appears and grows. If it fills, the place declares independence for ${REBEL_DUR} seconds: its lines close, it makes and takes no freight, and ships there are held. Once it’s restless enough the workers vote on what they want, usually that your nearest line be extended to them. Serve it to calm it, or tap it and Negotiate: give them what they voted for (they never refuse that, and stay calm for two periods), or offer something else, which they may refuse, and every refusal makes them angrier. A place an antimatter ship blew up at or beside may vote instead to keep antimatter ships away: give them that and the drives on lines through there go back to spare, with none fitted to those lines for two periods. Other offers: pay them off, let them keep a 25% toll on deliveries there for two periods, or give them a direct line home (or to the wormhole), a shield for keeps, storage, a fast dock or a cargo pod. Any deal keeps them calm for a period. Late game only: from 2070 in Earth–Moon runs, six periods into Proxima and uncharted runs.</li>
+    <li><b>Unrest.</b> Keep a place waiting (its freight above about 60% of its room for a long stretch, or storm damage left unrepaired) and it grows restless: a flag appears and grows. If it fills, the place declares independence for ${REBEL_DUR} seconds: its lines close, it makes and takes no freight, and ships there are held. Once it’s restless enough the workers vote on what they want, usually that your nearest line be extended to them, and give <b>strike notice</b>: no deal within ${NOTICE} seconds and the crews on lines through there strike for ${WALK_DUR}. About half of each of those lines’ ships lay up at their next stop, keeping their freight aboard (one per line always runs), and if your lines reach another place of its kind, its docks take no deliveries and freight for it goes there instead. A deal, or serving it till it calms down, calls the strike off at any point. Serve it to calm it, or tap it and Negotiate: give them what they voted for (they never refuse that, and stay calm for two periods), or offer something else, which they may refuse, and every refusal makes them angrier. A place an antimatter ship blew up at or beside may vote instead to keep antimatter ships away: give them that and the drives on lines through there go back to spare, with none fitted to those lines for two periods. Other offers: pay them off, let them keep a 25% toll on deliveries there for two periods, or give them a direct line home (or to the wormhole), a shield for keeps, storage, a fast dock or a cargo pod. Any deal keeps them calm for a period. Late game only: from 2070 in Earth–Moon runs, six periods into Proxima and uncharted runs.</li>
     <li><b>Sensors elsewhere.</b> Uncharted systems have two to buy: a star watch (earlier storm warnings) and a signal array, which hears unknown signals sooner and tells you what they are. Proxima has a flare watch.</li>
     <li><b>Saving.</b> Your run saves itself as you play, and when you close the page. Continue on the start screen picks it up where you left off. A run that ends is not kept.</li>
     <li><b>Other system’s storms.</b> When a storm or flare is coming on the map you’re not looking at and a shield there would help, a message says so and the ⇄ button turns amber.</li>
@@ -4498,7 +4589,7 @@ function helpBody() {
     <li><b>Settings.</b> ≡ menu → ${gi('iGear')} (or ${gi('iGear')} on the start screen). <b>Colour-blind safe</b> swaps the line colours for a set that stays apart with red–green or blue–yellow colour blindness, writes each line’s number on its knobs (on a loop, a numbered disc), its swatch and the new-line tag, marks the round freight colour alone told apart (${shp('moon')} the Moon a crescent, ${shp('mars')} Mars a band across, ${shp('world')} a colony a band down; ${shp('earth')} Earth stays plain, ${shp('proxb')} Proxima b has its ring), and gives a crowded place’s edge arrow a second ring. <b>Text size</b> makes the words in panels, notes and on the map 120% or 140%. Both are kept in this browser.</li>
     <li><b>Report a problem.</b> Something odd? ≡ menu → Report (or ⚑ Report on the Network Lost card): say what happened and Send. It goes to the developer with the game’s state, and with Include run on, the run itself, so it can be loaded exactly as it was. What gets sent · copy shows all of it, with Copy diagnostics and Copy save.</li>
     <li><b>Keyboard.</b> On a computer: Space plays or pauses, 1, 2, 3 and 5 set the speed, Esc closes the bar along the bottom. While you draw or reshape a line, Esc or the right mouse button cancels it. Scroll to zoom; drag empty space, or hold the middle or right button anywhere, to pan.</li>
-    <li><b>Speed.</b> Tap the speed button for 0.1× and 0.5× slow motion or 2×, 3× and 5× (5× asks first). When a new place opens, a restless place votes on a demand or declares independence, or an antimatter drive starts to fail, the game pauses so you don’t miss it: white rings spread from any place that isn’t on a line yet, amber rings from a place that wants to talk, the play button pulses, and ▶ carries on. Turn the pause off with the “❚❚ new place · talks · ${gi('iAm')}” switch in the same menu.</li>
+    <li><b>Speed.</b> Tap the speed button for 0.1× and 0.5× slow motion or 2×, 3× and 5× (5× asks first). When a new place opens, a restless place votes on a demand, goes on strike or declares independence, or an antimatter drive starts to fail, the game pauses so you don’t miss it: white rings spread from any place that isn’t on a line yet, amber rings from a place that wants to talk, the play button pulses, and ▶ carries on. Turn the pause off with the “❚❚ new place · talks · ${gi('iAm')}” switch in the same menu.</li>
     <li><b>Capybaras.</b> They run the Alliance. The quartermaster at the Alliance Shop has advice, and late in a run a capybara envoy can calm a restless place for free, once a period.</li>
     <li><b>Awards.</b> 22 to earn, from your first delivery to lines in three star systems. New ones show a gold note; reviews and the end of a run list what the run earned; the leaderboard’s 🏅 Awards shows them all.</li>
     <li><b>Leaderboard.</b> Every review and every finished run updates your row for that run code. Open it from a review, the end of a run or the start screen; tap a code twice to play it.</li>
@@ -4891,7 +4982,7 @@ function draw(rdt) {
   // ships (the selected line's last, bigger, outlined and numbered). 5.51: the ship you picked waits until after the
   // places, so it is on top of everything, even docked under a place or stacked with its line's other ships, and
   // shows its freight beside its number. (Its tap spot keeps its usual order.)
-  shipSpots = []; let picked = null;
+  shipSpots = []; let picked = null; const layN = {};   // 5.71: ships on strike laid up at each place so far
   for (const L of order) for (let si = 0; si < L.ships.length; si++) {
     const sh = L.ships[si], chosen = L.id === selId;
     let pos;
@@ -4904,6 +4995,8 @@ function draw(rdt) {
       // docked: point the way it will leave
       const p = PL[L.stops[sh.k]], nd = nextDir(L, sh), sg = segOf(L, sh.k, nd);
       pos = { x: p.x, y: p.y, ang: !sg ? 0 : nd > 0 ? sampleAt(sg, 0).ang : sampleAt(sg, sg.len).ang + Math.PI };
+      // 5.71: on strike: laid up in an arc above the stop, where you can see them, instead of under it
+      if (sh.walk) { const pi = L.stops[sh.k], n = layN[pi] = (layN[pi] || 0) + 1, a = -Math.PI / 2 + [0, .6, -.6, 1.2, -1.2][(n - 1) % 5], rr = (R(pi) + 24 + 26 * Math.floor((n - 1) / 5)) * uk / sc; pos = { x: p.x + Math.cos(a) * rr, y: p.y + Math.sin(a) * rr, ang: a + Math.PI / 2 }; }
     }
     const bt = bornAt.has(sh) ? (performance.now() - bornAt.get(sh)) / 1000 : 9, pop = bt < .45 ? 1 + .55 * Math.sin(bt / .45 * Math.PI) : 1;
     const zk = uk * (chosen ? 1.3 : 1) * pop, x = X(pos.x), y = Y(pos.y), len = (22 + 8 * sh.pods) * zk, wid = 11 * zk, hl = len / 2, hw = wid / 2, nose = 6 * zk, rr = 3 * zk;
@@ -4923,6 +5016,7 @@ function draw(rdt) {
       }
       ctx.fillStyle = L.color; ctx.strokeStyle = hot ? '#ff5a4a' : sick ? '#ffc35a' : chosen ? '#ffffff' : sh.am ? '#e6d2ff' : '#04060b'; ctx.lineWidth = hot || sick ? 2.6 : chosen ? 2.2 : 2; ctx.lineJoin = 'round';
       if (sh.fix) ctx.globalAlpha *= .55;
+      if (sh.walk && sh.state === 'stop') ctx.globalAlpha *= .5;   // 5.71: laid up, on strike
       // a hull with a pointed nose, so you can see which way it is going
       ctx.beginPath(); ctx.moveTo(-hl + rr, -hw); ctx.lineTo(hl - nose, -hw); ctx.lineTo(hl, 0); ctx.lineTo(hl - nose, hw); ctx.lineTo(-hl + rr, hw);
       ctx.quadraticCurveTo(-hl, hw, -hl, hw - rr); ctx.lineTo(-hl, -hw + rr); ctx.quadraticCurveTo(-hl, -hw, -hl + rr, -hw); ctx.closePath(); ctx.fill(); ctx.stroke();
@@ -4931,6 +5025,8 @@ function draw(rdt) {
       for (let k = 0; k < n; k++) ctx.fillRect(-len / 2 + 3 * zk + (k % cols) * cw + (cw - cb) / 2, -wid / 2 + 2.2 * zk + Math.floor(k / cols) * 3.8 * zk, cb, cb);
       ctx.restore();
       if (sh.fix) { ctx.font = `${Math.round(12 * uk * TK)}px system-ui, sans-serif`; ctx.textAlign = 'center'; ctx.fillText('🔧', x, y - hl - (chosen ? 20 : 6)); }
+      // 5.71: on strike: a little orange flag over it, going to lay up or laid up
+      else if (sh.walk) { const fx = x - 3 * uk, fy = y - hl * .6 - (chosen ? 14 : 3) * uk; ctx.strokeStyle = '#ffb27a'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(fx, fy); ctx.lineTo(fx, fy - 12 * uk); ctx.stroke(); ctx.fillStyle = '#ff9a5a'; ctx.beginPath(); ctx.moveTo(fx + 1, fy - 12 * uk); ctx.lineTo(fx + 1 + 9 * uk, fy - 9 * uk); ctx.lineTo(fx + 1, fy - 6 * uk); ctx.closePath(); ctx.fill(); }
       // 5.65: containment failing: a red ring pulsing round it and the seconds left
       if (sh.amAlarm) {
         const left = Math.max(0, sh.amAlarm - S.t), pz = .5 + .5 * Math.sin(clock * 12);
@@ -5119,7 +5215,7 @@ function drawPlace(i) {
     }
   }
   if (S.flash[i] > 0) { ctx.strokeStyle = '#fff'; ctx.globalAlpha = S.flash[i]; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y, r + 6 + (1 - S.flash[i]) * 26, 0, Math.PI * 2); ctx.stroke(); ctx.globalAlpha = 1; }
-  if (swingLive('strike', i)) { ctx.strokeStyle = '#ff8a7a'; ctx.lineWidth = 2.5; ctx.setLineDash([3, 4]); ctx.lineDashOffset = clock * 8; ctx.beginPath(); ctx.arc(x, y, r + 7, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]); ctx.lineDashOffset = 0; }
+  if (noDeliv(i)) { ctx.strokeStyle = '#ff8a7a'; ctx.lineWidth = 2.5; ctx.setLineDash([3, 4]); ctx.lineDashOffset = clock * 8; ctx.beginPath(); ctx.arc(x, y, r + 7, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]); ctx.lineDashOffset = 0; }
   if (S.surgeAt === i || swingLive('rush', i)) { ctx.strokeStyle = '#ffc35a'; ctx.globalAlpha = .5 + .4 * Math.sin(clock * 8); ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y, r + 7, 0, Math.PI * 2); ctx.stroke(); ctx.globalAlpha = 1; }
   if (S.depot[i]) { ctx.strokeStyle = 'rgba(233,237,244,.7)'; ctx.lineWidth = 1.6; shapePath(s, x, y, r + 5); ctx.stroke(); }
   if (S.shield[i]) {
@@ -5207,6 +5303,8 @@ function drawPlace(i) {
       label(`independent · ${Math.ceil(S.rebel[i] - S.t)}s`, x, y + r + 31 + lift(), '#ffb27a');
     }
   }
+  // 5.71: strike notice, or a strike on
+  { const w = walkOf(i); if (w && !rebelNow(i)) label(walkLive(i) ? `on strike · ${Math.ceil(w.until - S.t)}s` : `strike in ${Math.max(0, Math.ceil(w.at - S.t))}s`, x, y + r + 31 + lift(), walkLive(i) ? '#ff8a7a' : '#ffb27a'); }
   if (S.dmg[i]) {
     const bx = x + r * .85, by = y - r * .85; ctx.fillStyle = '#e8574f'; ctx.beginPath(); ctx.arc(bx, by, 7, 0, Math.PI * 2); ctx.fill();
     ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.8; ctx.beginPath(); ctx.moveTo(bx - 3, by + 3); ctx.lineTo(bx + 3, by - 3); ctx.stroke(); ctx.beginPath(); ctx.arc(bx + 3, by - 3, 1.8, 0, Math.PI * 2); ctx.stroke();
@@ -5543,7 +5641,7 @@ document.addEventListener('keydown', e => {
    Claude app it also saves to your own private space in the artifact's database at each assembly and
    when you leave, so closing the app, or a cleared browser, doesn't lose it. Continue picks whichever
    save is newer. A run that ends (the red ring fills) is not kept. */
-const SAVE_KEY = 'lagrange-save', NOSAVE = new Set(['rnd', 'NH', 'DS', 'present', 'auto', 'undo', 'tut', 'irl', 'look']);
+const SAVE_KEY = 'lagrange-save', NOSAVE = new Set(['rnd', 'NH', 'DS', 'present', 'auto', 'undo', 'tut', 'irl', 'look', 'walkAlt']);
 let saveSoon = false, lastLocal = 0, cloud = null, cloudSave = null, cloudBusy = false, cloudNext, cdb = null, cuser = null, cuid = null;
 const canSave = () => !!S && S.started && !S.over && !S.tut && !S.auto;
 const saveLabel = () => `${qLabel(S.t)}${S.scen === 'sol' ? '' : ' · ' + SCEN[S.scen].name}`;
@@ -5600,7 +5698,7 @@ function resumeRun(sv) {
     const re = (arr, def) => { const out = def.slice(); (arr || []).forEach((v, k) => { if (map[k] >= 0) out[map[k]] = v; }); return out; };
     S = Object.assign({}, D, o);
     if (o.hard == null) S.hard = true;   // 5.48: runs saved before Normal existed were played on Hard's rules
-    for (const k of ['shape', 'at', 'open', 'openedAt', 'Q', 'of', 'depot', 'shield', 'flash', 'dmg', 'unrest', 'rebel', 'fastDock', 'toll', 'calm', 'keepShield', 'demand']) S[k] = re(o[k], D[k]);
+    for (const k of ['shape', 'at', 'open', 'openedAt', 'Q', 'of', 'depot', 'shield', 'flash', 'dmg', 'unrest', 'rebel', 'fastDock', 'toll', 'calm', 'keepShield', 'demand', 'walk']) S[k] = re(o[k], D[k]);
     S.irl = D.irl;
     for (let i = BASE_NP; i < NP; i++) if (S.irl[i]) S.irl[i] = { ...S.irl[i], y: Math.round(cal(S.at[i])) };
     // places a newer version adds to this kind of run (a wormhole, say) arrive shortly after you continue
@@ -5676,6 +5774,7 @@ window.LC = {
   snapCam, cal, calOf, perOf, lineYear, showLog, fitInfo, setCB, setTextSize, showSettings, get cbSafe() { return cbSafe; }, get TK() { return TK; }, buySensor, SENSORS, setSys, setAutoPause, inScen, trayUI, recordRun, readBoard, openBoard, showLost, endLost, showWin, award, readAch, needList, lookAt, ACH, ask5, qmTip, diagText, saveText, loadSaveText, perf, get capyImg() { return capyImg; }, get won() { return won; }, get lost() { return lost; }, get boardAll() { return boardAll; }, scrap, scrapVal, repairCost, negotiateCost, voteDemand, sysNeeds, get fxs() { return fxs; }, negotiate, startRebel, tunnelEnds, saveAll, readLocal, resumeRun, bestSave, parseCode, runCode, codeOf, splashUI, SCEN, repairPlace, repairSensor, buyOffer, price, sysOf, tunnelOpen, hud, get sc() { return sc; }, UPKEEP, upkeepShare, ovT, reliefFor, BRK_GAP, openPlace, fuelNear, crowdAt, warnRoom, shipSpots: () => shipSpots, get wclock() { return wclock; }, pins: () => pins.map(q => ({ x: rot ? VW - q.y : q.x, y: rot ? q.x : q.y, i: q.i })),
   redrawFee, chargeRedraw, fixShips, whyCrowded, worstTrouble, selLine, checkUpdate, verNum, get newer() { return newer; }, upkeepDue, berths, docked, queueAt, stuckAt, stuckNote, startSwing, breakdowns, lateGame, ovT, crowdFix,
   toast, toastMs, hideToast, get toastT() { return toastT; },
+  giveNotice, startWalk, endWalk, walkLines, walkLive, walkSoon, noDeliv, layUp, WALK: { NOTICE, DUR: WALK_DUR }, talksHTML, banner,   // 5.71
   fitAm, blowUp, amAlarm, antimatter, amOpen, lineWrecks, wrecked, wreck, shipV, slowDry, amWorst, wreckWorst, AM: { YEAR: AM_YEAR, FAST: AM_FAST, WARN: AM_WARN, HEAL: WRECK_HEAL, UPKEEP: AM_UPKEEP }, offerPair, whyNot, canBuy, applyOffer,   // 5.65
   fast(sec) { const n = Math.round(sec / STEP); for (let i = 0; i < n && !S.over; i++) step(STEP); },
   screen(id) { const n = PL[IDX[id]], x = X(n.x), y = Y(n.y); return rot ? { x: VW - y, y: x } : { x, y }; },
